@@ -8,8 +8,10 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.core.config import get_settings
 from app.db.base import Base
 
-# Import each module's models here so Alembic's autogenerate can see them, e.g.:
-# from app.modules.auth import models as auth_models  # noqa: F401
+# Import each module's models here so Alembic's autogenerate can see them.
+from app.modules.audit import models as audit_models  # noqa: F401,E402
+from app.modules.auth import models as auth_models  # noqa: F401,E402
+from app.modules.companies import models as companies_models  # noqa: F401,E402
 
 config = context.config
 
@@ -20,7 +22,7 @@ target_metadata = Base.metadata
 
 
 def get_database_url() -> str:
-    return get_settings().database_url
+    return get_settings().migration_database_url
 
 
 def run_migrations_offline() -> None:

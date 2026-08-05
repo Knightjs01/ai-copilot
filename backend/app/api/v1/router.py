@@ -1,9 +1,12 @@
 from fastapi import APIRouter
 
 from app.api.v1 import health
+from app.modules.auth.api import router as auth_router
+from app.modules.companies.api import router as companies_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
+api_router.include_router(auth_router)
+api_router.include_router(companies_router)
 
-# Future modules (auth, projects, candidates, ...) register their routers here,
-# e.g. api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+# Future modules (projects, candidates, ...) register their routers here.

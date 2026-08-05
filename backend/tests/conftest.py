@@ -1,0 +1,105 @@
+import os
+
+# Must happen before any `app.*` import — app.db.base builds its engine at import time from
+# whatever DATABASE_URL is set then, and Settings() is lru_cached, so this has to run first.
+_TEST_DB_NAME = "ai_copilot_test"
+
+_original_app_url = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://app_runtime:app_runtime@localhost:5432/ai_copilot",
+)
+_original_auth_url = os.environ.get(
+    "AUTH_DATABASE_URL",
+    "postgresql+asyncpg://app_auth:app_auth@localhost:5432/ai_copilot",
+)
+_original_admin_url = os.environ.get(
+    "MIGRATION_DATABASE_URL", "postgresql+asyncpg://copilot:copilot@localhost:5432/ai_copilot"
+)
+
+_test_admin_url = _original_admin_url.rsplit("/", 1)[0] + f"/{_TEST_DB_NAME}"
+
+os.environ["DATABASE_URL"] = _original_app_url.rsplit("/", 1)[0] + f"/{_TEST_DB_NAME}"
+os.environ["AUTH_DATABASE_URL"] = _original_auth_url.rsplit("/", 1)[0] + f"/{_TEST_DB_NAME}"
+os.environ["MIGRATION_DATABASE_URL"] = _test_admin_url
+os.environ["ENVIRONMENT"] = "test"  # disables rate limiting — see app/core/rate_limit.py
+
+import asyncio  # noqa: E402
+from collections.abc import AsyncGenerator  # noqa: E402
+
+import asyncpg  # noqa: E402
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+from sqlalchemy import text  # noqa: E402
+from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
+
+
+def _admin_maintenance_dsn() -> str:
+    # asyncpg's native connect() wants a plain postgresql:// DSN, not SQLAlchemy's +asyncpg one,
+    # and must point at a database other than the one we're about to create.
+    base = _original_admin_url.replace("postgresql+asyncpg://", "postgresql://").rsplit("/", 1)[0]
+    return f"{base}/postgres"
+
+
+async def _ensure_test_database_exists() -> None:
+    conn = await asyncpg.connect(_admin_maintenance_dsn())
+    try:
+        exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", _TEST_DB_NAME)
+        if not exists:
+            await conn.execute(f'CREATE DATABASE "{_TEST_DB_NAME}"')
+    finally:
+        await conn.close()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _setup_test_database() -> None:
+    asyncio.run(_ensure_test_database_exists())
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _clean_tables() -> AsyncGenerator[None, None]:
+    yield
+    # Uses the admin (copilot) connection, not the app's own app_runtime engine — app_runtime is
+    # deliberately not granted TRUNCATE (it's not a privilege the app needs for real operation,
+    # only test cleanup), matching the least-privilege grant set from the Phase 1 migration.
+    admin_engine = create_async_engine(_test_admin_url)
+    try:
+        async with admin_engine.begin() as conn:
+            await conn.execute(text("TRUNCATE TABLE companies CASCADE"))
+    finally:
+        await admin_engine.dispose()
+
+
+class CapturingEmailSender:
+    """Test double for app.modules.auth.email.EmailSender — records sent emails instead of
+    logging them, so tests can read verification/reset/invite tokens deterministically instead
+    of scraping logs (which proved flaky across a full test-suite run with caplog)."""
+
+    def __init__(self) -> None:
+        self.sent: list[dict[str, str]] = []
+
+    async def send(self, *, to: str, subject: str, body: str) -> None:
+        self.sent.append({"to": to, "subject": subject, "body": body})
+
+
+@pytest.fixture
+def sent_emails() -> CapturingEmailSender:
+    return CapturingEmailSender()
+
+
+@pytest_asyncio.fixture
+async def client(sent_emails: CapturingEmailSender) -> AsyncGenerator[AsyncClient, None]:
+    from app.main import app
+    from app.modules.auth.dependencies import get_email_sender
+
+    app.dependency_overrides[get_email_sender] = lambda: sent_emails
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
+    finally:
+        app.dependency_overrides.pop(get_email_sender, None)

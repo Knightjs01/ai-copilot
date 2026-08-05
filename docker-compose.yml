@@ -33,7 +33,12 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://copilot:copilot@postgres:5432/ai_copilot
+      # The _DB_PASSWORD vars themselves come from env_file (backend/.env) — only the URLs need
+      # the postgres/redis hostnames overridden for container networking, so only these are
+      # repeated here rather than the whole .env file.
+      DATABASE_URL: postgresql+asyncpg://app_runtime:M-OmTe2GooDqjAanKM0JtdVG-nITjTT6@postgres:5432/ai_copilot
+      AUTH_DATABASE_URL: postgresql+asyncpg://app_auth:MPEOYhinBZaw-SHx0bqvfud7DwAh5lmT@postgres:5432/ai_copilot
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://copilot:copilot@postgres:5432/ai_copilot
       REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"

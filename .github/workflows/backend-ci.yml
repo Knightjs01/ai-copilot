@@ -18,6 +18,39 @@ defaults:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: copilot
+          POSTGRES_PASSWORD: copilot
+          POSTGRES_DB: ai_copilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U copilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # See app/core/config.py and the Phase 1 migration for why there are three DB roles.
+      APP_DB_PASSWORD: ci-app-runtime-password
+      AUTH_DB_PASSWORD: ci-app-auth-password
+      DATABASE_URL: postgresql+asyncpg://app_runtime:ci-app-runtime-password@localhost:5432/ai_copilot
+      AUTH_DATABASE_URL: postgresql+asyncpg://app_auth:ci-app-auth-password@localhost:5432/ai_copilot
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://copilot:copilot@localhost:5432/ai_copilot
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: ci-test-secret-key-not-for-production-use
+      ENCRYPTION_KEY: 85nYuqaJXgaGjnzQOHpuNrUD4RKYYmJXqSk3Q9-UNjU=
     steps:
       - uses: actions/checkout@v4
 

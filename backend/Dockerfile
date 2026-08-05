@@ -14,7 +14,9 @@ ENV PATH="/opt/poetry/bin:$PATH"
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock* ./
-RUN poetry install --no-root --only main
+# Includes dev deps (pytest, ruff, ...) since this stage is what local docker-compose dev uses.
+# A separate --only main production stage should be added before this is ever deployed.
+RUN poetry install --no-root
 
 COPY . .
 
