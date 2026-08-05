@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-5"
 
+    # No default on purpose, same as anthropic_api_key. Empty means app.modules.auth.dependencies
+    # .get_email_sender() falls back to ConsoleEmailSender (local dev / tests) — see
+    # app/modules/auth/email.py's BrevoEmailSender for how this is used once set.
+    brevo_api_key: str = ""
+    brevo_sender_email: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

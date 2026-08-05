@@ -15,6 +15,7 @@ interface AuthContextValue {
     password: string,
     fullName: string
   ) => Promise<void>;
+  acceptInvite: (token: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
 }
@@ -81,6 +82,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [loadMe]
   );
 
+  const acceptInvite = React.useCallback(
+    async (token: string, password: string) => {
+      const res = await apiClient.post<TokenResponse>("/users/accept-invite", {
+        token,
+        password,
+      });
+      setAccessToken(res.access_token);
+      await loadMe();
+    },
+    [loadMe]
+  );
+
   const logout = React.useCallback(async () => {
     try {
       await apiClient.post("/auth/logout");
@@ -97,8 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = React.useMemo(
-    () => ({ user, isLoading, login, signup, logout, hasPermission }),
-    [user, isLoading, login, signup, logout, hasPermission]
+    () => ({ user, isLoading, login, signup, acceptInvite, logout, hasPermission }),
+    [user, isLoading, login, signup, acceptInvite, logout, hasPermission]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

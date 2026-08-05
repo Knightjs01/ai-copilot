@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,12 +49,17 @@ REFRESH_COOKIE_NAME = "refresh_token"
 
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     settings = get_settings()
+    # SameSite=None is required once frontend and backend live on different hostnames (e.g. two
+    # separate Railway subdomains) — a Lax cookie is not sent on cross-site fetch/XHR regardless
+    # of credentials:"include". None requires Secure, which cookie_secure=true already guarantees
+    # in that setup; falls back to Lax locally where both run on plain http://localhost.
+    samesite: Literal["none", "lax"] = "none" if settings.cookie_secure else "lax"
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=samesite,
         max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
         path="/api/v1/auth",
     )

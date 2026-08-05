@@ -16,6 +16,17 @@ export type CandidateStatus =
 
 export type PrescreenOutcome = "advance" | "reject" | "hold";
 
+export type RoleName = "Owner" | "Admin" | "Member";
+
+export interface UserRead {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  is_email_verified: boolean;
+  roles: string[];
+}
+
 export interface MeResponse {
   id: string;
   email: string;

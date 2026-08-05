@@ -39,6 +39,11 @@ docker compose up --build
 - Backend: http://localhost:8000/api/docs
 - Frontend: http://localhost:3000
 
+### Deploying
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full Railway walkthrough (Postgres, Redis, real
+email via Brevo, and inviting a second user into the same company's workspace).
+
 ### Natively
 
 ```bash
@@ -79,6 +84,7 @@ poetry run pytest
 | 8 | Pre-Screen Interview Tracking & AI Fit Assessment — interview date field, AI fit score + call-prep guidance (fit rating, strengths/gaps, suggested questions, non-obvious areas to probe) comparing a candidate against the role's blueprint + hiring manager's top 5, pre-screen Advance/Reject/Hold outcome + notes, and a second AI pass generating handoff recommendations for the next round grounded in the actual call notes | ✅ Done |
 | 9 | Frontend — design system (Tailwind slate + Paraform-style restraint), auth, and the full pre-screen workflow UI: project list/detail, drag-and-drop JD/resume dropzones, a `@dnd-kit` candidate pipeline Kanban board, and every AI-generation card from Phases 5-8 | ✅ Done |
 | 10 | Burn Project — permanent GDPR hard-delete of a project and every candidate under it (resumes, sanitized text, AI artifacts, all of it), distinct from the existing archive/soft-delete; confirmation flow with a fire-wipe animation | ✅ Done |
-| 11+ | Anything further is scoped only if it's still needed inside the pre-screen boundary above — everything past pre-screen lives in Greenhouse | Not planned |
+| 11 | Production deployment (Railway, real email via Brevo) + Team/Invite UI so a second user can log in and share a company's data | ✅ Done |
+| 12+ | Anything further is scoped only if it's still needed inside the pre-screen boundary above — everything past pre-screen lives in Greenhouse | Not planned |
 
 Each phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.

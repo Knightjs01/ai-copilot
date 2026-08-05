@@ -7,21 +7,35 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.db.base import async_session_factory
 from app.modules.auth import security
-from app.modules.auth.email import ConsoleEmailSender, EmailSender
+from app.modules.auth.email import BrevoEmailSender, ConsoleEmailSender, EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.repository.roles import RoleRepository
 from app.modules.auth.repository.users import UserRepository
 
 _bearer_scheme = HTTPBearer(auto_error=False)
-_default_email_sender = ConsoleEmailSender()
+_default_email_sender: EmailSender | None = None
 
 
 def get_email_sender() -> EmailSender:
     """Overridable via app.dependency_overrides — tests inject a capturing sender instead of
-    letting emails just go to logs, so they can read the verification/reset/invite tokens."""
+    letting emails just go to logs, so they can read the verification/reset/invite tokens.
 
+    Constructed lazily, not at module import time, matching the pattern in e.g.
+    app/modules/intelligence/dependencies.py — picks BrevoEmailSender once BREVO_API_KEY is set
+    (production), otherwise ConsoleEmailSender (local dev / CI, where it's never set)."""
+
+    global _default_email_sender
+    if _default_email_sender is None:
+        settings = get_settings()
+        if settings.brevo_api_key:
+            _default_email_sender = BrevoEmailSender(
+                api_key=settings.brevo_api_key, sender_email=settings.brevo_sender_email
+            )
+        else:
+            _default_email_sender = ConsoleEmailSender()
     return _default_email_sender
 
 
