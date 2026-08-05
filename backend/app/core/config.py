@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     frontend_base_url: str = "http://localhost:3000"
 
+    # Local-filesystem resume storage — see app/modules/candidates/storage.py. Swap for an
+    # S3-backed FileStorage implementation before deploying anywhere with more than one instance.
+    storage_dir: str = "/app/storage"
+    max_resume_size_mb: int = 10
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

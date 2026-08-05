@@ -25,6 +25,7 @@ os.environ["ENVIRONMENT"] = "test"  # disables rate limiting — see app/core/ra
 
 import asyncio  # noqa: E402
 from collections.abc import AsyncGenerator  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 import asyncpg  # noqa: E402
 import pytest  # noqa: E402
@@ -92,14 +93,24 @@ def sent_emails() -> CapturingEmailSender:
 
 
 @pytest_asyncio.fixture
-async def client(sent_emails: CapturingEmailSender) -> AsyncGenerator[AsyncClient, None]:
+async def client(
+    sent_emails: CapturingEmailSender, tmp_path: Path
+) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
     from app.modules.auth.dependencies import get_email_sender
+    from app.modules.candidates.dependencies import get_file_storage
+    from app.modules.candidates.storage import LocalFileStorage
+
+    # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
+    # leaves orphaned resume files under backend/storage/ on the host indefinitely.
+    test_storage = LocalFileStorage(root=str(tmp_path / "storage"))
 
     app.dependency_overrides[get_email_sender] = lambda: sent_emails
+    app.dependency_overrides[get_file_storage] = lambda: test_storage
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
     finally:
         app.dependency_overrides.pop(get_email_sender, None)
+        app.dependency_overrides.pop(get_file_storage, None)

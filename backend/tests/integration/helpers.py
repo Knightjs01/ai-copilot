@@ -52,3 +52,11 @@ async def invite_and_accept(
     )
     assert accept_response.status_code == 200, accept_response.text
     return accept_response.json()
+
+
+async def create_project(
+    client: AsyncClient, *, headers: dict, title: str = "Test Project"
+) -> dict:
+    response = await client.post("/api/v1/projects", json={"title": title}, headers=headers)
+    assert response.status_code == 201, response.text
+    return response.json()

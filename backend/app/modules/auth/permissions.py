@@ -8,6 +8,10 @@ class Permissions:
     PROJECTS_VIEW = "projects.view"
     PROJECTS_UPDATE = "projects.update"
     PROJECTS_DELETE = "projects.delete"
+    CANDIDATES_CREATE = "candidates.create"
+    CANDIDATES_VIEW = "candidates.view"
+    CANDIDATES_UPDATE = "candidates.update"
+    CANDIDATES_DELETE = "candidates.delete"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -20,6 +24,10 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.PROJECTS_VIEW: "View hiring projects",
     Permissions.PROJECTS_UPDATE: "Update hiring projects",
     Permissions.PROJECTS_DELETE: "Archive hiring projects",
+    Permissions.CANDIDATES_CREATE: "Add candidates",
+    Permissions.CANDIDATES_VIEW: "View candidates",
+    Permissions.CANDIDATES_UPDATE: "Update candidates (including resume uploads)",
+    Permissions.CANDIDATES_DELETE: "Archive candidates",
 }
 
 
@@ -45,6 +53,14 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.PROJECTS_VIEW,
         Permissions.PROJECTS_UPDATE,
         Permissions.PROJECTS_DELETE,
+        Permissions.CANDIDATES_CREATE,
+        Permissions.CANDIDATES_VIEW,
+        Permissions.CANDIDATES_UPDATE,
+        Permissions.CANDIDATES_DELETE,
     ],
-    RoleName.MEMBER: [Permissions.USERS_VIEW, Permissions.PROJECTS_VIEW],
+    RoleName.MEMBER: [
+        Permissions.USERS_VIEW,
+        Permissions.PROJECTS_VIEW,
+        Permissions.CANDIDATES_VIEW,
+    ],
 }
