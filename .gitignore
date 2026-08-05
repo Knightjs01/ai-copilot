@@ -13,6 +13,7 @@ node_modules/
 .next/
 out/
 .turbo/
+next-env.d.ts
 
 # Env files
 .env
