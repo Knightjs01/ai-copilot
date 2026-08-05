@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.dependencies import (
@@ -80,6 +80,24 @@ async def update_project(
         hiring_manager_id=body.hiring_manager_id,
         hiring_manager_id_set="hiring_manager_id" in fields_set,
         role_brief=body.role_brief,
+    )
+    return ProjectRead.model_validate(project)
+
+
+@router.post("/{project_id}/jd", response_model=ProjectRead)
+async def upload_jd(
+    project_id: uuid.UUID,
+    file: UploadFile = File(...),
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ProjectRead:
+    content = await file.read()
+    project = await ProjectService(session).upload_jd(
+        actor=actor,
+        project_id=project_id,
+        content=content,
+        content_type=file.content_type or "application/octet-stream",
     )
     return ProjectRead.model_validate(project)
 

@@ -6,7 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.auth.service.user_service import UserService
-from app.modules.projects.exceptions import InvalidHiringManagerError, ProjectNotFoundError
+from app.modules.privacy_gateway.exceptions import ExtractionFailedError, UnsupportedFileTypeError
+from app.modules.privacy_gateway.extraction import extract_text
+from app.modules.projects.exceptions import (
+    InvalidHiringManagerError,
+    JDExtractionFailedError,
+    ProjectNotFoundError,
+    UnsupportedJDFileTypeError,
+)
 from app.modules.projects.models import Project, ProjectStatus
 from app.modules.projects.repository import ProjectRepository
 
@@ -88,6 +95,29 @@ class ProjectService:
             company_id=actor.company_id,
             actor_user_id=actor.id,
             action="project.updated",
+            target_type="project",
+            target_id=project.id,
+        )
+        return project
+
+    async def upload_jd(
+        self, *, actor: User, project_id: uuid.UUID, content: bytes, content_type: str
+    ) -> Project:
+        project = await self.get_project(company_id=actor.company_id, project_id=project_id)
+
+        try:
+            extracted_text = extract_text(content=content, content_type=content_type)
+        except UnsupportedFileTypeError as exc:
+            raise UnsupportedJDFileTypeError(str(exc)) from exc
+        except ExtractionFailedError as exc:
+            raise JDExtractionFailedError(str(exc)) from exc
+
+        project.role_brief = extracted_text
+
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="project.jd_uploaded",
             target_type="project",
             target_id=project.id,
         )

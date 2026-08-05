@@ -14,6 +14,9 @@ from app.modules.auth import models as auth_models  # noqa: F401,E402
 from app.modules.candidates import models as candidates_models  # noqa: F401,E402
 from app.modules.companies import models as companies_models  # noqa: F401,E402
 from app.modules.hiring_blueprint import models as hiring_blueprint_models  # noqa: F401,E402
+from app.modules.hiring_manager_alignment import (  # noqa: F401,E402
+    models as hiring_manager_alignment_models,
+)
 from app.modules.intelligence import models as intelligence_models  # noqa: F401,E402
 from app.modules.privacy_gateway import models as privacy_gateway_models  # noqa: F401,E402
 from app.modules.projects import models as projects_models  # noqa: F401,E402

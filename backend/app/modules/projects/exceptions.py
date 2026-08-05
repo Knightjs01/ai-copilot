@@ -14,3 +14,13 @@ class ProjectNotFoundError(ProjectError):
 class InvalidHiringManagerError(ProjectError):
     status_code = 400
     detail = "Hiring manager must belong to the same company"
+
+
+class UnsupportedJDFileTypeError(ProjectError):
+    status_code = 400
+    detail = "Unsupported job description file type for automatic text extraction"
+
+
+class JDExtractionFailedError(ProjectError):
+    status_code = 422
+    detail = "Could not extract text from this job description file"
