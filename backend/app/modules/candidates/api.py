@@ -124,9 +124,9 @@ async def download_resume(
     session: AsyncSession = Depends(get_tenant_db),
     storage: FileStorage = Depends(get_file_storage),
 ) -> Response:
-    content, filename = await CandidateService(session, storage=storage).download_resume(
-        company_id=actor.company_id, candidate_id=candidate_id
-    )
+    content, filename, _content_type = await CandidateService(
+        session, storage=storage
+    ).download_resume(company_id=actor.company_id, candidate_id=candidate_id)
     return Response(
         content=content,
         media_type="application/octet-stream",

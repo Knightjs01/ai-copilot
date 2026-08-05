@@ -21,6 +21,9 @@ _ALLOWED_CONTENT_TYPES = {
     "application/msword": ".doc",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 }
+_EXTENSION_TO_CONTENT_TYPE = {
+    ext: content_type for content_type, ext in _ALLOWED_CONTENT_TYPES.items()
+}
 
 
 class CandidateService:
@@ -176,11 +179,39 @@ class CandidateService:
 
     async def download_resume(
         self, *, company_id: uuid.UUID, candidate_id: uuid.UUID
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes, str, str]:
+        """Returns (content, original_filename, content_type). content_type is inferred from the
+        stored key's extension — we don't persist it separately since it's fully determined by
+        the extension already recorded at upload time."""
+
         candidate = await self.get_candidate(company_id=company_id, candidate_id=candidate_id)
         if candidate.resume_file_key is None:
             raise ResumeNotFoundError()
 
         content = await self._storage.read(key=candidate.resume_file_key)
         filename = candidate.resume_original_filename or "resume"
-        return content, filename
+        extension = "." + candidate.resume_file_key.rsplit(".", 1)[-1]
+        content_type = _EXTENSION_TO_CONTENT_TYPE.get(extension, "application/octet-stream")
+        return content, filename, content_type
+
+    async def clear_resume(self, *, actor: User, candidate_id: uuid.UUID) -> Candidate:
+        """Deletes the stored resume file and clears its reference from the candidate record —
+        used by the privacy_gateway module once a resume has been sanitized, per CLAUDE.md's
+        rule that the original CV upload must not persist on the platform after processing."""
+
+        candidate = await self.get_candidate(company_id=actor.company_id, candidate_id=candidate_id)
+        if candidate.resume_file_key is None:
+            raise ResumeNotFoundError()
+
+        await self._storage.delete(key=candidate.resume_file_key)
+        candidate.resume_file_key = None
+        candidate.resume_original_filename = None
+
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="candidate.resume_cleared",
+            target_type="candidate",
+            target_id=candidate.id,
+        )
+        return candidate
