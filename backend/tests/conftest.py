@@ -36,6 +36,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
+from app.modules.candidates.storage import LocalFileStorage  # noqa: E402
 from app.modules.hiring_blueprint.llm_client import HiringBlueprintExtraction  # noqa: E402
 from app.modules.intelligence.llm_client import (  # noqa: E402
     CandidateProfileExtraction,
@@ -193,25 +194,29 @@ def fake_prescreen_assessment_llm_client() -> FakePrescreenAssessmentLLMClient:
     return FakePrescreenAssessmentLLMClient()
 
 
+@pytest.fixture
+def test_storage(tmp_path: Path) -> LocalFileStorage:
+    # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
+    # leaves orphaned resume files under backend/storage/ on the host indefinitely. Exposed as
+    # its own fixture (not just built inline in `client`) so tests can inspect the filesystem
+    # directly — e.g. project_deletion's tests asserting a resume file was actually removed.
+    return LocalFileStorage(root=str(tmp_path / "storage"))
+
+
 @pytest_asyncio.fixture
 async def client(
     sent_emails: CapturingEmailSender,
     fake_llm_client: FakeLLMClient,
     fake_hiring_blueprint_llm_client: FakeHiringBlueprintLLMClient,
     fake_prescreen_assessment_llm_client: FakePrescreenAssessmentLLMClient,
-    tmp_path: Path,
+    test_storage: LocalFileStorage,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
     from app.modules.auth.dependencies import get_email_sender
     from app.modules.candidates.dependencies import get_file_storage
-    from app.modules.candidates.storage import LocalFileStorage
     from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
     from app.modules.intelligence.dependencies import get_llm_client
     from app.modules.prescreen_assessment.dependencies import get_prescreen_assessment_llm_client
-
-    # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
-    # leaves orphaned resume files under backend/storage/ on the host indefinitely.
-    test_storage = LocalFileStorage(root=str(tmp_path / "storage"))
 
     app.dependency_overrides[get_email_sender] = lambda: sent_emails
     app.dependency_overrides[get_file_storage] = lambda: test_storage

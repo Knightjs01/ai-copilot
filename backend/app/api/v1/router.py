@@ -9,6 +9,7 @@ from app.modules.hiring_manager_alignment.api import router as hiring_manager_al
 from app.modules.intelligence.api import router as intelligence_router
 from app.modules.prescreen_assessment.api import router as prescreen_assessment_router
 from app.modules.privacy_gateway.api import router as privacy_gateway_router
+from app.modules.project_deletion.api import router as project_deletion_router
 from app.modules.projects.api import router as projects_router
 
 api_router = APIRouter(prefix="/api/v1")
@@ -22,6 +23,7 @@ api_router.include_router(intelligence_router)
 api_router.include_router(hiring_blueprint_router)
 api_router.include_router(hiring_manager_alignment_router)
 api_router.include_router(prescreen_assessment_router)
+api_router.include_router(project_deletion_router)
 
 # Everything past pre-screen (interview loops, scorecards, offer, decision) is handled in the
 # company's ATS (Greenhouse), not this platform — see README Roadmap.

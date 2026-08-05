@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.candidates.models import Candidate, CandidateSource, CandidateStatus
@@ -56,3 +56,14 @@ class CandidateRepository:
 
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def list_all_by_project_id(self, project_id: uuid.UUID) -> list[Candidate]:
+        """Unpaginated, includes soft-deleted rows — used only by project_deletion's hard-delete
+        orchestration, which needs every candidate under a project regardless of status."""
+        result = await self._session.execute(
+            select(Candidate).where(Candidate.project_id == project_id)
+        )
+        return list(result.scalars().all())
+
+    async def delete_by_project_id(self, project_id: uuid.UUID) -> None:
+        await self._session.execute(delete(Candidate).where(Candidate.project_id == project_id))

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.hiring_blueprint.models import HiringBlueprint
@@ -56,3 +56,8 @@ class HiringBlueprintRepository:
         self._session.add(blueprint)
         await self._session.flush()
         return blueprint
+
+    async def delete_by_project_id(self, project_id: uuid.UUID) -> None:
+        await self._session.execute(
+            delete(HiringBlueprint).where(HiringBlueprint.project_id == project_id)
+        )

@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 
+import { BurnProjectDialog } from "@/components/project/burn-project-dialog";
 import { CandidatesKanban } from "@/components/project/candidates-kanban";
 import { HiringBlueprintCard } from "@/components/project/hiring-blueprint-card";
 import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-alignment-card";
@@ -25,11 +26,16 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{project.title}</h1>
-        <Badge variant={PROJECT_STATUS_VARIANT[project.status]}>
-          {PROJECT_STATUS_LABEL[project.status]}
-        </Badge>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {project.title}
+          </h1>
+          <Badge variant={PROJECT_STATUS_VARIANT[project.status]}>
+            {PROJECT_STATUS_LABEL[project.status]}
+          </Badge>
+        </div>
+        <BurnProjectDialog projectId={project.id} projectTitle={project.title} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

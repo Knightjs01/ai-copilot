@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.intelligence.models import IntelligencePack
@@ -54,3 +54,10 @@ class IntelligencePackRepository:
         self._session.add(pack)
         await self._session.flush()
         return pack
+
+    async def delete_by_candidate_ids(self, candidate_ids: list[uuid.UUID]) -> None:
+        if not candidate_ids:
+            return
+        await self._session.execute(
+            delete(IntelligencePack).where(IntelligencePack.candidate_id.in_(candidate_ids))
+        )

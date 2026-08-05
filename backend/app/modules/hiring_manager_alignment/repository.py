@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.hiring_manager_alignment.models import HiringManagerAlignment
@@ -44,3 +44,8 @@ class HiringManagerAlignmentRepository:
         self._session.add(alignment)
         await self._session.flush()
         return alignment
+
+    async def delete_by_project_id(self, project_id: uuid.UUID) -> None:
+        await self._session.execute(
+            delete(HiringManagerAlignment).where(HiringManagerAlignment.project_id == project_id)
+        )

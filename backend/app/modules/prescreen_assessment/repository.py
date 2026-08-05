@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.prescreen_assessment.models import PrescreenAssessment
@@ -69,3 +69,10 @@ class PrescreenAssessmentRepository:
         assessment.handoff_recommendations = handoff_recommendations
         await self._session.flush()
         return assessment
+
+    async def delete_by_candidate_ids(self, candidate_ids: list[uuid.UUID]) -> None:
+        if not candidate_ids:
+            return
+        await self._session.execute(
+            delete(PrescreenAssessment).where(PrescreenAssessment.candidate_id.in_(candidate_ids))
+        )

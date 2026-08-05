@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.privacy_gateway.models import SanitizedProfile
@@ -48,3 +48,10 @@ class SanitizedProfileRepository:
         self._session.add(profile)
         await self._session.flush()
         return profile
+
+    async def delete_by_candidate_ids(self, candidate_ids: list[uuid.UUID]) -> None:
+        if not candidate_ids:
+            return
+        await self._session.execute(
+            delete(SanitizedProfile).where(SanitizedProfile.candidate_id.in_(candidate_ids))
+        )
