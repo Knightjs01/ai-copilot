@@ -20,7 +20,7 @@ Presentation (API routers) → Service (use cases) → Domain (business rules) �
 
 Every feature lives in its own module under `backend/app/modules/<name>/`, each with its own `api.py`, `service.py`, `domain.py`, `repository.py`, and `models.py`. Modules don't reach into each other's repositories directly — cross-module calls go through the other module's service layer. See `backend/app/modules/__init__.py` for the full layer contract.
 
-Every tenant (company) gets an isolated workspace. Every query against tenant-scoped tables must filter by company — no data leaks across tenants. This rule isn't implemented yet (Phase 1); it's called out here so it's never forgotten once real data models land.
+Every tenant (company) gets an isolated workspace. Every query against tenant-scoped tables must filter by company — no data leaks across tenants. This is enforced with Postgres row-level security (not just application-level filtering) as of Phase 1: see `backend/alembic/versions/0001_phase1_foundation.py` for the RLS policy and the three-role connection setup, and `backend/app/modules/auth/dependencies.py` for `get_tenant_db`.
 
 ## Running Locally
 
@@ -33,6 +33,8 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 docker compose up --build
 ```
+
+`backend/.env.example` documents (as inline comments) the `python -c ...` one-liners to generate `SECRET_KEY`, `ENCRYPTION_KEY`, `APP_DB_PASSWORD`, and `AUTH_DB_PASSWORD` — fill those in (and the matching passwords embedded in `DATABASE_URL`/`AUTH_DATABASE_URL`) before starting the stack for the first time. See that file's comments for why there are three separate DB roles.
 
 - Backend: http://localhost:8000/api/docs
 - Frontend: http://localhost:3000
@@ -65,7 +67,7 @@ poetry run pytest
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Foundation scaffold — repo structure, clean-architecture skeleton, Docker Compose, CI, health check | ✅ Done |
-| 1 | Foundation module — Companies, Users, RBAC, JWT auth (login/refresh/MFA/email verification/password reset), tenant isolation | Next |
-| 2+ | Hiring workflow modules — projects, blueprints, candidates, privacy gateway, interviews, scorecards, decision support, ATS integrations, analytics | Planned |
+| 1 | Foundation module — Companies, Users, RBAC, JWT auth (login/refresh/MFA/email verification/password reset), Postgres RLS tenant isolation | ✅ Done |
+| 2+ | Hiring workflow modules — projects, blueprints, candidates, privacy gateway, interviews, scorecards, decision support, ATS integrations, analytics | Next |
 
 Each future phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.
