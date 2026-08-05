@@ -1,8 +1,23 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+
+import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/lib/auth-context";
+
 export default function HomePage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (isLoading) return;
+    router.replace(user ? "/projects" : "/login");
+  }, [isLoading, user, router]);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-24">
-      <h1 className="text-4xl font-semibold tracking-tight">AI Interview Copilot</h1>
-      <p className="text-muted-foreground">Phase 0 scaffold — foundation module coming next.</p>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50">
+      <Spinner className="h-6 w-6 text-muted-foreground" />
     </main>
   );
 }

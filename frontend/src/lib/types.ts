@@ -1,0 +1,124 @@
+// Mirrors backend/app/modules/*/schemas.py Read/Create/Update models. Keep in sync by hand —
+// no codegen pipeline exists yet.
+
+export type ProjectStatus = "draft" | "open" | "on_hold" | "filled" | "cancelled";
+
+export type CandidateSource = "referral" | "job_board" | "agency" | "direct" | "other";
+
+export type CandidateStatus =
+  | "new"
+  | "screening"
+  | "interviewing"
+  | "offer"
+  | "hired"
+  | "rejected"
+  | "withdrawn";
+
+export type PrescreenOutcome = "advance" | "reject" | "hold";
+
+export interface MeResponse {
+  id: string;
+  email: string;
+  full_name: string;
+  company_id: string;
+  is_email_verified: boolean;
+  mfa_enabled: boolean;
+  roles: string[];
+  permissions: string[];
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+export interface MfaChallengeResponse {
+  mfa_required: true;
+  challenge_token: string;
+}
+
+export interface Project {
+  id: string;
+  company_id: string;
+  title: string;
+  department: string | null;
+  status: ProjectStatus;
+  hiring_manager_id: string | null;
+  created_by_id: string;
+  role_brief: string | null;
+}
+
+export interface Candidate {
+  id: string;
+  company_id: string;
+  project_id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  source: CandidateSource;
+  status: CandidateStatus;
+  resume_original_filename: string | null;
+  interview_scheduled_at: string | null;
+  prescreen_outcome: PrescreenOutcome | null;
+  prescreen_notes: string | null;
+  created_by_id: string;
+}
+
+export interface SanitizedProfile {
+  id: string;
+  candidate_id: string;
+  redacted_text: string;
+}
+
+export interface HiringBlueprint {
+  id: string;
+  project_id: string;
+  role_summary: string;
+  key_responsibilities: string[];
+  must_have_qualifications: string[];
+  nice_to_have_qualifications: string[];
+  evaluation_criteria: string[];
+  model_used: string;
+  generated_at: string;
+}
+
+export interface HiringManagerAlignment {
+  id: string;
+  project_id: string;
+  top_requirements: string[];
+  submitted_by_id: string;
+  submitted_at: string;
+}
+
+export interface EducationEntry {
+  institution: string;
+  degree: string;
+  field: string;
+}
+
+export interface IntelligencePack {
+  id: string;
+  candidate_id: string;
+  skills: string[];
+  experience_summary: string;
+  education: EducationEntry[];
+  narrative_summary: string;
+  model_used: string;
+  generated_at: string;
+}
+
+export type FitRating = "Strong Fit" | "Good Fit" | "Possible Fit" | "Weak Fit";
+
+export interface PrescreenAssessment {
+  id: string;
+  candidate_id: string;
+  fit_rating: FitRating;
+  fit_summary: string;
+  strengths: string[];
+  gaps: string[];
+  suggested_questions: string[];
+  areas_to_probe: string[];
+  handoff_recommendations: string[] | null;
+  model_used: string;
+  generated_at: string;
+}
