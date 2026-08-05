@@ -36,6 +36,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
+from app.modules.hiring_blueprint.llm_client import HiringBlueprintExtraction  # noqa: E402
 from app.modules.intelligence.llm_client import (  # noqa: E402
     CandidateProfileExtraction,
     EducationEntry,
@@ -121,14 +122,45 @@ def fake_llm_client() -> FakeLLMClient:
     return FakeLLMClient()
 
 
+class FakeHiringBlueprintLLMClient:
+    """Test double for app.modules.hiring_blueprint.llm_client.HiringBlueprintLLMClient —
+    returns a canned, deterministic blueprint instead of calling the real Claude API. Kept
+    separate from FakeLLMClient (intelligence's fake): different module, different domain,
+    different dependency override."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def generate_blueprint(
+        self, *, role_brief: str, title: str, department: str | None
+    ) -> HiringBlueprintExtraction:
+        self.calls.append(role_brief)
+        return HiringBlueprintExtraction(
+            role_summary="A fake but deterministic role summary for testing.",
+            key_responsibilities=["Build things", "Review code"],
+            must_have_qualifications=["Fake required skill"],
+            nice_to_have_qualifications=["Fake bonus skill"],
+            evaluation_criteria=["Technical depth", "Collaboration"],
+        )
+
+
+@pytest.fixture
+def fake_hiring_blueprint_llm_client() -> FakeHiringBlueprintLLMClient:
+    return FakeHiringBlueprintLLMClient()
+
+
 @pytest_asyncio.fixture
 async def client(
-    sent_emails: CapturingEmailSender, fake_llm_client: FakeLLMClient, tmp_path: Path
+    sent_emails: CapturingEmailSender,
+    fake_llm_client: FakeLLMClient,
+    fake_hiring_blueprint_llm_client: FakeHiringBlueprintLLMClient,
+    tmp_path: Path,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
     from app.modules.auth.dependencies import get_email_sender
     from app.modules.candidates.dependencies import get_file_storage
     from app.modules.candidates.storage import LocalFileStorage
+    from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
     from app.modules.intelligence.dependencies import get_llm_client
 
     # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
@@ -138,6 +170,9 @@ async def client(
     app.dependency_overrides[get_email_sender] = lambda: sent_emails
     app.dependency_overrides[get_file_storage] = lambda: test_storage
     app.dependency_overrides[get_llm_client] = lambda: fake_llm_client
+    app.dependency_overrides[get_hiring_blueprint_llm_client] = (
+        lambda: fake_hiring_blueprint_llm_client
+    )
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -146,3 +181,4 @@ async def client(
         app.dependency_overrides.pop(get_email_sender, None)
         app.dependency_overrides.pop(get_file_storage, None)
         app.dependency_overrides.pop(get_llm_client, None)
+        app.dependency_overrides.pop(get_hiring_blueprint_llm_client, None)

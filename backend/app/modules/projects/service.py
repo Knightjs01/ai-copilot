@@ -25,6 +25,7 @@ class ProjectService:
         department: str | None,
         status: ProjectStatus,
         hiring_manager_id: uuid.UUID | None,
+        role_brief: str | None = None,
     ) -> Project:
         await self._validate_hiring_manager(actor.company_id, hiring_manager_id)
 
@@ -35,6 +36,7 @@ class ProjectService:
             status=status,
             hiring_manager_id=hiring_manager_id,
             created_by_id=actor.id,
+            role_brief=role_brief,
         )
         await self._audit.record(
             company_id=actor.company_id,
@@ -66,6 +68,7 @@ class ProjectService:
         status: ProjectStatus | None,
         hiring_manager_id: uuid.UUID | None,
         hiring_manager_id_set: bool,
+        role_brief: str | None = None,
     ) -> Project:
         project = await self.get_project(company_id=actor.company_id, project_id=project_id)
 
@@ -75,6 +78,8 @@ class ProjectService:
             project.department = department
         if status is not None:
             project.status = status.value
+        if role_brief is not None:
+            project.role_brief = role_brief
         if hiring_manager_id_set:
             await self._validate_hiring_manager(actor.company_id, hiring_manager_id)
             project.hiring_manager_id = hiring_manager_id

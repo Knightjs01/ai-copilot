@@ -30,6 +30,7 @@ async def create_project(
         department=body.department,
         status=body.status,
         hiring_manager_id=body.hiring_manager_id,
+        role_brief=body.role_brief,
     )
     return ProjectRead.model_validate(project)
 
@@ -78,6 +79,7 @@ async def update_project(
         status=body.status,
         hiring_manager_id=body.hiring_manager_id,
         hiring_manager_id_set="hiring_manager_id" in fields_set,
+        role_brief=body.role_brief,
     )
     return ProjectRead.model_validate(project)
 

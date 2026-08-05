@@ -71,6 +71,8 @@ poetry run pytest
 | 2 | Projects module — create/list/view/update/archive hiring projects (workflow Stage 1) | ✅ Done |
 | 3 | Candidates module — candidate CRUD + resume upload/download attached to a project (workflow Stage 4) | ✅ Done |
 | 4 | Privacy Gateway — extract resume text, redact PII (rule-based, no LLM), delete the original CV (workflow Stage 5) | ✅ Done |
-| 5+ | Remaining hiring workflow modules — Candidate Intelligence Pack (first LLM integration), AI hiring blueprint, stakeholder alignment, interviews, scorecards, decision support, ATS integrations, analytics | Next |
+| 5 | Candidate Intelligence Pack — first LLM integration; structured skills/experience/education summary generated from redacted resume text only (workflow Stage 6) | ✅ Done |
+| 6 | AI Hiring Blueprint — role summary, responsibilities, must/nice-to-have qualifications, and evaluation criteria generated from a hiring manager's role brief | ✅ Done |
+| 7+ | Remaining hiring workflow modules — stakeholder alignment, interviews, scorecards, decision support, ATS integrations, analytics | Next |
 
 Each future phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.

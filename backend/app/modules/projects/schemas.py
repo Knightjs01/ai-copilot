@@ -10,6 +10,7 @@ class ProjectCreate(BaseModel):
     department: str | None = Field(default=None, max_length=255)
     hiring_manager_id: uuid.UUID | None = None
     status: ProjectStatus = ProjectStatus.DRAFT
+    role_brief: str | None = None
 
 
 class ProjectUpdate(BaseModel):
@@ -17,6 +18,7 @@ class ProjectUpdate(BaseModel):
     department: str | None = None
     hiring_manager_id: uuid.UUID | None = None
     status: ProjectStatus | None = None
+    role_brief: str | None = None
 
 
 class ProjectRead(BaseModel):
@@ -29,3 +31,4 @@ class ProjectRead(BaseModel):
     status: ProjectStatus
     hiring_manager_id: uuid.UUID | None
     created_by_id: uuid.UUID
+    role_brief: str | None

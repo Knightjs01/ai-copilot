@@ -19,6 +19,7 @@ class ProjectRepository:
         status: ProjectStatus,
         hiring_manager_id: uuid.UUID | None,
         created_by_id: uuid.UUID,
+        role_brief: str | None = None,
     ) -> Project:
         project = Project(
             company_id=company_id,
@@ -27,6 +28,7 @@ class ProjectRepository:
             status=status.value,
             hiring_manager_id=hiring_manager_id,
             created_by_id=created_by_id,
+            role_brief=role_brief,
         )
         self._session.add(project)
         await self._session.flush()
