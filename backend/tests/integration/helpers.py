@@ -29,3 +29,26 @@ def extract_token_from_email(sent_emails: CapturingEmailSender) -> str:
         if match:
             return match.group(1)
     raise AssertionError("No token found in sent emails")
+
+
+async def invite_and_accept(
+    client: AsyncClient,
+    *,
+    inviter_headers: dict,
+    email: str,
+    role: str,
+    sent_emails: CapturingEmailSender,
+) -> dict:
+    invite_response = await client.post(
+        "/api/v1/users/invite",
+        json={"email": email, "full_name": "Invited Person", "role": role},
+        headers=inviter_headers,
+    )
+    assert invite_response.status_code == 201, invite_response.text
+    token = extract_token_from_email(sent_emails)
+
+    accept_response = await client.post(
+        "/api/v1/users/accept-invite", json={"token": token, "password": "a secure password 123"}
+    )
+    assert accept_response.status_code == 200, accept_response.text
+    return accept_response.json()

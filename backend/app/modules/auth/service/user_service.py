@@ -169,6 +169,13 @@ class UserService:
             target_id=target.id,
         )
 
+    async def is_company_member(self, *, company_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """For other modules to validate a user reference (e.g. assigning a hiring manager)
+        belongs to the expected company, without exposing the raising internal lookup below."""
+
+        user = await self._users.get_by_id(user_id)
+        return user is not None and user.company_id == company_id and user.deleted_at is None
+
     async def _get_company_member(self, company_id: uuid.UUID, user_id: uuid.UUID) -> User:
         user = await self._users.get_by_id(user_id)
         if user is None or user.company_id != company_id or user.deleted_at is not None:

@@ -12,6 +12,7 @@ from app.db.base import Base
 from app.modules.audit import models as audit_models  # noqa: F401,E402
 from app.modules.auth import models as auth_models  # noqa: F401,E402
 from app.modules.companies import models as companies_models  # noqa: F401,E402
+from app.modules.projects import models as projects_models  # noqa: F401,E402
 
 config = context.config
 

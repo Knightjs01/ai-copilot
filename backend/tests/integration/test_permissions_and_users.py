@@ -1,30 +1,7 @@
 from httpx import AsyncClient
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, extract_token_from_email, signup
-
-
-async def _invite_and_accept(
-    client: AsyncClient,
-    *,
-    inviter_headers: dict,
-    email: str,
-    role: str,
-    sent_emails: CapturingEmailSender,
-) -> dict:
-    invite_response = await client.post(
-        "/api/v1/users/invite",
-        json={"email": email, "full_name": "Invited Person", "role": role},
-        headers=inviter_headers,
-    )
-    assert invite_response.status_code == 201, invite_response.text
-    token = extract_token_from_email(sent_emails)
-
-    accept_response = await client.post(
-        "/api/v1/users/accept-invite", json={"token": token, "password": "a secure password 123"}
-    )
-    assert accept_response.status_code == 200, accept_response.text
-    return accept_response.json()
+from tests.integration.helpers import auth_headers, invite_and_accept, signup
 
 
 async def test_member_cannot_invite_but_admin_can(
@@ -33,7 +10,7 @@ async def test_member_cannot_invite_but_admin_can(
     owner = await signup(client, email="owner@perms.com", company_name="Perms Co")
     owner_headers = auth_headers(owner["access_token"])
 
-    member = await _invite_and_accept(
+    member = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
         email="member@perms.com",
@@ -52,7 +29,7 @@ async def test_member_cannot_invite_but_admin_can(
     can_view = await client.get("/api/v1/users", headers=member_headers)
     assert can_view.status_code == 200
 
-    admin = await _invite_and_accept(
+    admin = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
         email="admin@perms.com",
@@ -96,7 +73,7 @@ async def test_removed_user_loses_access(
     owner = await signup(client, email="remover@perms.com", company_name="Remover Co")
     owner_headers = auth_headers(owner["access_token"])
 
-    member = await _invite_and_accept(
+    member = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
         email="removeme@perms.com",

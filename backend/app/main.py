@@ -8,8 +8,8 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.exceptions import AppError
 from app.core.rate_limit import limiter
-from app.modules.auth.exceptions import AuthError
 
 
 def create_app() -> FastAPI:
@@ -38,8 +38,8 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
     app.add_middleware(SlowAPIMiddleware)
 
-    @app.exception_handler(AuthError)
-    async def auth_error_handler(request: Request, exc: AuthError) -> JSONResponse:
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
     app.include_router(api_router)

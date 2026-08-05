@@ -1,11 +1,9 @@
-class AuthError(Exception):
+from app.core.exceptions import AppError
+
+
+class AuthError(AppError):
     status_code = 400
     detail = "Authentication error"
-
-    def __init__(self, detail: str | None = None) -> None:
-        super().__init__(detail or self.detail)
-        if detail:
-            self.detail = detail
 
 
 class EmailAlreadyRegisteredError(AuthError):
