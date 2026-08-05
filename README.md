@@ -68,6 +68,7 @@ poetry run pytest
 |---|---|---|
 | 0 | Foundation scaffold — repo structure, clean-architecture skeleton, Docker Compose, CI, health check | ✅ Done |
 | 1 | Foundation module — Companies, Users, RBAC, JWT auth (login/refresh/MFA/email verification/password reset), Postgres RLS tenant isolation | ✅ Done |
-| 2+ | Hiring workflow modules — projects, blueprints, candidates, privacy gateway, interviews, scorecards, decision support, ATS integrations, analytics | Next |
+| 2 | Projects module — create/list/view/update/archive hiring projects (workflow Stage 1) | ✅ Done |
+| 3+ | Remaining hiring workflow modules — AI hiring blueprint, stakeholder alignment, candidates, privacy gateway, interviews, scorecards, decision support, ATS integrations, analytics | Next |
 
 Each future phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.
