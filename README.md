@@ -70,6 +70,7 @@ poetry run pytest
 | 1 | Foundation module — Companies, Users, RBAC, JWT auth (login/refresh/MFA/email verification/password reset), Postgres RLS tenant isolation | ✅ Done |
 | 2 | Projects module — create/list/view/update/archive hiring projects (workflow Stage 1) | ✅ Done |
 | 3 | Candidates module — candidate CRUD + resume upload/download attached to a project (workflow Stage 4) | ✅ Done |
-| 4+ | Remaining hiring workflow modules — AI hiring blueprint, stakeholder alignment, privacy gateway, interviews, scorecards, decision support, ATS integrations, analytics | Next |
+| 4 | Privacy Gateway — extract resume text, redact PII (rule-based, no LLM), delete the original CV (workflow Stage 5) | ✅ Done |
+| 5+ | Remaining hiring workflow modules — Candidate Intelligence Pack (first LLM integration), AI hiring blueprint, stakeholder alignment, interviews, scorecards, decision support, ATS integrations, analytics | Next |
 
 Each future phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.
