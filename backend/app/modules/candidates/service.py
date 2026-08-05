@@ -11,7 +11,12 @@ from app.modules.candidates.exceptions import (
     InvalidResumeFileError,
     ResumeNotFoundError,
 )
-from app.modules.candidates.models import Candidate, CandidateSource, CandidateStatus
+from app.modules.candidates.models import (
+    Candidate,
+    CandidateSource,
+    CandidateStatus,
+    PrescreenOutcome,
+)
 from app.modules.candidates.repository import CandidateRepository
 from app.modules.candidates.storage import FileStorage, LocalFileStorage
 from app.modules.projects.service import ProjectService
@@ -102,6 +107,9 @@ class CandidateService:
         phone: str | None,
         source: CandidateSource | None,
         status: CandidateStatus | None,
+        interview_scheduled_at: datetime | None = None,
+        prescreen_outcome: PrescreenOutcome | None = None,
+        prescreen_notes: str | None = None,
     ) -> Candidate:
         candidate = await self.get_candidate(company_id=actor.company_id, candidate_id=candidate_id)
 
@@ -115,6 +123,12 @@ class CandidateService:
             candidate.source = source.value
         if status is not None:
             candidate.status = status.value
+        if interview_scheduled_at is not None:
+            candidate.interview_scheduled_at = interview_scheduled_at
+        if prescreen_outcome is not None:
+            candidate.prescreen_outcome = prescreen_outcome.value
+        if prescreen_notes is not None:
+            candidate.prescreen_notes = prescreen_notes
 
         await self._audit.record(
             company_id=actor.company_id,

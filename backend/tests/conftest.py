@@ -41,6 +41,7 @@ from app.modules.intelligence.llm_client import (  # noqa: E402
     CandidateProfileExtraction,
     EducationEntry,
 )
+from app.modules.prescreen_assessment.llm_client import AssessmentExtraction  # noqa: E402
 
 
 def _admin_maintenance_dsn() -> str:
@@ -149,11 +150,55 @@ def fake_hiring_blueprint_llm_client() -> FakeHiringBlueprintLLMClient:
     return FakeHiringBlueprintLLMClient()
 
 
+class FakePrescreenAssessmentLLMClient:
+    """Test double for app.modules.prescreen_assessment.llm_client.PrescreenAssessmentLLMClient
+    — returns canned, deterministic responses instead of calling the real Claude API. Kept
+    separate from the other two fakes: different module, different domain, different
+    dependency override."""
+
+    def __init__(self) -> None:
+        self.assessment_calls: list[list[str]] = []
+        self.handoff_calls: list[str] = []
+
+    async def generate_assessment(
+        self,
+        *,
+        role_summary: str,
+        must_have_qualifications: list[str],
+        evaluation_criteria: list[str],
+        top_requirements: list[str],
+        candidate_skills: list[str],
+        candidate_experience_summary: str,
+        candidate_education: list[dict[str, str]],
+    ) -> AssessmentExtraction:
+        self.assessment_calls.append(top_requirements)
+        return AssessmentExtraction(
+            fit_rating="Good Fit",
+            fit_summary="A fake but deterministic fit summary for testing.",
+            strengths=["Fake strength"],
+            gaps=["Fake gap"],
+            suggested_questions=["Fake suggested question"],
+            areas_to_probe=["Fake area to probe"],
+        )
+
+    async def generate_handoff_recommendations(
+        self, *, fit_summary: str, gaps: list[str], areas_to_probe: list[str], prescreen_notes: str
+    ) -> list[str]:
+        self.handoff_calls.append(prescreen_notes)
+        return ["Fake handoff recommendation"]
+
+
+@pytest.fixture
+def fake_prescreen_assessment_llm_client() -> FakePrescreenAssessmentLLMClient:
+    return FakePrescreenAssessmentLLMClient()
+
+
 @pytest_asyncio.fixture
 async def client(
     sent_emails: CapturingEmailSender,
     fake_llm_client: FakeLLMClient,
     fake_hiring_blueprint_llm_client: FakeHiringBlueprintLLMClient,
+    fake_prescreen_assessment_llm_client: FakePrescreenAssessmentLLMClient,
     tmp_path: Path,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
@@ -162,6 +207,7 @@ async def client(
     from app.modules.candidates.storage import LocalFileStorage
     from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
     from app.modules.intelligence.dependencies import get_llm_client
+    from app.modules.prescreen_assessment.dependencies import get_prescreen_assessment_llm_client
 
     # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
     # leaves orphaned resume files under backend/storage/ on the host indefinitely.
@@ -173,6 +219,9 @@ async def client(
     app.dependency_overrides[get_hiring_blueprint_llm_client] = (
         lambda: fake_hiring_blueprint_llm_client
     )
+    app.dependency_overrides[get_prescreen_assessment_llm_client] = (
+        lambda: fake_prescreen_assessment_llm_client
+    )
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -182,3 +231,4 @@ async def client(
         app.dependency_overrides.pop(get_file_storage, None)
         app.dependency_overrides.pop(get_llm_client, None)
         app.dependency_overrides.pop(get_hiring_blueprint_llm_client, None)
+        app.dependency_overrides.pop(get_prescreen_assessment_llm_client, None)

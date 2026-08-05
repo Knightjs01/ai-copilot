@@ -69,6 +69,27 @@ async def test_missing_tool_use_block_raises_llm_request_error() -> None:
         await client.generate_blueprint(role_brief="some brief", title="Some Role", department=None)
 
 
+async def test_rejects_string_instead_of_list_for_key_responsibilities() -> None:
+    # Regression test: observed in production, Claude occasionally returns a list-typed field
+    # as an XML-tagged string instead of a JSON array despite the forced tool-use schema
+    # declaring an array. Must fail loudly, not silently iterate character-by-character.
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=_fake_tool_response(
+            {
+                "role_summary": "A role.",
+                "key_responsibilities": "<item>Not a real list</item>",
+                "must_have_qualifications": [],
+                "nice_to_have_qualifications": [],
+                "evaluation_criteria": [],
+            }
+        )
+    )
+
+    with pytest.raises(LLMRequestError):
+        await client.generate_blueprint(role_brief="brief", title="Role", department=None)
+
+
 async def test_missing_fields_in_tool_response_default_to_empty() -> None:
     client = _make_client()
     client._client.messages.create = AsyncMock(  # type: ignore[method-assign]

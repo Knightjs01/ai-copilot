@@ -64,6 +64,8 @@ poetry run pytest
 
 ## Roadmap
 
+**Product scope**: this platform covers the Talent Acquisition team's **pre-screen phase only** — from opening a hiring project through the TA-run pre-screen call and its Advance/Reject/Hold outcome. It is used exclusively by the TA team; hiring managers and other stakeholders never log in. Once a candidate clears pre-screen, everything downstream (interview loops, panel scorecards, offer, decision) is managed in the company's ATS (Greenhouse) — not in this platform. This scopes down what earlier phase names implied ("interviews," "scorecards," "decision support" were provisional placeholders, not commitments).
+
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Foundation scaffold — repo structure, clean-architecture skeleton, Docker Compose, CI, health check | ✅ Done |
@@ -74,6 +76,7 @@ poetry run pytest
 | 5 | Candidate Intelligence Pack — first LLM integration; structured skills/experience/education summary generated from redacted resume text only (workflow Stage 6) | ✅ Done |
 | 6 | AI Hiring Blueprint — role summary, responsibilities, must/nice-to-have qualifications, and evaluation criteria generated from a hiring manager's role brief | ✅ Done |
 | 7 | JD Upload & Hiring Manager Alignment — drag-and-drop a JD to auto-populate role info, plus the TA team's structured record of the hiring manager's top 5 requirements (this platform is TA-team-only; hiring managers never log in) | ✅ Done |
-| 8+ | Remaining hiring workflow modules — interviews, scorecards, decision support, ATS integrations, analytics | Next |
+| 8 | Pre-Screen Interview Tracking & AI Fit Assessment — interview date field, AI fit score + call-prep guidance (fit rating, strengths/gaps, suggested questions, non-obvious areas to probe) comparing a candidate against the role's blueprint + hiring manager's top 5, pre-screen Advance/Reject/Hold outcome + notes, and a second AI pass generating handoff recommendations for the next round grounded in the actual call notes | ✅ Done |
+| 9+ | Anything further is scoped only if it's still needed inside the pre-screen boundary above — everything past pre-screen lives in Greenhouse | Not planned |
 
-Each future phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.
+Each phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.

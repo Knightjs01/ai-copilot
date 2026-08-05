@@ -93,6 +93,37 @@ async def test_member_can_view_but_not_create_update_delete_candidates(
     assert delete_denied.status_code == 403
 
 
+async def test_update_candidate_prescreen_fields(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@prescreenfields.com", company_name="Prescreen Fields")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+
+    create_response = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": project["id"], "full_name": "Prescreen Fields Candidate"},
+        headers=headers,
+    )
+    candidate_id = create_response.json()["id"]
+    assert create_response.json()["interview_scheduled_at"] is None
+    assert create_response.json()["prescreen_outcome"] is None
+    assert create_response.json()["prescreen_notes"] is None
+
+    update_response = await client.patch(
+        f"/api/v1/candidates/{candidate_id}",
+        json={
+            "interview_scheduled_at": "2026-09-01T14:00:00Z",
+            "prescreen_outcome": "advance",
+            "prescreen_notes": "Strong communicator, advancing to hiring manager round.",
+        },
+        headers=headers,
+    )
+    assert update_response.status_code == 200, update_response.text
+    updated = update_response.json()
+    assert updated["interview_scheduled_at"] == "2026-09-01T14:00:00Z"
+    assert updated["prescreen_outcome"] == "advance"
+    assert updated["prescreen_notes"] == "Strong communicator, advancing to hiring manager round."
+
+
 async def test_project_id_must_belong_to_same_company(client: AsyncClient) -> None:
     owner_a = await signup(client, email="owner@companya2.com", company_name="Company A2")
     headers_a = auth_headers(owner_a["access_token"])

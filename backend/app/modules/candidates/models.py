@@ -1,7 +1,8 @@
 import enum
 import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +28,12 @@ class CandidateStatus(str, enum.Enum):
     WITHDRAWN = "withdrawn"
 
 
+class PrescreenOutcome(str, enum.Enum):
+    ADVANCE = "advance"
+    REJECT = "reject"
+    HOLD = "hold"
+
+
 class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "candidates"
 
@@ -43,4 +50,9 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     status: Mapped[str] = mapped_column(String(20), default=CandidateStatus.NEW.value)
     resume_file_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     resume_original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    interview_scheduled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    prescreen_outcome: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    prescreen_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))

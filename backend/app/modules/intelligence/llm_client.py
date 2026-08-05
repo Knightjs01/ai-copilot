@@ -12,6 +12,18 @@ class LLMRequestError(Exception):
     module doesn't know about HTTP), the service layer wraps this into one."""
 
 
+def _as_list(value: Any, *, field_name: str) -> list[Any]:
+    # Observed in production: despite the forced tool-use JSON schema declaring an array,
+    # Claude occasionally returns a list-typed field as a single XML-tagged string instead
+    # (e.g. "<item>...</item>\n<item>...</item>"). Iterating that directly would silently
+    # produce one "entry" per character rather than per list item — fail loudly instead.
+    if not isinstance(value, list):
+        raise LLMRequestError(
+            f"Expected Claude's {field_name!r} field to be a list, got {type(value).__name__}"
+        )
+    return value
+
+
 @dataclass
 class EducationEntry:
     institution: str
@@ -130,10 +142,12 @@ class AnthropicLLMClient:
                     degree=str(entry.get("degree", "")),
                     field=str(entry.get("field", "")),
                 )
-                for entry in data.get("education", [])
+                for entry in _as_list(data.get("education", []), field_name="education")
             ]
             return CandidateProfileExtraction(
-                skills=[str(skill) for skill in data.get("skills", [])],
+                skills=[
+                    str(skill) for skill in _as_list(data.get("skills", []), field_name="skills")
+                ],
                 experience_summary=str(data.get("experience_summary", "")),
                 education=education,
                 narrative_summary=str(data.get("narrative_summary", "")),

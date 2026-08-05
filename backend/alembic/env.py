@@ -18,6 +18,9 @@ from app.modules.hiring_manager_alignment import (  # noqa: F401,E402
     models as hiring_manager_alignment_models,
 )
 from app.modules.intelligence import models as intelligence_models  # noqa: F401,E402
+from app.modules.prescreen_assessment import (  # noqa: F401,E402
+    models as prescreen_assessment_models,
+)
 from app.modules.privacy_gateway import models as privacy_gateway_models  # noqa: F401,E402
 from app.modules.projects import models as projects_models  # noqa: F401,E402
 

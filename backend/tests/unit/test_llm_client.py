@@ -60,6 +60,26 @@ async def test_missing_tool_use_block_raises_llm_request_error() -> None:
         await client.extract_candidate_profile(redacted_text="some text")
 
 
+async def test_rejects_string_instead_of_list_for_skills() -> None:
+    # Regression test: observed in production, Claude occasionally returns a list-typed field
+    # as an XML-tagged string instead of a JSON array despite the forced tool-use schema
+    # declaring an array. Must fail loudly, not silently iterate character-by-character.
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=_fake_tool_response(
+            {
+                "skills": "<item>Not a real list</item>",
+                "experience_summary": "Backend engineer.",
+                "education": [],
+                "narrative_summary": "A summary.",
+            }
+        )
+    )
+
+    with pytest.raises(LLMRequestError):
+        await client.extract_candidate_profile(redacted_text="some text")
+
+
 async def test_missing_fields_in_tool_response_default_to_empty() -> None:
     client = _make_client()
     client._client.messages.create = AsyncMock(  # type: ignore[method-assign]

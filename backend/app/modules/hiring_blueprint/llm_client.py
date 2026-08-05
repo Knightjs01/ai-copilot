@@ -12,6 +12,18 @@ class LLMRequestError(Exception):
     module doesn't know about HTTP), the service layer wraps this into one."""
 
 
+def _as_list(value: Any, *, field_name: str) -> list[Any]:
+    # Observed in production: despite the forced tool-use JSON schema declaring an array,
+    # Claude occasionally returns a list-typed field as a single XML-tagged string instead
+    # (e.g. "<item>...</item>\n<item>...</item>"). Iterating that directly would silently
+    # produce one "entry" per character rather than per list item — fail loudly instead.
+    if not isinstance(value, list):
+        raise LLMRequestError(
+            f"Expected Claude's {field_name!r} field to be a list, got {type(value).__name__}"
+        )
+    return value
+
+
 @dataclass
 class HiringBlueprintExtraction:
     role_summary: str = ""
@@ -123,12 +135,32 @@ class AnthropicHiringBlueprintLLMClient:
             data = tool_use_block.input
             return HiringBlueprintExtraction(
                 role_summary=str(data.get("role_summary", "")),
-                key_responsibilities=[str(v) for v in data.get("key_responsibilities", [])],
-                must_have_qualifications=[str(v) for v in data.get("must_have_qualifications", [])],
-                nice_to_have_qualifications=[
-                    str(v) for v in data.get("nice_to_have_qualifications", [])
+                key_responsibilities=[
+                    str(v)
+                    for v in _as_list(
+                        data.get("key_responsibilities", []), field_name="key_responsibilities"
+                    )
                 ],
-                evaluation_criteria=[str(v) for v in data.get("evaluation_criteria", [])],
+                must_have_qualifications=[
+                    str(v)
+                    for v in _as_list(
+                        data.get("must_have_qualifications", []),
+                        field_name="must_have_qualifications",
+                    )
+                ],
+                nice_to_have_qualifications=[
+                    str(v)
+                    for v in _as_list(
+                        data.get("nice_to_have_qualifications", []),
+                        field_name="nice_to_have_qualifications",
+                    )
+                ],
+                evaluation_criteria=[
+                    str(v)
+                    for v in _as_list(
+                        data.get("evaluation_criteria", []), field_name="evaluation_criteria"
+                    )
+                ],
             )
         except (KeyError, TypeError, AttributeError) as exc:
             raise LLMRequestError(f"Malformed structured response from Claude: {exc}") from exc

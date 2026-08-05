@@ -1,8 +1,9 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.modules.candidates.models import CandidateSource, CandidateStatus
+from app.modules.candidates.models import CandidateSource, CandidateStatus, PrescreenOutcome
 
 
 class CandidateCreate(BaseModel):
@@ -20,6 +21,9 @@ class CandidateUpdate(BaseModel):
     phone: str | None = Field(default=None, max_length=50)
     source: CandidateSource | None = None
     status: CandidateStatus | None = None
+    interview_scheduled_at: datetime | None = None
+    prescreen_outcome: PrescreenOutcome | None = None
+    prescreen_notes: str | None = None
 
 
 class CandidateRead(BaseModel):
@@ -34,4 +38,7 @@ class CandidateRead(BaseModel):
     source: CandidateSource
     status: CandidateStatus
     resume_original_filename: str | None
+    interview_scheduled_at: datetime | None
+    prescreen_outcome: PrescreenOutcome | None
+    prescreen_notes: str | None
     created_by_id: uuid.UUID
