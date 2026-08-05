@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     storage_dir: str = "/app/storage"
     max_resume_size_mb: int = 10
 
+    # No default on purpose, same as secret_key — must be set for real use. See
+    # app/modules/intelligence/llm_client.py. Never populated by app code; the user sets it
+    # directly in backend/.env.
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-5"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

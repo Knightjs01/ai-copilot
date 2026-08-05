@@ -36,6 +36,11 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
+from app.modules.intelligence.llm_client import (  # noqa: E402
+    CandidateProfileExtraction,
+    EducationEntry,
+)
+
 
 def _admin_maintenance_dsn() -> str:
     # asyncpg's native connect() wants a plain postgresql:// DSN, not SQLAlchemy's +asyncpg one,
@@ -92,14 +97,39 @@ def sent_emails() -> CapturingEmailSender:
     return CapturingEmailSender()
 
 
+class FakeLLMClient:
+    """Test double for app.modules.intelligence.llm_client.LLMClient — returns a canned,
+    deterministic extraction instead of calling the real Claude API. No automated test may ever
+    hit the real API: it costs money, is slow/flaky over the network, and would require
+    ANTHROPIC_API_KEY to be set just to run the test suite at all."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def extract_candidate_profile(self, *, redacted_text: str) -> CandidateProfileExtraction:
+        self.calls.append(redacted_text)
+        return CandidateProfileExtraction(
+            skills=["Python", "Distributed Systems"],
+            experience_summary="Backend engineer with several years of experience.",
+            education=[EducationEntry(institution="Fake University", degree="BSc", field="CS")],
+            narrative_summary="A fake but deterministic summary for testing.",
+        )
+
+
+@pytest.fixture
+def fake_llm_client() -> FakeLLMClient:
+    return FakeLLMClient()
+
+
 @pytest_asyncio.fixture
 async def client(
-    sent_emails: CapturingEmailSender, tmp_path: Path
+    sent_emails: CapturingEmailSender, fake_llm_client: FakeLLMClient, tmp_path: Path
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
     from app.modules.auth.dependencies import get_email_sender
     from app.modules.candidates.dependencies import get_file_storage
     from app.modules.candidates.storage import LocalFileStorage
+    from app.modules.intelligence.dependencies import get_llm_client
 
     # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
     # leaves orphaned resume files under backend/storage/ on the host indefinitely.
@@ -107,6 +137,7 @@ async def client(
 
     app.dependency_overrides[get_email_sender] = lambda: sent_emails
     app.dependency_overrides[get_file_storage] = lambda: test_storage
+    app.dependency_overrides[get_llm_client] = lambda: fake_llm_client
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -114,3 +145,4 @@ async def client(
     finally:
         app.dependency_overrides.pop(get_email_sender, None)
         app.dependency_overrides.pop(get_file_storage, None)
+        app.dependency_overrides.pop(get_llm_client, None)
