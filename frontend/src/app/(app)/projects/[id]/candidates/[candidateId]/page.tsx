@@ -10,10 +10,12 @@ import { HandoffRecommendationsCard } from "@/components/candidate/handoff-recom
 import { IntelligencePackCard } from "@/components/candidate/intelligence-pack-card";
 import { PrescreenAssessmentCard } from "@/components/candidate/prescreen-assessment-card";
 import { PrescreenOutcomeCard } from "@/components/candidate/prescreen-outcome-card";
+import { RevealIdentityDialog } from "@/components/candidate/reveal-identity-dialog";
 import { ResumeCard } from "@/components/candidate/resume-card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs } from "@/components/ui/tabs";
+import { useAuth } from "@/lib/auth-context";
 import { useCandidate } from "@/lib/queries/candidates";
 import { CANDIDATE_STATUS_LABEL } from "@/lib/status-display";
 
@@ -28,6 +30,7 @@ export default function CandidateDetailPage() {
   const params = useParams<{ id: string; candidateId: string }>();
   const { data: candidate, isLoading } = useCandidate(params.candidateId);
   const [activeTab, setActiveTab] = React.useState<CandidateTab>("overview");
+  const { hasPermission } = useAuth();
 
   if (isLoading || !candidate) {
     return (
@@ -49,13 +52,14 @@ export default function CandidateDetailPage() {
         </Link>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {candidate.full_name}
+            {candidate.callsign}
           </h1>
           <Badge variant="neutral">{CANDIDATE_STATUS_LABEL[candidate.status]}</Badge>
+          {hasPermission("identity_vault.reveal") && (
+            <RevealIdentityDialog candidateId={candidate.id} />
+          )}
         </div>
-        {candidate.email && (
-          <p className="mt-1 text-sm text-muted-foreground">{candidate.email}</p>
-        )}
+        <p className="mt-1 text-sm text-muted-foreground">{candidate.candidate_ref}</p>
       </div>
 
       <Tabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />

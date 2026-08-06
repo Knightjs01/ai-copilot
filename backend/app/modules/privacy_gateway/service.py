@@ -7,10 +7,16 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.candidates.service import CandidateService
 from app.modules.candidates.storage import FileStorage
+from app.modules.identity_vault.service import IdentityVaultService
 from app.modules.privacy_gateway.exceptions import SanitizedProfileNotFoundError
 from app.modules.privacy_gateway.extraction import extract_text
 from app.modules.privacy_gateway.models import SanitizedProfile
-from app.modules.privacy_gateway.redaction import redact_text
+from app.modules.privacy_gateway.redaction import (
+    EMAIL_PATTERN,
+    LINKEDIN_PATTERN,
+    PHONE_PATTERN,
+    redact_text,
+)
 from app.modules.privacy_gateway.repository import SanitizedProfileRepository
 
 _CONTENT_TYPE_TO_LABEL = {
@@ -27,6 +33,7 @@ class PrivacyGatewayService:
         # caller (e.g. tests, via get_file_storage) injected — this was a real bug caught by the
         # integration tests (they hit the real /app/storage instead of the per-test tmp_path).
         self._candidates = CandidateService(session, storage=storage)
+        self._vault = IdentityVaultService(session)
         self._audit = AuditService(session)
 
     async def sanitize_candidate(self, *, actor: User, candidate_id: uuid.UUID) -> SanitizedProfile:
@@ -40,7 +47,22 @@ class PrivacyGatewayService:
         )
 
         text = extract_text(content=content, content_type=content_type)
-        redacted_text, counts = redact_text(text=text, known_full_name=candidate.full_name)
+
+        # Extraction happens on the RAW text, before redact_text() below destroys the matches —
+        # best-effort fill of the Identity Vault's email/phone/linkedin_url fields. Only fills
+        # fields still NULL; never overwrites a value an Owner already entered manually.
+        email_match = EMAIL_PATTERN.search(text)
+        phone_match = PHONE_PATTERN.search(text)
+        linkedin_match = LINKEDIN_PATTERN.search(text)
+        await self._vault.populate_from_sanitize(
+            candidate_id=candidate_id,
+            email=email_match.group(0) if email_match else None,
+            phone=phone_match.group(0) if phone_match else None,
+            linkedin_url=linkedin_match.group(0) if linkedin_match else None,
+        )
+
+        known_full_name = await self._vault.get_decrypted_full_name(candidate_id)
+        redacted_text, counts = redact_text(text=text, known_full_name=known_full_name)
 
         profile = await self._repository.upsert(
             company_id=actor.company_id,

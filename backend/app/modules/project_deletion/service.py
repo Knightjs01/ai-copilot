@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,12 +9,29 @@ from app.modules.candidates.repository import CandidateRepository
 from app.modules.candidates.storage import FileStorage
 from app.modules.hiring_blueprint.repository import HiringBlueprintRepository
 from app.modules.hiring_manager_alignment.repository import HiringManagerAlignmentRepository
+from app.modules.identity_vault.repository import (
+    IdentityRevealEventRepository,
+    IdentityVaultRepository,
+)
 from app.modules.intelligence.repository import IntelligencePackRepository
 from app.modules.prescreen_assessment.repository import PrescreenAssessmentRepository
 from app.modules.privacy_gateway.repository import SanitizedProfileRepository
+from app.modules.project_deletion.schemas import PurgeCertificate
 from app.modules.projects.exceptions import ProjectNotFoundError
 from app.modules.projects.models import Project
 from app.modules.projects.repository import ProjectRepository
+
+_DATA_CATEGORIES_DESTROYED = [
+    "Uploaded resumes",
+    "Sanitized/anonymised CVs",
+    "AI candidate intelligence packs",
+    "Pre-screen assessments",
+    "Candidate identity vault records",
+    "Identity reveal audit trail",
+    "Candidate records",
+    "Hiring blueprint",
+    "Hiring manager alignment",
+]
 
 
 class ProjectDeletionService:
@@ -31,10 +49,12 @@ class ProjectDeletionService:
         self._prescreen_assessment_repo = PrescreenAssessmentRepository(session)
         self._hiring_blueprint_repo = HiringBlueprintRepository(session)
         self._hiring_manager_alignment_repo = HiringManagerAlignmentRepository(session)
+        self._vault_repo = IdentityVaultRepository(session)
+        self._reveal_events_repo = IdentityRevealEventRepository(session)
         self._audit = AuditService(session)
         self._storage = storage
 
-    async def burn_project(self, *, actor: User, project_id: uuid.UUID) -> int:
+    async def burn_project(self, *, actor: User, project_id: uuid.UUID) -> PurgeCertificate:
         project = await self._get_project_tolerating_soft_delete(
             company_id=actor.company_id, project_id=project_id
         )
@@ -53,6 +73,9 @@ class ProjectDeletionService:
         await self._sanitized_profile_repo.delete_by_candidate_ids(candidate_ids)
         await self._intelligence_pack_repo.delete_by_candidate_ids(candidate_ids)
         await self._prescreen_assessment_repo.delete_by_candidate_ids(candidate_ids)
+        # Vault records + reveal events before candidates — both FK to candidate_id.
+        await self._vault_repo.delete_by_candidate_ids(candidate_ids)
+        await self._reveal_events_repo.delete_by_candidate_ids(candidate_ids)
         await self._candidate_repo.delete_by_project_id(project_id)
 
         await self._hiring_blueprint_repo.delete_by_project_id(project_id)
@@ -70,9 +93,16 @@ class ProjectDeletionService:
             extra_data={"title": project.title, "candidate_count": len(candidates)},
         )
 
+        certificate = PurgeCertificate(
+            project_title=project.title,
+            candidate_count=len(candidates),
+            data_categories_destroyed=_DATA_CATEGORIES_DESTROYED,
+            purged_at=datetime.now(timezone.utc),
+        )
+
         await self._project_repo.delete_by_id(project_id)
 
-        return len(candidates)
+        return certificate
 
     async def _get_project_tolerating_soft_delete(
         self, *, company_id: uuid.UUID, project_id: uuid.UUID

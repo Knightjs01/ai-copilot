@@ -4,9 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, FileText } from "lucide-react";
 
 import { PhantomIcon } from "@/components/phantom-icon";
+import { Button } from "@/components/ui/button";
+import type { PurgeCertificate } from "@/lib/types";
 
 interface BurnOverlayProps {
   phase: "burning" | "success";
+  certificate?: PurgeCertificate | null;
+  onContinue?: () => void;
 }
 
 // Files fly in from scattered positions around the phantom and get "eaten" — shrinking and
@@ -20,7 +24,18 @@ const FILES = [
   { x: 0, y: 110, delay: 1.35 },
 ];
 
-export function BurnOverlay({ phase }: BurnOverlayProps) {
+function handleCopyCertificate(certificate: PurgeCertificate) {
+  const text = [
+    `Purge Certificate — ${certificate.project_title}`,
+    `Purged at: ${new Date(certificate.purged_at).toLocaleString()}`,
+    `Candidates purged: ${certificate.candidate_count}`,
+    "Data categories destroyed:",
+    ...certificate.data_categories_destroyed.map((c) => `  - ${c}`),
+  ].join("\n");
+  void navigator.clipboard.writeText(text);
+}
+
+export function BurnOverlay({ phase, certificate, onContinue }: BurnOverlayProps) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm"
@@ -59,12 +74,46 @@ export function BurnOverlay({ phase }: BurnOverlayProps) {
             initial={{ opacity: 0, scale: 0.92, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.35, ease: "easeOut" }}
-            className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-white px-10 py-8 shadow-xl shadow-slate-900/10"
+            className="flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border border-border bg-white px-10 py-8 shadow-xl shadow-slate-900/10"
           >
             <PhantomIcon className="h-14" />
             <div className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
               <Check className="h-5 w-5 text-brand" />
               Project successfully purged
+            </div>
+            {certificate && (
+              <div className="flex w-full flex-col gap-2 rounded-xl bg-slate-50 px-4 py-3 text-left">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Purge certificate
+                </p>
+                <p className="text-sm text-foreground">
+                  {certificate.candidate_count} candidate
+                  {certificate.candidate_count === 1 ? "" : "s"} and all associated data
+                  permanently destroyed:
+                </p>
+                <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                  {certificate.data_categories_destroyed.map((category) => (
+                    <li key={category}>• {category}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="flex gap-2">
+              {certificate && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleCopyCertificate(certificate)}
+                >
+                  Copy certificate
+                </Button>
+              )}
+              {onContinue && (
+                <Button type="button" variant="brand" size="sm" onClick={onContinue}>
+                  Continue
+                </Button>
+              )}
             </div>
           </motion.div>
         )}

@@ -67,13 +67,15 @@ export interface Project {
   role_brief: string | null;
 }
 
+// Real name/email/phone/location/current_employer/current_title never appear on this type — they
+// live exclusively in the Identity Vault (see CandidateIdentitySnapshot below), revealed only via
+// the Owner-gated reveal flow. Every other view of a candidate uses callsign/candidate_ref.
 export interface Candidate {
   id: string;
   company_id: string;
   project_id: string;
-  full_name: string;
-  email: string | null;
-  phone: string | null;
+  callsign: string;
+  candidate_ref: string;
   source: CandidateSource;
   status: CandidateStatus;
   resume_original_filename: string | null;
@@ -82,9 +84,6 @@ export interface Candidate {
   prescreen_notes: string | null;
   expected_salary: number | null;
   agency_name: string | null;
-  current_employer: string | null;
-  current_title: string | null;
-  location: string | null;
   notice_period: NoticePeriod | null;
   created_by_id: string;
 }
@@ -104,9 +103,7 @@ export interface ProjectAnalytics {
   source_breakdown: Record<string, number>;
   agency_breakdown: Record<string, number>;
   salary_stats: SalaryStats;
-  location_breakdown: Record<string, number>;
   notice_period_breakdown: Record<string, number>;
-  current_employer_breakdown: Record<string, number>;
 }
 
 export interface SanitizedProfile {
@@ -167,4 +164,63 @@ export interface PrescreenAssessment {
   handoff_recommendations: string[] | null;
   model_used: string;
   generated_at: string;
+}
+
+export type RevealReason =
+  | "Hiring Manager Interview"
+  | "Offer Preparation"
+  | "Background Checks"
+  | "Client Submission"
+  | "Hiring Manager Review"
+  | "Other";
+
+// The decrypted Reveal Identity response — the only place vault plaintext ever appears in the
+// frontend. Never persisted to any query cache beyond the reveal dialog's own local state.
+export interface CandidateIdentitySnapshot {
+  reveal_event_id: string;
+  callsign: string;
+  candidate_ref: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  current_employer: string | null;
+  current_title: string | null;
+  linkedin_url: string | null;
+  expected_salary: number | null;
+  original_cv_status: string;
+}
+
+export interface VaultListItem {
+  candidate_id: string;
+  callsign: string;
+  candidate_ref: string;
+  status: CandidateStatus;
+  vault_populated: boolean;
+}
+
+export interface RevealEventRead {
+  id: string;
+  candidate_id: string;
+  callsign: string;
+  candidate_ref: string;
+  actor_email: string;
+  reason: string;
+  revealed_at: string;
+  closed_at: string | null;
+  duration_seconds: number | null;
+}
+
+export interface VaultDashboardStats {
+  total_candidates: number;
+  active_vault_records: number;
+  reveal_event_count: number;
+  recent_reveals: RevealEventRead[];
+}
+
+export interface PurgeCertificate {
+  project_title: string;
+  candidate_count: number;
+  data_categories_destroyed: string[];
+  purged_at: string;
 }

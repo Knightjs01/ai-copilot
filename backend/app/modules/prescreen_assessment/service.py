@@ -11,6 +11,7 @@ from app.modules.hiring_blueprint.exceptions import HiringBlueprintNotFoundError
 from app.modules.hiring_blueprint.service import HiringBlueprintService
 from app.modules.hiring_manager_alignment.exceptions import HiringManagerAlignmentNotFoundError
 from app.modules.hiring_manager_alignment.service import HiringManagerAlignmentService
+from app.modules.identity_vault.service import IdentityVaultService
 from app.modules.intelligence.service import IntelligenceService
 from app.modules.prescreen_assessment.exceptions import (
     MissingHiringBlueprintError,
@@ -25,6 +26,7 @@ from app.modules.prescreen_assessment.llm_client import (
 )
 from app.modules.prescreen_assessment.models import PrescreenAssessment
 from app.modules.prescreen_assessment.repository import PrescreenAssessmentRepository
+from app.modules.privacy_gateway.redaction import redact_text
 
 
 class PrescreenAssessmentService:
@@ -40,6 +42,7 @@ class PrescreenAssessmentService:
         self._intelligence = IntelligenceService(session)
         self._blueprints = HiringBlueprintService(session)
         self._alignments = HiringManagerAlignmentService(session)
+        self._vault = IdentityVaultService(session)
         self._audit = AuditService(session)
         self._llm_client = llm_client
 
@@ -125,12 +128,20 @@ class PrescreenAssessmentService:
             company_id=actor.company_id, candidate_id=candidate_id
         )
 
+        # prescreen_notes is recruiter free text and bypasses the privacy gateway entirely — it's
+        # the one place a real name could otherwise leak into an LLM prompt, so it gets the same
+        # name-redaction pass here, using the vault's decrypted name as the known name to strip.
+        known_full_name = await self._vault.get_decrypted_full_name(candidate_id)
+        redacted_notes, _ = redact_text(
+            text=candidate.prescreen_notes, known_full_name=known_full_name
+        )
+
         try:
             recommendations = await self._llm_client.generate_handoff_recommendations(
                 fit_summary=assessment.fit_summary,
                 gaps=assessment.gaps,
                 areas_to_probe=assessment.areas_to_probe,
-                prescreen_notes=candidate.prescreen_notes,
+                prescreen_notes=redacted_notes,
             )
         except LLMRequestError as exc:
             raise PrescreenAssessmentGenerationError(str(exc)) from exc

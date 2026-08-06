@@ -3,9 +3,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import type { PurgeCertificate } from "@/lib/types";
 
 interface BurnProjectResponse {
   candidate_count: number;
+  certificate: PurgeCertificate;
 }
 
 export function useBurnProject(projectId: string) {

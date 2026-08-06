@@ -168,10 +168,21 @@ async def test_burn_project_purges_everything(
         )
         == 1
     )
+    assert (
+        await _table_row_count(
+            "candidate_identity_vaults", "candidate_id", candidate_a_id, company_id=company_id
+        )
+        == 1
+    )
 
     burn_response = await client.post(f"/api/v1/projects/{project_id}/burn", headers=headers)
     assert burn_response.status_code == 200, burn_response.text
-    assert burn_response.json()["candidate_count"] == 2
+    body = burn_response.json()
+    assert body["candidate_count"] == 2
+    certificate = body["certificate"]
+    assert certificate["candidate_count"] == 2
+    assert "Candidate identity vault records" in certificate["data_categories_destroyed"]
+    assert "Identity reveal audit trail" in certificate["data_categories_destroyed"]
 
     # Nothing survives the burn.
     assert await _table_row_count("projects", "id", project_id, company_id=company_id) == 0
@@ -206,6 +217,12 @@ async def test_burn_project_purges_everything(
         )
         == 0
     )
+    assert (
+        await _table_row_count(
+            "candidate_identity_vaults", "candidate_id", candidate_a_id, company_id=company_id
+        )
+        == 0
+    )
 
     # The resume file itself is gone from storage, not just dereferenced.
     try:
@@ -230,7 +247,11 @@ async def test_burn_project_audit_entry_survives(client: AsyncClient) -> None:
 
     burn_response = await client.post(f"/api/v1/projects/{project_id}/burn", headers=headers)
     assert burn_response.status_code == 200
-    assert burn_response.json()["candidate_count"] == 0
+    body = burn_response.json()
+    assert body["candidate_count"] == 0
+    assert body["certificate"]["project_title"] == "Role To Burn"
+    assert body["certificate"]["candidate_count"] == 0
+    assert body["certificate"]["purged_at"]
 
     async with engine.connect() as conn:
         result = await conn.execute(

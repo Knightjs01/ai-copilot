@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.candidates.models import Candidate, CandidateSource, CandidateStatus
@@ -15,9 +15,8 @@ class CandidateRepository:
         *,
         company_id: uuid.UUID,
         project_id: uuid.UUID,
-        full_name: str,
-        email: str | None,
-        phone: str | None,
+        callsign: str,
+        candidate_ref: str,
         source: CandidateSource,
         status: CandidateStatus,
         created_by_id: uuid.UUID,
@@ -25,9 +24,8 @@ class CandidateRepository:
         candidate = Candidate(
             company_id=company_id,
             project_id=project_id,
-            full_name=full_name,
-            email=email,
-            phone=phone,
+            callsign=callsign,
+            candidate_ref=candidate_ref,
             source=source.value,
             status=status.value,
             created_by_id=created_by_id,
@@ -35,6 +33,14 @@ class CandidateRepository:
         self._session.add(candidate)
         await self._session.flush()
         return candidate
+
+    async def callsign_exists_in_project(self, project_id: uuid.UUID, callsign: str) -> bool:
+        result = await self._session.execute(
+            select(
+                exists().where(Candidate.project_id == project_id, Candidate.callsign == callsign)
+            )
+        )
+        return bool(result.scalar_one())
 
     async def get_by_id(self, candidate_id: uuid.UUID) -> Candidate | None:
         return await self._session.get(Candidate, candidate_id)

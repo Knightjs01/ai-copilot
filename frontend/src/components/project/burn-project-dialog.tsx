@@ -16,11 +16,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useBurnProject } from "@/lib/queries/project-deletion";
+import type { PurgeCertificate } from "@/lib/types";
 
 // Minimum time the purge animation plays before the API result is allowed to flip it to the
 // success state — an instant response shouldn't cut the animation short.
 const MIN_ANIMATION_MS = 1400;
-const SUCCESS_HOLD_MS = 1600;
 
 type Phase = "idle" | "burning" | "success";
 
@@ -35,6 +35,7 @@ export function BurnProjectDialog({
   const [open, setOpen] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [error, setError] = React.useState<string | null>(null);
+  const [certificate, setCertificate] = React.useState<PurgeCertificate | null>(null);
   const burnProject = useBurnProject(projectId);
 
   const handleConfirm = async () => {
@@ -43,9 +44,9 @@ export function BurnProjectDialog({
     setPhase("burning");
     const minDelay = new Promise((resolve) => setTimeout(resolve, MIN_ANIMATION_MS));
     try {
-      await Promise.all([burnProject.mutateAsync(), minDelay]);
+      const [result] = await Promise.all([burnProject.mutateAsync(), minDelay]);
+      setCertificate(result.certificate);
       setPhase("success");
-      setTimeout(() => router.push("/projects"), SUCCESS_HOLD_MS);
     } catch {
       setPhase("idle");
       setError("Couldn't purge this project — try again.");
@@ -82,7 +83,13 @@ export function BurnProjectDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {phase !== "idle" && <BurnOverlay phase={phase} />}
+      {phase !== "idle" && (
+        <BurnOverlay
+          phase={phase}
+          certificate={certificate}
+          onContinue={phase === "success" ? () => router.push("/projects") : undefined}
+        />
+      )}
     </>
   );
 }

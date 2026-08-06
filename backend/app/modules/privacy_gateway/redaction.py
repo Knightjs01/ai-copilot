@@ -1,6 +1,9 @@
 import re
 
 _EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+# Public alias — privacy_gateway.service extracts a match with this before redact_text() (below)
+# replaces it, to seed the Identity Vault's email field.
+EMAIL_PATTERN = _EMAIL_PATTERN
 
 # Common US/UK street-type suffixes, used to recognize a street-address line such as
 # "42 Baker Street" or "123 Maple St, Apt 4B". This is a best-effort heuristic, not full
@@ -32,11 +35,20 @@ _US_CITY_STATE_ZIP_PATTERN = re.compile(
 _PHONE_PATTERN = re.compile(
     r"(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]\d{3,4}[\s.-]\d{3,4}(?:[\s.-]\d{2,4})?"
 )
+# Public alias — same extraction-before-redaction reasoning as EMAIL_PATTERN above.
+PHONE_PATTERN = _PHONE_PATTERN
 
 _URL_PATTERN = re.compile(
     r"(?:https?://)?(?:www\.)?(?:linkedin\.com|github\.com|twitter\.com|x\.com)/\S+"
     r"|https?://\S+",
     re.IGNORECASE,
+)
+
+# LinkedIn-specific — extraction-only, used by privacy_gateway.service to populate the Identity
+# Vault's linkedin_url field before redaction destroys the match. Kept separate from _URL_PATTERN
+# above (which stays generic across linkedin/github/twitter/x for redaction purposes).
+LINKEDIN_PATTERN = re.compile(
+    r"(?:https?://)?(?:www\.)?linkedin\.com/(?:in|pub)/\S+", re.IGNORECASE
 )
 
 

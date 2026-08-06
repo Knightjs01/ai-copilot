@@ -27,7 +27,7 @@ async def burn_project(
     session: AsyncSession = Depends(get_tenant_db),
     storage: FileStorage = Depends(get_file_storage),
 ) -> BurnProjectResponse:
-    candidate_count = await ProjectDeletionService(session, storage).burn_project(
+    certificate = await ProjectDeletionService(session, storage).burn_project(
         actor=actor, project_id=project_id
     )
-    return BurnProjectResponse(candidate_count=candidate_count)
+    return BurnProjectResponse(candidate_count=certificate.candidate_count, certificate=certificate)

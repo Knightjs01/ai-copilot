@@ -73,12 +73,10 @@ export function CandidatesKanban({ projectId }: { projectId: string }) {
               {byStatus(status).map((candidate) => (
                 <Link key={candidate.id} href={`/projects/${projectId}/candidates/${candidate.id}`}>
                   <KanbanCard id={candidate.id}>
-                    <p className="text-sm font-medium text-foreground">{candidate.full_name}</p>
-                    {candidate.email && (
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {candidate.email}
-                      </p>
-                    )}
+                    <p className="text-sm font-medium text-foreground">{candidate.callsign}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {candidate.candidate_ref}
+                    </p>
                     {candidate.prescreen_outcome && (
                       <Badge
                         variant={PRESCREEN_OUTCOME_VARIANT[candidate.prescreen_outcome]}

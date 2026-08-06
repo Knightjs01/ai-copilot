@@ -23,9 +23,6 @@ const NOTICE_PERIOD_OPTIONS = (Object.keys(NOTICE_PERIOD_LABEL) as NoticePeriod[
 export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
   const updateCandidate = useUpdateCandidate(candidate.id, candidate.project_id);
 
-  const [currentEmployer, setCurrentEmployer] = React.useState(candidate.current_employer ?? "");
-  const [currentTitle, setCurrentTitle] = React.useState(candidate.current_title ?? "");
-  const [location, setLocation] = React.useState(candidate.location ?? "");
   const [expectedSalary, setExpectedSalary] = React.useState(
     candidate.expected_salary != null ? String(candidate.expected_salary) : ""
   );
@@ -38,9 +35,6 @@ export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
 
   React.useEffect(() => {
     if (isDirty) return;
-    setCurrentEmployer(candidate.current_employer ?? "");
-    setCurrentTitle(candidate.current_title ?? "");
-    setLocation(candidate.location ?? "");
     setExpectedSalary(candidate.expected_salary != null ? String(candidate.expected_salary) : "");
     setNoticePeriod(candidate.notice_period);
     setSource(candidate.source);
@@ -50,9 +44,6 @@ export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
   const handleSave = () => {
     updateCandidate.mutate(
       {
-        current_employer: currentEmployer || undefined,
-        current_title: currentTitle || undefined,
-        location: location || undefined,
         expected_salary: expectedSalary ? Number(expectedSalary) : undefined,
         notice_period: noticePeriod ?? undefined,
         source: source ?? undefined,
@@ -68,54 +59,24 @@ export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
         <CardTitle>Candidate info</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Current employer" htmlFor="currentEmployer">
-            <Input
-              id="currentEmployer"
-              placeholder="e.g. Acme Corp"
-              value={currentEmployer}
-              onChange={(e) => {
-                setCurrentEmployer(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-          </Field>
-          <Field label="Current title" htmlFor="currentTitle">
-            <Input
-              id="currentTitle"
-              placeholder="e.g. Senior Backend Engineer"
-              value={currentTitle}
-              onChange={(e) => {
-                setCurrentTitle(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-          </Field>
-          <Field label="Location" htmlFor="location">
-            <Input
-              id="location"
-              placeholder="e.g. Leeds, UK"
-              value={location}
-              onChange={(e) => {
-                setLocation(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-          </Field>
-          <Field label="Expected salary" htmlFor="expectedSalary">
-            <Input
-              id="expectedSalary"
-              type="number"
-              min={0}
-              placeholder="e.g. 95000"
-              value={expectedSalary}
-              onChange={(e) => {
-                setExpectedSalary(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-          </Field>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Employer, title, and location are Owner-only Identity Vault fields — edit them from the
+          project&apos;s Identity Vault tab.
+        </p>
+
+        <Field label="Expected salary" htmlFor="expectedSalary">
+          <Input
+            id="expectedSalary"
+            type="number"
+            min={0}
+            placeholder="e.g. 95000"
+            value={expectedSalary}
+            onChange={(e) => {
+              setExpectedSalary(e.target.value);
+              setIsDirty(true);
+            }}
+          />
+        </Field>
 
         <Field label="Notice period">
           <PillToggleGroup

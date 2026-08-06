@@ -12,6 +12,7 @@ class Permissions:
     CANDIDATES_VIEW = "candidates.view"
     CANDIDATES_UPDATE = "candidates.update"
     CANDIDATES_DELETE = "candidates.delete"
+    IDENTITY_VAULT_REVEAL = "identity_vault.reveal"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -28,6 +29,7 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.CANDIDATES_VIEW: "View candidates",
     Permissions.CANDIDATES_UPDATE: "Update candidates (including resume uploads)",
     Permissions.CANDIDATES_DELETE: "Archive candidates",
+    Permissions.IDENTITY_VAULT_REVEAL: "Reveal candidate identity from the vault",
 }
 
 
@@ -42,6 +44,9 @@ class RoleName:
 # the permission codes/descriptions, deliberately not importing this module — migrations are a
 # historical record and shouldn't depend on code that will keep changing after they're written.
 ROLE_PERMISSIONS: dict[str, list[str]] = {
+    # Owner is the only role that gets every permission automatically — this is also currently
+    # the only place Owner and Admin diverge: IDENTITY_VAULT_REVEAL is deliberately absent from
+    # Admin's explicit list below, since candidate identity reveal is Owner-exclusive by design.
     RoleName.OWNER: list(ALL_PERMISSIONS.keys()),
     RoleName.ADMIN: [
         Permissions.USERS_VIEW,

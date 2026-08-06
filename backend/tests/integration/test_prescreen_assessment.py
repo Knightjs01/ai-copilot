@@ -219,6 +219,35 @@ async def test_handoff_recommendations_happy_path(
     ]
 
 
+async def test_handoff_recommendations_redacts_name_from_notes(
+    client: AsyncClient, fake_prescreen_assessment_llm_client: FakePrescreenAssessmentLLMClient
+) -> None:
+    owner = await signup(client, email="owner@handoffredact.com", company_name="Handoff Redact Co")
+    headers = auth_headers(owner["access_token"])
+    project_id = await _setup_project_with_blueprint_and_alignment(client, headers=headers)
+    candidate_id = await _create_candidate_with_intelligence_pack(
+        client, headers=headers, project_id=project_id, full_name="Jamie Analyst"
+    )
+    await client.post(f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=headers)
+
+    await client.patch(
+        f"/api/v1/candidates/{candidate_id}",
+        json={"prescreen_notes": "Jamie Analyst was strong on distributed systems."},
+        headers=headers,
+    )
+
+    handoff_response = await client.post(
+        f"/api/v1/candidates/{candidate_id}/prescreen-assessment/handoff", headers=headers
+    )
+    assert handoff_response.status_code == 200, handoff_response.text
+
+    # prescreen_notes is recruiter free text that bypasses the privacy gateway entirely — the
+    # real name must be stripped before it ever reaches the LLM client.
+    assert len(fake_prescreen_assessment_llm_client.handoff_calls) == 1
+    assert "Jamie Analyst" not in fake_prescreen_assessment_llm_client.handoff_calls[0]
+    assert "[REDACTED_NAME]" in fake_prescreen_assessment_llm_client.handoff_calls[0]
+
+
 async def test_handoff_recommendations_without_assessment_fails(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@nohandoffassess.com", company_name="No Assess Co")
     headers = auth_headers(owner["access_token"])

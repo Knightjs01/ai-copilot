@@ -20,6 +20,7 @@ from app.modules.candidates.models import (
 )
 from app.modules.candidates.repository import CandidateRepository
 from app.modules.candidates.storage import FileStorage, LocalFileStorage
+from app.modules.identity_vault.service import IdentityVaultService
 from app.modules.projects.service import ProjectService
 
 _ALLOWED_CONTENT_TYPES = {
@@ -38,6 +39,7 @@ class CandidateService:
         self._repository = CandidateRepository(session)
         self._projects = ProjectService(session)
         self._audit = AuditService(session)
+        self._vault = IdentityVaultService(session)
         self._storage = storage or LocalFileStorage()
 
     async def create_candidate(
@@ -57,15 +59,27 @@ class CandidateService:
         # either way from the caller's point of view.
         await self._projects.get_project(company_id=actor.company_id, project_id=project_id)
 
+        callsign = await self._vault.generate_callsign(project_id=project_id)
+        candidate_ref = await self._vault.generate_candidate_ref()
         candidate = await self._repository.create(
             company_id=actor.company_id,
+            project_id=project_id,
+            callsign=callsign,
+            candidate_ref=candidate_ref,
+            source=source,
+            status=status,
+            created_by_id=actor.id,
+        )
+        # full_name/email/phone never touch the candidates table — they go straight into the
+        # Identity Vault, encrypted, so a candidate exists in the Hiring Workspace only ever as a
+        # callsign/candidate_ref pair.
+        await self._vault.create_vault_record(
+            company_id=actor.company_id,
+            candidate_id=candidate.id,
             project_id=project_id,
             full_name=full_name,
             email=email,
             phone=phone,
-            source=source,
-            status=status,
-            created_by_id=actor.id,
         )
         await self._audit.record(
             company_id=actor.company_id,
@@ -103,9 +117,6 @@ class CandidateService:
         *,
         actor: User,
         candidate_id: uuid.UUID,
-        full_name: str | None,
-        email: str | None,
-        phone: str | None,
         source: CandidateSource | None,
         status: CandidateStatus | None,
         interview_scheduled_at: datetime | None = None,
@@ -113,19 +124,10 @@ class CandidateService:
         prescreen_notes: str | None = None,
         expected_salary: int | None = None,
         agency_name: str | None = None,
-        current_employer: str | None = None,
-        current_title: str | None = None,
-        location: str | None = None,
         notice_period: NoticePeriod | None = None,
     ) -> Candidate:
         candidate = await self.get_candidate(company_id=actor.company_id, candidate_id=candidate_id)
 
-        if full_name is not None:
-            candidate.full_name = full_name
-        if email is not None:
-            candidate.email = email
-        if phone is not None:
-            candidate.phone = phone
         if source is not None:
             candidate.source = source.value
         if status is not None:
@@ -140,12 +142,6 @@ class CandidateService:
             candidate.expected_salary = expected_salary
         if agency_name is not None:
             candidate.agency_name = agency_name
-        if current_employer is not None:
-            candidate.current_employer = current_employer
-        if current_title is not None:
-            candidate.current_title = current_title
-        if location is not None:
-            candidate.location = location
         if notice_period is not None:
             candidate.notice_period = notice_period.value
 

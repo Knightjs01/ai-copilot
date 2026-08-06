@@ -13,6 +13,8 @@ from app.modules.candidates.models import (
 
 class CandidateCreate(BaseModel):
     project_id: uuid.UUID
+    # Input-only — CandidateService routes these straight into a new Identity Vault record and
+    # never persists them on the Candidate row itself. See app/modules/identity_vault/__init__.py.
     full_name: str = Field(min_length=1, max_length=255)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=50)
@@ -21,9 +23,6 @@ class CandidateCreate(BaseModel):
 
 
 class CandidateUpdate(BaseModel):
-    full_name: str | None = Field(default=None, min_length=1, max_length=255)
-    email: EmailStr | None = None
-    phone: str | None = Field(default=None, max_length=50)
     source: CandidateSource | None = None
     status: CandidateStatus | None = None
     interview_scheduled_at: datetime | None = None
@@ -31,9 +30,6 @@ class CandidateUpdate(BaseModel):
     prescreen_notes: str | None = None
     expected_salary: int | None = Field(default=None, ge=0)
     agency_name: str | None = Field(default=None, max_length=255)
-    current_employer: str | None = Field(default=None, max_length=255)
-    current_title: str | None = Field(default=None, max_length=255)
-    location: str | None = Field(default=None, max_length=255)
     notice_period: NoticePeriod | None = None
 
 
@@ -43,9 +39,8 @@ class CandidateRead(BaseModel):
     id: uuid.UUID
     company_id: uuid.UUID
     project_id: uuid.UUID
-    full_name: str
-    email: str | None
-    phone: str | None
+    callsign: str
+    candidate_ref: str
     source: CandidateSource
     status: CandidateStatus
     resume_original_filename: str | None
@@ -54,8 +49,5 @@ class CandidateRead(BaseModel):
     prescreen_notes: str | None
     expected_salary: int | None
     agency_name: str | None
-    current_employer: str | None
-    current_title: str | None
-    location: str | None
     notice_period: NoticePeriod | None
     created_by_id: uuid.UUID

@@ -50,11 +50,7 @@ class AnalyticsService:
                 minimum=min(salaries) if salaries else None,
                 maximum=max(salaries) if salaries else None,
             ),
-            location_breakdown=dict(Counter(c.location for c in candidates if c.location)),
             notice_period_breakdown=dict(
                 Counter(c.notice_period for c in candidates if c.notice_period)
-            ),
-            current_employer_breakdown=dict(
-                Counter(c.current_employer for c in candidates if c.current_employer)
             ),
         )

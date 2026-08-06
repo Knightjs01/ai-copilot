@@ -52,9 +52,12 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id"), index=True
     )
-    full_name: Mapped[str] = mapped_column(String(255))
-    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
-    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Callsign/candidate_ref are the only candidate-identifying fields visible in the Hiring
+    # Workspace — real name/email/phone/location/current_employer/current_title live exclusively
+    # in identity_vault.CandidateIdentityVault, encrypted, revealed only through the Owner-gated
+    # reveal_identity flow. See app/modules/identity_vault/__init__.py.
+    callsign: Mapped[str] = mapped_column(String(50))
+    candidate_ref: Mapped[str] = mapped_column(String(30), unique=True)
     source: Mapped[str] = mapped_column(String(20), default=CandidateSource.DIRECT.value)
     status: Mapped[str] = mapped_column(String(20), default=CandidateStatus.NEW.value)
     resume_file_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -69,11 +72,5 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     # unconstrained at the DB level (same pattern as every other optional scalar in this table).
     expected_salary: Mapped[int | None] = mapped_column(nullable=True)
     agency_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    # Candidate Info tab fields — free-text where the real world is too varied to enum
-    # (employer/title/location), constrained where it naturally clusters into a small set of
-    # buckets that are actually useful to chart on the analytics snapshot (notice_period).
-    current_employer: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    current_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     notice_period: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_by_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))

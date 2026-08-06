@@ -73,6 +73,16 @@ def test_fernet_encrypt_decrypt_roundtrip() -> None:
     assert security.decrypt_secret(encrypted) == plain
 
 
+def test_fernet_encrypt_decrypt_roundtrip_long_value() -> None:
+    # Identity Vault PII columns are Text, not String(255) — Fernet ciphertext for even a short
+    # plaintext already exceeds 255 chars, so this confirms round-tripping something long-ish
+    # (well beyond a typical name/email/phone) still works cleanly.
+    plain = "A" * 500
+    encrypted = security.encrypt_secret(plain)
+    assert len(encrypted) > 255
+    assert security.decrypt_secret(encrypted) == plain
+
+
 def test_fernet_decrypt_rejects_tampered_value() -> None:
     encrypted = security.encrypt_secret("some-secret")
     with pytest.raises(security.TokenError):

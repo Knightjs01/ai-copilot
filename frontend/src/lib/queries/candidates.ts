@@ -48,9 +48,6 @@ export function useCreateCandidate(projectId: string) {
 }
 
 interface UpdateCandidateInput {
-  full_name?: string;
-  email?: string;
-  phone?: string;
   source?: CandidateSource;
   status?: CandidateStatus;
   interview_scheduled_at?: string;
@@ -58,9 +55,6 @@ interface UpdateCandidateInput {
   prescreen_notes?: string;
   expected_salary?: number;
   agency_name?: string;
-  current_employer?: string;
-  current_title?: string;
-  location?: string;
   notice_period?: NoticePeriod;
 }
 

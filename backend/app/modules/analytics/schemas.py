@@ -16,6 +16,4 @@ class ProjectAnalytics(BaseModel):
     source_breakdown: dict[str, int]
     agency_breakdown: dict[str, int]
     salary_stats: SalaryStats
-    location_breakdown: dict[str, int]
     notice_period_breakdown: dict[str, int]
-    current_employer_breakdown: dict[str, int]

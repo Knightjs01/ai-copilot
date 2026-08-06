@@ -1,4 +1,4 @@
-from app.modules.privacy_gateway.redaction import redact_text
+from app.modules.privacy_gateway.redaction import LINKEDIN_PATTERN, redact_text
 
 
 def test_redacts_known_email() -> None:
@@ -95,3 +95,13 @@ def test_does_not_redact_a_plain_city_name() -> None:
     redacted, counts = redact_text(text="Currently based in Leeds, UK.", known_full_name="")
     assert "Leeds" in redacted
     assert counts["address"] == 0
+
+
+def test_linkedin_pattern_matches_in_and_pub_profiles() -> None:
+    assert LINKEDIN_PATTERN.search("https://www.linkedin.com/in/janedoe")
+    assert LINKEDIN_PATTERN.search("linkedin.com/pub/janedoe/12/345/678")
+
+
+def test_linkedin_pattern_does_not_match_other_sites() -> None:
+    assert LINKEDIN_PATTERN.search("https://github.com/janedoe") is None
+    assert LINKEDIN_PATTERN.search("https://twitter.com/janedoe") is None
