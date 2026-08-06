@@ -76,3 +76,13 @@ class PrescreenAssessmentRepository:
         await self._session.execute(
             delete(PrescreenAssessment).where(PrescreenAssessment.candidate_id.in_(candidate_ids))
         )
+
+    async def list_by_candidate_ids(
+        self, candidate_ids: list[uuid.UUID]
+    ) -> list[PrescreenAssessment]:
+        if not candidate_ids:
+            return []
+        result = await self._session.execute(
+            select(PrescreenAssessment).where(PrescreenAssessment.candidate_id.in_(candidate_ids))
+        )
+        return list(result.scalars().all())

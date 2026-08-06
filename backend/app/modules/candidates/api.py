@@ -85,6 +85,8 @@ async def update_candidate(
         interview_scheduled_at=body.interview_scheduled_at,
         prescreen_outcome=body.prescreen_outcome,
         prescreen_notes=body.prescreen_notes,
+        expected_salary=body.expected_salary,
+        agency_name=body.agency_name,
     )
     return CandidateRead.model_validate(candidate)
 

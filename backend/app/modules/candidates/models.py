@@ -55,4 +55,9 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     )
     prescreen_outcome: Mapped[str | None] = mapped_column(String(20), nullable=True)
     prescreen_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Captured alongside the prescreen outcome — expected_salary only makes sense once a real
+    # conversation has happened; agency_name is only meaningful when source == AGENCY, but left
+    # unconstrained at the DB level (same pattern as every other optional scalar in this table).
+    expected_salary: Mapped[int | None] = mapped_column(nullable=True)
+    agency_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_by_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))

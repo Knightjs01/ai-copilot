@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { invalidateProjectAnalytics } from "@/lib/queries/analytics";
 import type { Candidate, CandidateSource, CandidateStatus, PrescreenOutcome } from "@/lib/types";
 
 export function useCandidates(projectId: string | undefined) {
@@ -35,6 +36,7 @@ export function useCreateCandidate(projectId: string) {
     mutationFn: (input: CreateCandidateInput) => apiClient.post<Candidate>("/candidates", input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["candidates", { projectId }] });
+      invalidateProjectAnalytics(queryClient);
     },
   });
 }
@@ -48,6 +50,8 @@ interface UpdateCandidateInput {
   interview_scheduled_at?: string;
   prescreen_outcome?: PrescreenOutcome;
   prescreen_notes?: string;
+  expected_salary?: number;
+  agency_name?: string;
 }
 
 export function useUpdateCandidate(candidateId: string, projectId?: string) {
@@ -60,6 +64,7 @@ export function useUpdateCandidate(candidateId: string, projectId?: string) {
       if (projectId) {
         void queryClient.invalidateQueries({ queryKey: ["candidates", { projectId }] });
       }
+      invalidateProjectAnalytics(queryClient);
     },
   });
 }

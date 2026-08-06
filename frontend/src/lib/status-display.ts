@@ -1,5 +1,6 @@
 import type { BadgeProps } from "@/components/ui/badge";
 import type {
+  CandidateSource,
   CandidateStatus,
   FitRating,
   PrescreenOutcome,
@@ -55,6 +56,14 @@ export const PRESCREEN_OUTCOME_VARIANT: Record<PrescreenOutcome, Variant> = {
   advance: "success",
   reject: "danger",
   hold: "warning",
+};
+
+export const CANDIDATE_SOURCE_LABEL: Record<CandidateSource, string> = {
+  referral: "Referral",
+  job_board: "Job board",
+  agency: "Agency",
+  direct: "Direct",
+  other: "Other",
 };
 
 export const FIT_RATING_VARIANT: Record<FitRating, Variant> = {

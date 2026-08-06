@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import health
+from app.modules.analytics.api import router as analytics_router
 from app.modules.auth.api import router as auth_router
 from app.modules.candidates.api import router as candidates_router
 from app.modules.companies.api import router as companies_router
@@ -24,6 +25,7 @@ api_router.include_router(hiring_blueprint_router)
 api_router.include_router(hiring_manager_alignment_router)
 api_router.include_router(prescreen_assessment_router)
 api_router.include_router(project_deletion_router)
+api_router.include_router(analytics_router)
 
 # Everything past pre-screen (interview loops, scorecards, offer, decision) is handled in the
 # company's ATS (Greenhouse), not this platform — see README Roadmap.

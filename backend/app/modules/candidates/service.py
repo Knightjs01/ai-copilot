@@ -110,6 +110,8 @@ class CandidateService:
         interview_scheduled_at: datetime | None = None,
         prescreen_outcome: PrescreenOutcome | None = None,
         prescreen_notes: str | None = None,
+        expected_salary: int | None = None,
+        agency_name: str | None = None,
     ) -> Candidate:
         candidate = await self.get_candidate(company_id=actor.company_id, candidate_id=candidate_id)
 
@@ -129,6 +131,10 @@ class CandidateService:
             candidate.prescreen_outcome = prescreen_outcome.value
         if prescreen_notes is not None:
             candidate.prescreen_notes = prescreen_notes
+        if expected_salary is not None:
+            candidate.expected_salary = expected_salary
+        if agency_name is not None:
+            candidate.agency_name = agency_name
 
         await self._audit.record(
             company_id=actor.company_id,

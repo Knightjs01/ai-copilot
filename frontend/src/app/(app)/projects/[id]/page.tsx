@@ -6,6 +6,7 @@ import { BurnProjectDialog } from "@/components/project/burn-project-dialog";
 import { CandidatesKanban } from "@/components/project/candidates-kanban";
 import { HiringBlueprintCard } from "@/components/project/hiring-blueprint-card";
 import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-alignment-card";
+import { ProjectAnalyticsCard } from "@/components/project/project-analytics-card";
 import { RoleInfoCard } from "@/components/project/role-info-card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -43,6 +44,8 @@ export default function ProjectDetailPage() {
         <HiringBlueprintCard project={project} />
         <HiringManagerAlignmentCard projectId={project.id} />
       </div>
+
+      <ProjectAnalyticsCard projectId={project.id} />
 
       <CandidatesKanban projectId={project.id} />
     </div>

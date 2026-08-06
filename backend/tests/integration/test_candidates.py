@@ -107,6 +107,8 @@ async def test_update_candidate_prescreen_fields(client: AsyncClient) -> None:
     assert create_response.json()["interview_scheduled_at"] is None
     assert create_response.json()["prescreen_outcome"] is None
     assert create_response.json()["prescreen_notes"] is None
+    assert create_response.json()["expected_salary"] is None
+    assert create_response.json()["agency_name"] is None
 
     update_response = await client.patch(
         f"/api/v1/candidates/{candidate_id}",
@@ -114,6 +116,8 @@ async def test_update_candidate_prescreen_fields(client: AsyncClient) -> None:
             "interview_scheduled_at": "2026-09-01T14:00:00Z",
             "prescreen_outcome": "advance",
             "prescreen_notes": "Strong communicator, advancing to hiring manager round.",
+            "expected_salary": 95000,
+            "agency_name": "Talent Partners",
         },
         headers=headers,
     )
@@ -122,6 +126,8 @@ async def test_update_candidate_prescreen_fields(client: AsyncClient) -> None:
     assert updated["interview_scheduled_at"] == "2026-09-01T14:00:00Z"
     assert updated["prescreen_outcome"] == "advance"
     assert updated["prescreen_notes"] == "Strong communicator, advancing to hiring manager round."
+    assert updated["expected_salary"] == 95000
+    assert updated["agency_name"] == "Talent Partners"
 
 
 async def test_project_id_must_belong_to_same_company(client: AsyncClient) -> None:

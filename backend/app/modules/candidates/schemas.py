@@ -24,6 +24,8 @@ class CandidateUpdate(BaseModel):
     interview_scheduled_at: datetime | None = None
     prescreen_outcome: PrescreenOutcome | None = None
     prescreen_notes: str | None = None
+    expected_salary: int | None = Field(default=None, ge=0)
+    agency_name: str | None = Field(default=None, max_length=255)
 
 
 class CandidateRead(BaseModel):
@@ -41,4 +43,6 @@ class CandidateRead(BaseModel):
     interview_scheduled_at: datetime | None
     prescreen_outcome: PrescreenOutcome | None
     prescreen_notes: str | None
+    expected_salary: int | None
+    agency_name: str | None
     created_by_id: uuid.UUID

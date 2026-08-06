@@ -72,7 +72,26 @@ export interface Candidate {
   interview_scheduled_at: string | null;
   prescreen_outcome: PrescreenOutcome | null;
   prescreen_notes: string | null;
+  expected_salary: number | null;
+  agency_name: string | null;
   created_by_id: string;
+}
+
+export interface SalaryStats {
+  count: number;
+  average: number | null;
+  minimum: number | null;
+  maximum: number | null;
+}
+
+export interface ProjectAnalytics {
+  total_candidates: number;
+  status_breakdown: Record<string, number>;
+  prescreen_outcome_breakdown: Record<string, number>;
+  fit_rating_breakdown: Record<string, number>;
+  source_breakdown: Record<string, number>;
+  agency_breakdown: Record<string, number>;
+  salary_stats: SalaryStats;
 }
 
 export interface SanitizedProfile {
