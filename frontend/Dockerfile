@@ -19,6 +19,13 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# NEXT_PUBLIC_* vars are baked into the client JS bundle at build time, not read at runtime —
+# must be explicitly declared as a build ARG and promoted to a real env var here, otherwise
+# `next build` sees it as unset regardless of what's configured on the Railway service, and
+# ARG also makes this layer's Docker cache key depend on the value so changing it actually
+# triggers a rebuild instead of silently reusing a stale bundle.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN pnpm build
 
 FROM base AS runner
