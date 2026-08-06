@@ -197,8 +197,10 @@ async def test_handoff_recommendations_happy_path(
     owner = await signup(client, email="owner@handoff.com", company_name="Handoff Co")
     headers = auth_headers(owner["access_token"])
     project_id = await _setup_project_with_blueprint_and_alignment(client, headers=headers)
+    # Deliberately not "Handoff Candidate" — the word "Candidate" would then coincidentally match
+    # the new word-level name redaction wherever it naturally appears in the notes text below.
     candidate_id = await _create_candidate_with_intelligence_pack(
-        client, headers=headers, project_id=project_id, full_name="Handoff Candidate"
+        client, headers=headers, project_id=project_id, full_name="Priya Chandra"
     )
     await client.post(f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=headers)
 

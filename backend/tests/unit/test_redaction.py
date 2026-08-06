@@ -105,3 +105,50 @@ def test_linkedin_pattern_matches_in_and_pub_profiles() -> None:
 def test_linkedin_pattern_does_not_match_other_sites() -> None:
     assert LINKEDIN_PATTERN.search("https://github.com/janedoe") is None
     assert LINKEDIN_PATTERN.search("https://twitter.com/janedoe") is None
+
+
+def test_redacts_first_name_alone_in_prose() -> None:
+    text = (
+        "Jonathan Smith\n"
+        "Senior Backend Engineer\n\n"
+        "Jonathan is a backend engineer with 6 years of experience. "
+        "Smith led several major platform migrations."
+    )
+    redacted, counts = redact_text(text=text, known_full_name="Jonathan Smith")
+    assert "Jonathan" not in redacted
+    assert "Smith" not in redacted
+    assert counts["name"] == 3  # "Jonathan Smith" + standalone "Jonathan" + standalone "Smith"
+
+
+def test_does_not_redact_short_initials() -> None:
+    redacted, counts = redact_text(
+        text="J. Smith has 5 years of experience.", known_full_name="J Smith"
+    )
+    # "J" alone is a 1-character part and is deliberately skipped — matching every lone "J"/"I"/"A"
+    # in a document would over-redact unrelated text.
+    assert "J." in redacted
+    assert "Smith" not in redacted
+    assert counts["name"] == 1
+
+
+def test_name_redaction_does_not_break_email_redaction() -> None:
+    # Regression check: name parts must not consume the local-part of the candidate's own email
+    # (firstname.lastname@... is extremely common) before the email pattern gets to redact it.
+    text = "Jane Doe\njane.doe@example.com | 123-456-7890\nlinkedin.com/in/janedoe"
+    redacted, counts = redact_text(text=text, known_full_name="Jane Doe")
+    assert counts == {"name": 1, "address": 0, "url": 1, "email": 1, "phone": 1}
+    assert "[REDACTED_EMAIL]" in redacted
+    assert "jane" not in redacted.lower()
+    assert "doe" not in redacted.lower()
+
+
+def test_name_redaction_does_not_break_address_redaction_when_surname_matches_street() -> None:
+    # Regression check: a surname that's literally part of a street name ("Smith Street") must
+    # not be consumed by name redaction before the address pattern can match the whole thing.
+    redacted, counts = redact_text(
+        text="Home address: 15 Smith Street, Springfield, IL 62704",
+        known_full_name="Jane Smith",
+    )
+    assert "[REDACTED_ADDRESS]" in redacted
+    assert "Smith" not in redacted
+    assert counts["address"] == 2

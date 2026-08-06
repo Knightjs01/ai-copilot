@@ -52,22 +52,41 @@ LINKEDIN_PATTERN = re.compile(
 )
 
 
+def _build_name_pattern(full_name: str) -> re.Pattern[str] | None:
+    """Matches the full name as one unit AND each individual name part (first, middle, last) as
+    a standalone word — resume prose very commonly refers back to a candidate by first name alone
+    ("Jonathan is a backend engineer with...") after introducing them by full name once at the
+    top, and a full-name-only pattern lets every one of those mentions straight through. Parts
+    shorter than 2 characters (initials like "A.") are skipped — matching those would redact
+    essentially every short word in the document. Alternatives are ordered longest-first so a
+    contiguous "Jonathan Smith" collapses into one match rather than two adjacent ones. This is
+    still best-effort, not name NER — nicknames/diminutives ("Jon" for "Jonathan") that never
+    appear as an exact substring of the stored name are not caught."""
+
+    full_name = full_name.strip()
+    if not full_name:
+        return None
+    parts = [p for p in re.split(r"\s+", full_name) if len(p) >= 2]
+    if not parts:
+        return None
+    alternatives = sorted({full_name, *parts}, key=len, reverse=True)
+    pattern = "|".join(rf"\b{re.escape(p)}\b" for p in alternatives)
+    return re.compile(pattern, re.IGNORECASE)
+
+
 def redact_text(*, text: str, known_full_name: str) -> tuple[str, dict[str, int]]:
     """Rule-based PII redaction — no LLM involved (see module __init__ for why). Order matters:
-    redact the known name first (before URL/phone patterns might partially consume it), then
-    street/postal addresses, then URLs, then emails, then phone numbers (phone last since its
-    pattern is the most permissive and most likely to accidentally match fragments left by
-    earlier substitutions)."""
+    the structured, high-confidence patterns (address, URL, email, phone) run first so each gets
+    first claim on its own format, then the name pattern runs last as a catch-all sweep over
+    whatever's left. Name has to go last now that it also matches individual name parts (see
+    _build_name_pattern) — a first/last name is very often a literal substring of the candidate's
+    own email (firstname.lastname@...) or street name (e.g. "15 Smith Street"), and redacting the
+    name first would consume that substring, leaving the structured pattern nothing recognizable
+    to match against."""
 
     counts: dict[str, int] = {"name": 0, "address": 0, "url": 0, "email": 0, "phone": 0}
 
-    redacted = text
-    if known_full_name.strip():
-        name_pattern = re.compile(re.escape(known_full_name.strip()), re.IGNORECASE)
-        redacted, name_count = name_pattern.subn("[REDACTED_NAME]", redacted)
-        counts["name"] = name_count
-
-    redacted, street_count = _STREET_ADDRESS_PATTERN.subn("[REDACTED_ADDRESS]", redacted)
+    redacted, street_count = _STREET_ADDRESS_PATTERN.subn("[REDACTED_ADDRESS]", text)
     redacted, city_zip_count = _US_CITY_STATE_ZIP_PATTERN.subn("[REDACTED_ADDRESS]", redacted)
     redacted, postcode_count = _UK_POSTCODE_PATTERN.subn("[REDACTED_ADDRESS]", redacted)
     counts["address"] = street_count + city_zip_count + postcode_count
@@ -80,5 +99,10 @@ def redact_text(*, text: str, known_full_name: str) -> tuple[str, dict[str, int]
 
     redacted, phone_count = _PHONE_PATTERN.subn("[REDACTED_PHONE]", redacted)
     counts["phone"] = phone_count
+
+    name_pattern = _build_name_pattern(known_full_name)
+    if name_pattern is not None:
+        redacted, name_count = name_pattern.subn("[REDACTED_NAME]", redacted)
+        counts["name"] = name_count
 
     return redacted, counts
