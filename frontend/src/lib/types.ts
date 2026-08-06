@@ -224,3 +224,27 @@ export interface PurgeCertificate {
   data_categories_destroyed: string[];
   purged_at: string;
 }
+
+export type ActionItemType =
+  | "ready_to_advance"
+  | "needs_interview_scheduling"
+  | "needs_prescreen"
+  | "needs_alignment";
+
+export interface ActionItem {
+  type: ActionItemType;
+  message: string;
+  project_id: string;
+  project_title: string;
+  candidate_id: string | null;
+  candidate_callsign: string | null;
+}
+
+export interface DashboardStats {
+  live_projects: number;
+  candidates_in_process: number;
+  prescreen_stage_count: number;
+  hiring_manager_stage_count: number;
+  action_item_count: number;
+  action_items: ActionItem[];
+}

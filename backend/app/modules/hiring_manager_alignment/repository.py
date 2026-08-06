@@ -49,3 +49,11 @@ class HiringManagerAlignmentRepository:
         await self._session.execute(
             delete(HiringManagerAlignment).where(HiringManagerAlignment.project_id == project_id)
         )
+
+    async def list_project_ids_by_company(self, company_id: uuid.UUID) -> set[uuid.UUID]:
+        result = await self._session.execute(
+            select(HiringManagerAlignment.project_id).where(
+                HiringManagerAlignment.company_id == company_id
+            )
+        )
+        return set(result.scalars().all())
