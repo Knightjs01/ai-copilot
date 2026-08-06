@@ -108,14 +108,19 @@ class FakeLLMClient:
 
     def __init__(self) -> None:
         self.calls: list[str] = []
+        self.requirement_calls: list[list[str]] = []
 
-    async def extract_candidate_profile(self, *, redacted_text: str) -> CandidateProfileExtraction:
+    async def extract_candidate_profile(
+        self, *, redacted_text: str, hiring_manager_requirements: list[str]
+    ) -> CandidateProfileExtraction:
         self.calls.append(redacted_text)
+        self.requirement_calls.append(hiring_manager_requirements)
         return CandidateProfileExtraction(
             skills=["Python", "Distributed Systems"],
             experience_summary="Backend engineer with several years of experience.",
             education=[EducationEntry(institution="Fake University", degree="BSc", field="CS")],
             narrative_summary="A fake but deterministic summary for testing.",
+            highlights=["Fake highlight matching a hiring manager requirement."],
         )
 
 

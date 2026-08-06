@@ -16,6 +16,14 @@ export type CandidateStatus =
 
 export type PrescreenOutcome = "advance" | "reject" | "hold";
 
+export type NoticePeriod =
+  | "immediate"
+  | "one_week"
+  | "two_weeks"
+  | "one_month"
+  | "two_months"
+  | "three_plus_months";
+
 export type RoleName = "Owner" | "Admin" | "Member";
 
 export interface UserRead {
@@ -74,6 +82,10 @@ export interface Candidate {
   prescreen_notes: string | null;
   expected_salary: number | null;
   agency_name: string | null;
+  current_employer: string | null;
+  current_title: string | null;
+  location: string | null;
+  notice_period: NoticePeriod | null;
   created_by_id: string;
 }
 
@@ -92,6 +104,9 @@ export interface ProjectAnalytics {
   source_breakdown: Record<string, number>;
   agency_breakdown: Record<string, number>;
   salary_stats: SalaryStats;
+  location_breakdown: Record<string, number>;
+  notice_period_breakdown: Record<string, number>;
+  current_employer_breakdown: Record<string, number>;
 }
 
 export interface SanitizedProfile {
@@ -133,6 +148,7 @@ export interface IntelligencePack {
   experience_summary: string;
   education: EducationEntry[];
   narrative_summary: string;
+  highlights: string[];
   model_used: string;
   generated_at: string;
 }

@@ -14,3 +14,8 @@ class IntelligencePackNotFoundError(IntelligenceError):
 class IntelligencePackGenerationError(IntelligenceError):
     status_code = 502
     detail = "Could not generate the intelligence pack — the AI provider request failed"
+
+
+class MissingHiringManagerAlignmentError(IntelligenceError):
+    status_code = 400
+    detail = "Add the hiring manager's top requirements before generating the intelligence pack"

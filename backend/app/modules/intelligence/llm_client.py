@@ -37,20 +37,25 @@ class CandidateProfileExtraction:
     experience_summary: str = ""
     education: list[EducationEntry] = field(default_factory=list)
     narrative_summary: str = ""
+    highlights: list[str] = field(default_factory=list)
 
 
 class LLMClient(Protocol):
     async def extract_candidate_profile(
-        self, *, redacted_text: str
+        self, *, redacted_text: str, hiring_manager_requirements: list[str]
     ) -> CandidateProfileExtraction: ...
 
 
 _EXTRACTION_TOOL: dict[str, Any] = {
     "name": "record_candidate_profile",
     "description": (
-        "Records a structured, objective professional profile extracted from an anonymized "
-        "resume. Only include facts explicitly present in the text — do not infer, embellish, "
-        "speculate, or add any score, rating, or opinion."
+        "Records a structured professional profile extracted from an anonymized resume, plus "
+        "a short set of smart highlights comparing that profile against what the hiring "
+        "manager said matters most for this role. skills/experience_summary/education/"
+        "narrative_summary must stay strictly factual — only what's explicitly in the text, no "
+        "score, rating, or opinion. highlights is the one evaluative field: specific, "
+        "evidence-based observations connecting the candidate's actual background to the "
+        "hiring manager's stated requirements — not a restatement of the CV."
     ),
     "input_schema": {
         "type": "object",
@@ -58,7 +63,12 @@ _EXTRACTION_TOOL: dict[str, Any] = {
             "skills": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Technical and professional skills explicitly mentioned in the text.",
+                "description": (
+                    "Technical and professional skills explicitly mentioned in the text. List "
+                    "the skills most relevant to the hiring manager's stated requirements "
+                    "first, but only include skills actually present in the text — never add a "
+                    "skill just because the hiring manager asked for it."
+                ),
             },
             "experience_summary": {
                 "type": "string",
@@ -86,8 +96,27 @@ _EXTRACTION_TOOL: dict[str, Any] = {
                     "background. No judgment, no fit assessment, no scoring."
                 ),
             },
+            "highlights": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "3-5 short, specific, evidence-based highlights connecting this candidate's "
+                    "actual background to the hiring manager's stated requirements — e.g. '5 "
+                    "years leading distributed systems teams directly matches the hiring "
+                    "manager's #1 requirement'. Surface clear matches AND notable gaps against "
+                    "the requirements. Every highlight must be grounded in specific evidence "
+                    "from the resume text — never generic praise, never inferred beyond what's "
+                    "written."
+                ),
+            },
         },
-        "required": ["skills", "experience_summary", "education", "narrative_summary"],
+        "required": [
+            "skills",
+            "experience_summary",
+            "education",
+            "narrative_summary",
+            "highlights",
+        ],
     },
 }
 
@@ -103,7 +132,10 @@ class AnthropicLLMClient:
         self._client = AsyncAnthropic(api_key=settings.anthropic_api_key)
         self._model = settings.anthropic_model
 
-    async def extract_candidate_profile(self, *, redacted_text: str) -> CandidateProfileExtraction:
+    async def extract_candidate_profile(
+        self, *, redacted_text: str, hiring_manager_requirements: list[str]
+    ) -> CandidateProfileExtraction:
+        requirements_block = "\n".join(f"- {r}" for r in hiring_manager_requirements)
         try:
             # The SDK types `tools`/`tool_choice`/`messages` as specific TypedDicts; our
             # runtime-constructed dicts are correct (verified by tests/unit/test_llm_client.py
@@ -119,8 +151,14 @@ class AnthropicLLMClient:
                         "role": "user",
                         "content": (
                             "Extract a structured professional profile from the following "
-                            "anonymized resume text. Only use facts present in the text — do "
-                            "not infer or speculate.\n\n" + redacted_text
+                            "anonymized resume text, and write smart highlights comparing it "
+                            "against what the hiring manager said matters most for this role. "
+                            "Only use facts present in the resume text — do not infer or "
+                            "speculate about the candidate.\n\n"
+                            "Hiring manager's top requirements for this role:\n"
+                            + requirements_block
+                            + "\n\nAnonymized resume:\n"
+                            + redacted_text
                         ),
                     }
                 ],
@@ -151,6 +189,9 @@ class AnthropicLLMClient:
                 experience_summary=str(data.get("experience_summary", "")),
                 education=education,
                 narrative_summary=str(data.get("narrative_summary", "")),
+                highlights=[
+                    str(h) for h in _as_list(data.get("highlights", []), field_name="highlights")
+                ],
             )
         except (KeyError, TypeError, AttributeError) as exc:
             raise LLMRequestError(f"Malformed structured response from Claude: {exc}") from exc

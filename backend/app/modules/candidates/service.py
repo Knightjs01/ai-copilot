@@ -15,6 +15,7 @@ from app.modules.candidates.models import (
     Candidate,
     CandidateSource,
     CandidateStatus,
+    NoticePeriod,
     PrescreenOutcome,
 )
 from app.modules.candidates.repository import CandidateRepository
@@ -112,6 +113,10 @@ class CandidateService:
         prescreen_notes: str | None = None,
         expected_salary: int | None = None,
         agency_name: str | None = None,
+        current_employer: str | None = None,
+        current_title: str | None = None,
+        location: str | None = None,
+        notice_period: NoticePeriod | None = None,
     ) -> Candidate:
         candidate = await self.get_candidate(company_id=actor.company_id, candidate_id=candidate_id)
 
@@ -135,6 +140,14 @@ class CandidateService:
             candidate.expected_salary = expected_salary
         if agency_name is not None:
             candidate.agency_name = agency_name
+        if current_employer is not None:
+            candidate.current_employer = current_employer
+        if current_title is not None:
+            candidate.current_title = current_title
+        if location is not None:
+            candidate.location = location
+        if notice_period is not None:
+            candidate.notice_period = notice_period.value
 
         await self._audit.record(
             company_id=actor.company_id,

@@ -7,9 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
+from app.modules.candidates.service import CandidateService
+from app.modules.hiring_manager_alignment.exceptions import HiringManagerAlignmentNotFoundError
+from app.modules.hiring_manager_alignment.service import HiringManagerAlignmentService
 from app.modules.intelligence.exceptions import (
     IntelligencePackGenerationError,
     IntelligencePackNotFoundError,
+    MissingHiringManagerAlignmentError,
 )
 from app.modules.intelligence.llm_client import LLMClient, LLMRequestError
 from app.modules.intelligence.models import IntelligencePack
@@ -24,6 +28,8 @@ class IntelligenceService:
         self._settings = get_settings()
         self._repository = IntelligencePackRepository(session)
         self._privacy_gateway = PrivacyGatewayService(session)
+        self._candidates = CandidateService(session)
+        self._alignments = HiringManagerAlignmentService(session)
         self._audit = AuditService(session)
         self._llm_client = llm_client
 
@@ -38,9 +44,24 @@ class IntelligenceService:
             company_id=actor.company_id, candidate_id=candidate_id
         )
 
+        # The hiring manager's top requirements are what "smart highlights" are measured
+        # against below — without them there's nothing to compare the candidate to, so this is
+        # now a hard prerequisite (same enforcement pattern prescreen_assessment already uses
+        # for blueprint/alignment).
+        candidate = await self._candidates.get_candidate(
+            company_id=actor.company_id, candidate_id=candidate_id
+        )
+        try:
+            alignment = await self._alignments.get_alignment(
+                company_id=actor.company_id, project_id=candidate.project_id
+            )
+        except HiringManagerAlignmentNotFoundError as exc:
+            raise MissingHiringManagerAlignmentError() from exc
+
         try:
             extraction = await self._llm_client.extract_candidate_profile(
-                redacted_text=profile.redacted_text
+                redacted_text=profile.redacted_text,
+                hiring_manager_requirements=alignment.top_requirements,
             )
         except LLMRequestError as exc:
             raise IntelligencePackGenerationError(str(exc)) from exc
@@ -52,6 +73,7 @@ class IntelligenceService:
             experience_summary=extraction.experience_summary,
             education=[asdict(entry) for entry in extraction.education],
             narrative_summary=extraction.narrative_summary,
+            highlights=extraction.highlights,
             model_used=self._settings.anthropic_model,
             generated_at=datetime.now(timezone.utc),
         )

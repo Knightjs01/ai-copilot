@@ -15,6 +15,7 @@ out/
 .turbo/
 next-env.d.ts
 tsconfig.tsbuildinfo
+.pnpm-store/
 
 # Env files
 .env

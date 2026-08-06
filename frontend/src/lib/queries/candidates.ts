@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
 import { invalidateProjectAnalytics } from "@/lib/queries/analytics";
-import type { Candidate, CandidateSource, CandidateStatus, PrescreenOutcome } from "@/lib/types";
+import type {
+  Candidate,
+  CandidateSource,
+  CandidateStatus,
+  NoticePeriod,
+  PrescreenOutcome,
+} from "@/lib/types";
 
 export function useCandidates(projectId: string | undefined) {
   return useQuery({
@@ -52,6 +58,10 @@ interface UpdateCandidateInput {
   prescreen_notes?: string;
   expected_salary?: number;
   agency_name?: string;
+  current_employer?: string;
+  current_title?: string;
+  location?: string;
+  notice_period?: NoticePeriod;
 }
 
 export function useUpdateCandidate(candidateId: string, projectId?: string) {

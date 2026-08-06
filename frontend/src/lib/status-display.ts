@@ -3,6 +3,7 @@ import type {
   CandidateSource,
   CandidateStatus,
   FitRating,
+  NoticePeriod,
   PrescreenOutcome,
   ProjectStatus,
 } from "@/lib/types";
@@ -64,6 +65,15 @@ export const CANDIDATE_SOURCE_LABEL: Record<CandidateSource, string> = {
   agency: "Agency",
   direct: "Direct",
   other: "Other",
+};
+
+export const NOTICE_PERIOD_LABEL: Record<NoticePeriod, string> = {
+  immediate: "Immediate",
+  one_week: "1 week",
+  two_weeks: "2 weeks",
+  one_month: "1 month",
+  two_months: "2 months",
+  three_plus_months: "3+ months",
 };
 
 export const FIT_RATING_VARIANT: Record<FitRating, Variant> = {

@@ -9,8 +9,9 @@ import {
   CANDIDATE_SOURCE_LABEL,
   CANDIDATE_STATUS_COLUMNS,
   CANDIDATE_STATUS_LABEL,
+  NOTICE_PERIOD_LABEL,
 } from "@/lib/status-display";
-import type { CandidateSource, CandidateStatus } from "@/lib/types";
+import type { CandidateSource, CandidateStatus, NoticePeriod } from "@/lib/types";
 
 const BRAND_PURPLE = "#6651B0";
 
@@ -98,6 +99,21 @@ export function ProjectAnalyticsCard({ projectId }: { projectId: string }) {
     .sort((a, b) => b[1] - a[1])
     .map(([label, count]) => ({ label, count }));
 
+  const locationData = Object.entries(data.location_breakdown)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => ({ label, count }));
+
+  const noticePeriodData = Object.entries(data.notice_period_breakdown).map(
+    ([noticePeriod, count]) => ({
+      label: NOTICE_PERIOD_LABEL[noticePeriod as NoticePeriod] ?? noticePeriod,
+      count,
+    })
+  );
+
+  const currentEmployerData = Object.entries(data.current_employer_breakdown)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => ({ label, count }));
+
   const { salary_stats: salary } = data;
   const agencyCount = data.source_breakdown.agency ?? 0;
   const directCount = data.source_breakdown.direct ?? 0;
@@ -151,6 +167,24 @@ export function ProjectAnalyticsCard({ projectId }: { projectId: string }) {
             <div className="flex flex-col gap-2">
               <h3 className="text-sm font-medium text-foreground">Submissions by agency</h3>
               <BreakdownChart data={agencyData} />
+            </div>
+          )}
+          {noticePeriodData.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-medium text-foreground">Notice period</h3>
+              <BreakdownChart data={noticePeriodData} />
+            </div>
+          )}
+          {locationData.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-medium text-foreground">Location</h3>
+              <BreakdownChart data={locationData} />
+            </div>
+          )}
+          {currentEmployerData.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-medium text-foreground">Current employer</h3>
+              <BreakdownChart data={currentEmployerData} />
             </div>
           )}
         </div>

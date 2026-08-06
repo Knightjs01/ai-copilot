@@ -19,5 +19,6 @@ class IntelligencePackRead(BaseModel):
     experience_summary: str
     education: list[EducationEntryRead]
     narrative_summary: str
+    highlights: list[str]
     model_used: str
     generated_at: datetime

@@ -1,9 +1,11 @@
 "use client";
 
+import * as React from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+import { CandidateInfoCard } from "@/components/candidate/candidate-info-card";
 import { HandoffRecommendationsCard } from "@/components/candidate/handoff-recommendations-card";
 import { IntelligencePackCard } from "@/components/candidate/intelligence-pack-card";
 import { PrescreenAssessmentCard } from "@/components/candidate/prescreen-assessment-card";
@@ -11,12 +13,21 @@ import { PrescreenOutcomeCard } from "@/components/candidate/prescreen-outcome-c
 import { ResumeCard } from "@/components/candidate/resume-card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs } from "@/components/ui/tabs";
 import { useCandidate } from "@/lib/queries/candidates";
 import { CANDIDATE_STATUS_LABEL } from "@/lib/status-display";
+
+type CandidateTab = "overview" | "info";
+
+const TAB_OPTIONS: { value: CandidateTab; label: string }[] = [
+  { value: "overview", label: "Overview" },
+  { value: "info", label: "Candidate Info" },
+];
 
 export default function CandidateDetailPage() {
   const params = useParams<{ id: string; candidateId: string }>();
   const { data: candidate, isLoading } = useCandidate(params.candidateId);
+  const [activeTab, setActiveTab] = React.useState<CandidateTab>("overview");
 
   if (isLoading || !candidate) {
     return (
@@ -47,13 +58,19 @@ export default function CandidateDetailPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ResumeCard candidate={candidate} />
-        <IntelligencePackCard candidateId={candidate.id} />
-        <PrescreenAssessmentCard candidate={candidate} />
-        <PrescreenOutcomeCard candidate={candidate} />
-        <HandoffRecommendationsCard candidate={candidate} />
-      </div>
+      <Tabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
+
+      {activeTab === "overview" && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ResumeCard candidate={candidate} />
+          <IntelligencePackCard candidateId={candidate.id} projectId={candidate.project_id} />
+          <PrescreenAssessmentCard candidate={candidate} />
+          <PrescreenOutcomeCard candidate={candidate} />
+          <HandoffRecommendationsCard candidate={candidate} />
+        </div>
+      )}
+
+      {activeTab === "info" && <CandidateInfoCard candidate={candidate} />}
     </div>
   );
 }

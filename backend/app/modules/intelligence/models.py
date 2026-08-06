@@ -23,5 +23,6 @@ class IntelligencePack(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Bas
     experience_summary: Mapped[str] = mapped_column(Text)
     education: Mapped[list[Any]] = mapped_column(JSONB, default=list)
     narrative_summary: Mapped[str] = mapped_column(Text)
+    highlights: Mapped[list[Any]] = mapped_column(JSONB, default=list)
     model_used: Mapped[str] = mapped_column(String(100))
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

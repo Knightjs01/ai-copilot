@@ -3,7 +3,12 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.modules.candidates.models import CandidateSource, CandidateStatus, PrescreenOutcome
+from app.modules.candidates.models import (
+    CandidateSource,
+    CandidateStatus,
+    NoticePeriod,
+    PrescreenOutcome,
+)
 
 
 class CandidateCreate(BaseModel):
@@ -26,6 +31,10 @@ class CandidateUpdate(BaseModel):
     prescreen_notes: str | None = None
     expected_salary: int | None = Field(default=None, ge=0)
     agency_name: str | None = Field(default=None, max_length=255)
+    current_employer: str | None = Field(default=None, max_length=255)
+    current_title: str | None = Field(default=None, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    notice_period: NoticePeriod | None = None
 
 
 class CandidateRead(BaseModel):
@@ -45,4 +54,8 @@ class CandidateRead(BaseModel):
     prescreen_notes: str | None
     expected_salary: int | None
     agency_name: str | None
+    current_employer: str | None
+    current_title: str | None
+    location: str | None
+    notice_period: NoticePeriod | None
     created_by_id: uuid.UUID

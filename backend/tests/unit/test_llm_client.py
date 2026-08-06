@@ -31,23 +31,29 @@ async def test_extract_candidate_profile_sends_forced_tool_use_request() -> None
                 "experience_summary": "Backend engineer.",
                 "education": [{"institution": "Test U", "degree": "BSc", "field": "CS"}],
                 "narrative_summary": "A summary.",
+                "highlights": ["5 years Python matches the top requirement."],
             }
         )
     )
     client._client.messages.create = mock_create  # type: ignore[method-assign]
 
-    result = await client.extract_candidate_profile(redacted_text="[REDACTED_NAME] resume text")
+    result = await client.extract_candidate_profile(
+        redacted_text="[REDACTED_NAME] resume text",
+        hiring_manager_requirements=["5+ years Python"],
+    )
 
     mock_create.assert_awaited_once()
     call_kwargs = mock_create.await_args.kwargs
     assert call_kwargs["tools"] == [_EXTRACTION_TOOL]
     assert call_kwargs["tool_choice"] == {"type": "tool", "name": _EXTRACTION_TOOL["name"]}
     assert "[REDACTED_NAME] resume text" in call_kwargs["messages"][0]["content"]
+    assert "5+ years Python" in call_kwargs["messages"][0]["content"]
 
     assert result.skills == ["Python", "SQL"]
     assert result.experience_summary == "Backend engineer."
     assert result.education[0].institution == "Test U"
     assert result.narrative_summary == "A summary."
+    assert result.highlights == ["5 years Python matches the top requirement."]
 
 
 async def test_missing_tool_use_block_raises_llm_request_error() -> None:
@@ -57,7 +63,9 @@ async def test_missing_tool_use_block_raises_llm_request_error() -> None:
     )
 
     with pytest.raises(LLMRequestError):
-        await client.extract_candidate_profile(redacted_text="some text")
+        await client.extract_candidate_profile(
+            redacted_text="some text", hiring_manager_requirements=[]
+        )
 
 
 async def test_rejects_string_instead_of_list_for_skills() -> None:
@@ -72,12 +80,15 @@ async def test_rejects_string_instead_of_list_for_skills() -> None:
                 "experience_summary": "Backend engineer.",
                 "education": [],
                 "narrative_summary": "A summary.",
+                "highlights": [],
             }
         )
     )
 
     with pytest.raises(LLMRequestError):
-        await client.extract_candidate_profile(redacted_text="some text")
+        await client.extract_candidate_profile(
+            redacted_text="some text", hiring_manager_requirements=[]
+        )
 
 
 async def test_missing_fields_in_tool_response_default_to_empty() -> None:
@@ -86,9 +97,12 @@ async def test_missing_fields_in_tool_response_default_to_empty() -> None:
         return_value=_fake_tool_response({})
     )
 
-    result = await client.extract_candidate_profile(redacted_text="some text")
+    result = await client.extract_candidate_profile(
+        redacted_text="some text", hiring_manager_requirements=[]
+    )
 
     assert result.skills == []
     assert result.experience_summary == ""
     assert result.education == []
     assert result.narrative_summary == ""
+    assert result.highlights == []

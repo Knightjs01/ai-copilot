@@ -163,14 +163,32 @@ async def test_generate_assessment_without_alignment_fails(client: AsyncClient) 
     )
     assert blueprint_response.status_code == 200
 
-    candidate_id = await _create_candidate_with_intelligence_pack(
-        client, headers=headers, project_id=project["id"], full_name="No Alignment Candidate"
+    create_response = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": project["id"], "full_name": "No Alignment Candidate"},
+        headers=headers,
     )
+    candidate_id = create_response.json()["id"]
 
-    response = await client.post(
-        f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=headers
+    resume_bytes = _build_resume_pdf(full_name="No Alignment Candidate")
+    upload_response = await client.post(
+        f"/api/v1/candidates/{candidate_id}/resume",
+        files={"file": ("resume.pdf", resume_bytes, "application/pdf")},
+        headers=headers,
     )
-    assert response.status_code == 400  # MissingHiringManagerAlignmentError
+    assert upload_response.status_code == 200, upload_response.text
+
+    sanitize_response = await client.post(
+        f"/api/v1/candidates/{candidate_id}/sanitize", headers=headers
+    )
+    assert sanitize_response.status_code == 200, sanitize_response.text
+
+    # Alignment is required at intelligence-pack generation time too, so the missing
+    # alignment now surfaces here rather than at the later prescreen-assessment step.
+    pack_response = await client.post(
+        f"/api/v1/candidates/{candidate_id}/intelligence-pack", headers=headers
+    )
+    assert pack_response.status_code == 400  # MissingHiringManagerAlignmentError
 
 
 async def test_handoff_recommendations_happy_path(

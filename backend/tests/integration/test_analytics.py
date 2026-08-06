@@ -30,7 +30,13 @@ async def test_analytics_aggregates_source_status_and_salary(client: AsyncClient
     )
     await client.patch(
         f"/api/v1/candidates/{direct_one['id']}",
-        json={"expected_salary": 80000, "status": "screening"},
+        json={
+            "expected_salary": 80000,
+            "status": "screening",
+            "location": "Leeds, UK",
+            "notice_period": "one_month",
+            "current_employer": "Acme Corp",
+        },
         headers=headers,
     )
 
@@ -39,7 +45,12 @@ async def test_analytics_aggregates_source_status_and_salary(client: AsyncClient
     )
     await client.patch(
         f"/api/v1/candidates/{agency_one['id']}",
-        json={"agency_name": "Talent Partners", "expected_salary": 100000},
+        json={
+            "agency_name": "Talent Partners",
+            "expected_salary": 100000,
+            "location": "Leeds, UK",
+            "notice_period": "immediate",
+        },
         headers=headers,
     )
 
@@ -72,6 +83,9 @@ async def test_analytics_aggregates_source_status_and_salary(client: AsyncClient
     assert data["salary_stats"]["average"] == 90000
     assert data["salary_stats"]["minimum"] == 80000
     assert data["salary_stats"]["maximum"] == 100000
+    assert data["location_breakdown"] == {"Leeds, UK": 2}
+    assert data["notice_period_breakdown"] == {"one_month": 1, "immediate": 1}
+    assert data["current_employer_breakdown"] == {"Acme Corp": 1}
 
 
 async def test_analytics_includes_fit_rating_and_prescreen_outcome(client: AsyncClient) -> None:

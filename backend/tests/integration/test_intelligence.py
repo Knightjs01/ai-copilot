@@ -18,13 +18,25 @@ def _build_resume_pdf(*, full_name: str, email: str) -> bytes:
     return bytes(pdf.output())
 
 
-async def _create_sanitized_candidate(
-    client: AsyncClient, *, headers: dict, full_name: str, email: str
-) -> str:
+async def _create_project_with_alignment(client: AsyncClient, *, headers: dict) -> str:
     project = await create_project(client, headers=headers)
+    alignment_response = await client.put(
+        f"/api/v1/projects/{project['id']}/hiring-manager-alignment",
+        json={"top_requirements": ["5+ years Python", "Distributed systems experience"]},
+        headers=headers,
+    )
+    assert alignment_response.status_code == 200, alignment_response.text
+    return project["id"]
+
+
+async def _create_sanitized_candidate(
+    client: AsyncClient, *, headers: dict, full_name: str, email: str, project_id: str | None = None
+) -> str:
+    if project_id is None:
+        project_id = await _create_project_with_alignment(client, headers=headers)
     create_response = await client.post(
         "/api/v1/candidates",
-        json={"project_id": project["id"], "full_name": full_name, "email": email},
+        json={"project_id": project_id, "full_name": full_name, "email": email},
         headers=headers,
     )
     candidate_id = create_response.json()["id"]
@@ -63,12 +75,19 @@ async def test_generate_intelligence_pack_happy_path(
     assert pack["experience_summary"] == "Backend engineer with several years of experience."
     assert pack["education"] == [{"institution": "Fake University", "degree": "BSc", "field": "CS"}]
     assert pack["narrative_summary"] == "A fake but deterministic summary for testing."
+    assert pack["highlights"] == ["Fake highlight matching a hiring manager requirement."]
     assert pack["model_used"] == "claude-sonnet-5"
 
     # The fake client should only ever have seen the redacted text, never the candidate's name
     # or email — proves the module never bypasses the Privacy Gateway.
     assert len(fake_llm_client.calls) == 1
     assert "Intel Candidate" not in fake_llm_client.calls[0]
+
+    # The hiring manager's top requirements — set up by _create_project_with_alignment — must
+    # reach the LLM client, since that's what "smart highlights" are compared against.
+    assert fake_llm_client.requirement_calls == [
+        ["5+ years Python", "Distributed systems experience"]
+    ]
     assert "intel.candidate@example.com" not in fake_llm_client.calls[0]
 
     get_response = await client.get(
@@ -76,6 +95,24 @@ async def test_generate_intelligence_pack_happy_path(
     )
     assert get_response.status_code == 200
     assert get_response.json()["id"] == pack["id"]
+
+
+async def test_generate_without_alignment_fails(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@noalignment.com", company_name="No Alignment Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+    candidate_id = await _create_sanitized_candidate(
+        client,
+        headers=headers,
+        full_name="No Alignment Candidate",
+        email="no.alignment@example.com",
+        project_id=project["id"],
+    )
+
+    response = await client.post(
+        f"/api/v1/candidates/{candidate_id}/intelligence-pack", headers=headers
+    )
+    assert response.status_code == 400  # MissingHiringManagerAlignmentError
 
 
 async def test_generate_without_sanitizing_first_fails(client: AsyncClient) -> None:

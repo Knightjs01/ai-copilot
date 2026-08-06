@@ -34,6 +34,15 @@ class PrescreenOutcome(str, enum.Enum):
     HOLD = "hold"
 
 
+class NoticePeriod(str, enum.Enum):
+    IMMEDIATE = "immediate"
+    ONE_WEEK = "one_week"
+    TWO_WEEKS = "two_weeks"
+    ONE_MONTH = "one_month"
+    TWO_MONTHS = "two_months"
+    THREE_PLUS_MONTHS = "three_plus_months"
+
+
 class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "candidates"
 
@@ -60,4 +69,11 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     # unconstrained at the DB level (same pattern as every other optional scalar in this table).
     expected_salary: Mapped[int | None] = mapped_column(nullable=True)
     agency_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Candidate Info tab fields — free-text where the real world is too varied to enum
+    # (employer/title/location), constrained where it naturally clusters into a small set of
+    # buckets that are actually useful to chart on the analytics snapshot (notice_period).
+    current_employer: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    current_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    notice_period: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_by_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
