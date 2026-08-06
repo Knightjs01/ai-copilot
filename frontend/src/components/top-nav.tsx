@@ -30,7 +30,7 @@ export function TopNav() {
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-3 items-center px-6">
         <div className="flex items-center gap-6 justify-self-start">
           <Link href="/" aria-label="Phantom Hire home">
-            <PhantomIcon className="h-9" priority />
+            <PhantomIcon className="h-11" priority />
           </Link>
           {user && (
             <nav className="flex items-center gap-4">

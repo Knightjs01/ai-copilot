@@ -25,11 +25,10 @@ export function AuthShell({
             alt="Phantom Hire"
             width={830}
             height={219}
-            className="h-7 w-auto"
+            className="h-9 w-auto"
             priority
           />
         </Link>
-        <p className="text-sm text-muted-foreground">Pre-screen, powered by Claude.</p>
       </div>
       <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-8 shadow-sm shadow-slate-900/[0.03]">
         <div className="mb-6 flex flex-col gap-1">

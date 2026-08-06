@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useParams } from "next/navigation";
 
 import { BurnProjectDialog } from "@/components/project/burn-project-dialog";
@@ -10,12 +11,21 @@ import { ProjectAnalyticsCard } from "@/components/project/project-analytics-car
 import { RoleInfoCard } from "@/components/project/role-info-card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs } from "@/components/ui/tabs";
 import { useProject } from "@/lib/queries/projects";
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_VARIANT } from "@/lib/status-display";
+
+type ProjectTab = "overview" | "blueprint";
+
+const TAB_OPTIONS: { value: ProjectTab; label: string }[] = [
+  { value: "overview", label: "Overview" },
+  { value: "blueprint", label: "AI Hiring Blueprint" },
+];
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const { data: project, isLoading } = useProject(params.id);
+  const [activeTab, setActiveTab] = React.useState<ProjectTab>("overview");
 
   if (isLoading || !project) {
     return (
@@ -39,15 +49,22 @@ export default function ProjectDetailPage() {
         <BurnProjectDialog projectId={project.id} projectTitle={project.title} />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <RoleInfoCard project={project} />
-        <HiringBlueprintCard project={project} />
-        <HiringManagerAlignmentCard projectId={project.id} />
-      </div>
+      <Tabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
 
-      <ProjectAnalyticsCard projectId={project.id} />
+      {activeTab === "overview" && (
+        <>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <RoleInfoCard project={project} />
+            <HiringManagerAlignmentCard projectId={project.id} />
+          </div>
 
-      <CandidatesKanban projectId={project.id} />
+          <ProjectAnalyticsCard projectId={project.id} />
+
+          <CandidatesKanban projectId={project.id} />
+        </>
+      )}
+
+      {activeTab === "blueprint" && <HiringBlueprintCard project={project} />}
     </div>
   );
 }
