@@ -4,11 +4,9 @@ import Link from "next/link";
 import { Briefcase } from "lucide-react";
 
 import { NewProjectDialog } from "@/components/new-project-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useProjects } from "@/lib/queries/projects";
-import { PROJECT_STATUS_LABEL, PROJECT_STATUS_VARIANT } from "@/lib/status-display";
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects();
@@ -36,11 +34,8 @@ export default function ProjectsPage() {
           {projects.map((project) => (
             <Link key={project.id} href={`/projects/${project.id}`}>
               <Card className="h-full transition-shadow hover:shadow-md hover:shadow-slate-900/[0.06]">
-                <CardHeader className="flex-row items-start justify-between gap-2">
+                <CardHeader>
                   <CardTitle>{project.title}</CardTitle>
-                  <Badge variant={PROJECT_STATUS_VARIANT[project.status]}>
-                    {PROJECT_STATUS_LABEL[project.status]}
-                  </Badge>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">

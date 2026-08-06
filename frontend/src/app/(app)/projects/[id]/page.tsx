@@ -12,12 +12,10 @@ import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-
 import { IdentityVaultTab } from "@/components/project/identity-vault-tab";
 import { ProjectAnalyticsCard } from "@/components/project/project-analytics-card";
 import { RoleInfoCard } from "@/components/project/role-info-card";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth-context";
 import { useProject } from "@/lib/queries/projects";
-import { PROJECT_STATUS_LABEL, PROJECT_STATUS_VARIANT } from "@/lib/status-display";
 
 type ProjectTab = "overview" | "blueprint" | "candidates" | "vault";
 
@@ -47,14 +45,9 @@ export default function ProjectDetailPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {project.title}
-          </h1>
-          <Badge variant={PROJECT_STATUS_VARIANT[project.status]}>
-            {PROJECT_STATUS_LABEL[project.status]}
-          </Badge>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          {project.title}
+        </h1>
         <div className="flex items-center gap-2">
           {canEditProject && <EditProjectDialog project={project} />}
           <BurnProjectDialog projectId={project.id} projectTitle={project.title} />
