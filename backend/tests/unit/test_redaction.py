@@ -52,7 +52,7 @@ def test_redacts_multiple_pii_categories_together() -> None:
         "Experience: Acme Corp, 2020-2023"
     )
     redacted, counts = redact_text(text=text, known_full_name="Jane Doe")
-    assert counts == {"name": 1, "url": 1, "email": 1, "phone": 1}
+    assert counts == {"name": 1, "address": 0, "url": 1, "email": 1, "phone": 1}
     assert "2020-2023" in redacted
 
 
@@ -61,5 +61,37 @@ def test_no_pii_present_yields_zero_counts() -> None:
         text="Experienced backend engineer with distributed systems background.",
         known_full_name="Someone Else",
     )
-    assert counts == {"name": 0, "url": 0, "email": 0, "phone": 0}
+    assert counts == {"name": 0, "address": 0, "url": 0, "email": 0, "phone": 0}
     assert redacted == "Experienced backend engineer with distributed systems background."
+
+
+def test_redacts_us_street_address() -> None:
+    redacted, counts = redact_text(
+        text="Home address: 123 Maple Street, Springfield, IL 62704", known_full_name=""
+    )
+    assert "123 Maple Street" not in redacted
+    assert "62704" not in redacted
+    assert "[REDACTED_ADDRESS]" in redacted
+    assert counts["address"] == 2  # street line + city/state/zip tail
+
+
+def test_redacts_us_street_address_with_apartment() -> None:
+    redacted, counts = redact_text(text="456 Oak Ave, Apt 3B, Boston, MA 02108", known_full_name="")
+    assert "456 Oak Ave" not in redacted
+    assert "Apt 3B" not in redacted
+    assert counts["address"] >= 1
+
+
+def test_redacts_uk_postcode() -> None:
+    redacted, counts = redact_text(
+        text="Home Address: 42 Baker Street, London, NW1 6XE", known_full_name=""
+    )
+    assert "42 Baker Street" not in redacted
+    assert "NW1 6XE" not in redacted
+    assert counts["address"] >= 2
+
+
+def test_does_not_redact_a_plain_city_name() -> None:
+    redacted, counts = redact_text(text="Currently based in Leeds, UK.", known_full_name="")
+    assert "Leeds" in redacted
+    assert counts["address"] == 0

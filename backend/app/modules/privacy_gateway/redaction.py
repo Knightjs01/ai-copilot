@@ -2,6 +2,29 @@ import re
 
 _EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 
+# Common US/UK street-type suffixes, used to recognize a street-address line such as
+# "42 Baker Street" or "123 Maple St, Apt 4B". This is a best-effort heuristic, not full
+# address NER — unusual address formats may slip through.
+_STREET_SUFFIXES = (
+    r"Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way|Place|Pl|"
+    r"Circle|Cir|Terrace|Ter|Square|Sq|Crescent|Cres|Close|Gardens|Grove|Parade|Row|Highway|Hwy"
+)
+
+_STREET_ADDRESS_PATTERN = re.compile(
+    rf"\b\d{{1,5}}[A-Za-z]?\s+(?:[A-Za-z0-9'.-]+\s+){{0,4}}(?:{_STREET_SUFFIXES})\.?\b"
+    r"(?:,?\s*(?:Apt|Suite|Ste|Unit|Floor|Fl)\.?\s*#?\s*[A-Za-z0-9-]+)?",
+    re.IGNORECASE,
+)
+
+# UK postcode, e.g. "NW1 6XE", "M1 1AE", "SW1A 1AA", "B33 8TH".
+_UK_POSTCODE_PATTERN = re.compile(r"\b[A-Z]{1,2}\d[A-Z0-9]?\s*\d[A-Z]{2}\b", re.IGNORECASE)
+
+# US "City, ST 12345" or "City, ST 12345-6789" tail. Case-sensitive on the state code so
+# ordinary two-letter words ("in", "or", "at"...) don't get misread as state abbreviations.
+_US_CITY_STATE_ZIP_PATTERN = re.compile(
+    r"\b(?:[A-Z][a-zA-Z'-]*\s?){1,3},\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b"
+)
+
 # Matches common phone formats: optional leading +/country code, then THREE digit groups
 # separated by spaces/dots/dashes (e.g. 123-456-7890, (123) 456-7890, +44 20 7946 0958).
 # Requiring three groups (not two) is deliberate — a two-group pattern like \d+[\s.-]\d+ would
@@ -20,16 +43,22 @@ _URL_PATTERN = re.compile(
 def redact_text(*, text: str, known_full_name: str) -> tuple[str, dict[str, int]]:
     """Rule-based PII redaction — no LLM involved (see module __init__ for why). Order matters:
     redact the known name first (before URL/phone patterns might partially consume it), then
-    URLs, then emails, then phone numbers (phone last since its pattern is the most permissive
-    and most likely to accidentally match fragments left by earlier substitutions)."""
+    street/postal addresses, then URLs, then emails, then phone numbers (phone last since its
+    pattern is the most permissive and most likely to accidentally match fragments left by
+    earlier substitutions)."""
 
-    counts: dict[str, int] = {"name": 0, "url": 0, "email": 0, "phone": 0}
+    counts: dict[str, int] = {"name": 0, "address": 0, "url": 0, "email": 0, "phone": 0}
 
     redacted = text
     if known_full_name.strip():
         name_pattern = re.compile(re.escape(known_full_name.strip()), re.IGNORECASE)
         redacted, name_count = name_pattern.subn("[REDACTED_NAME]", redacted)
         counts["name"] = name_count
+
+    redacted, street_count = _STREET_ADDRESS_PATTERN.subn("[REDACTED_ADDRESS]", redacted)
+    redacted, city_zip_count = _US_CITY_STATE_ZIP_PATTERN.subn("[REDACTED_ADDRESS]", redacted)
+    redacted, postcode_count = _UK_POSTCODE_PATTERN.subn("[REDACTED_ADDRESS]", redacted)
+    counts["address"] = street_count + city_zip_count + postcode_count
 
     redacted, url_count = _URL_PATTERN.subn("[REDACTED_URL]", redacted)
     counts["url"] = url_count
