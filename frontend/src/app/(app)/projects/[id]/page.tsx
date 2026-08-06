@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 
 import { BurnProjectDialog } from "@/components/project/burn-project-dialog";
 import { CandidatesKanban } from "@/components/project/candidates-kanban";
+import { CandidatesListTab } from "@/components/project/candidates-list-tab";
+import { EditProjectDialog } from "@/components/project/edit-project-dialog";
 import { HiringBlueprintCard } from "@/components/project/hiring-blueprint-card";
 import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-alignment-card";
 import { IdentityVaultTab } from "@/components/project/identity-vault-tab";
@@ -17,7 +19,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useProject } from "@/lib/queries/projects";
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_VARIANT } from "@/lib/status-display";
 
-type ProjectTab = "overview" | "blueprint" | "vault";
+type ProjectTab = "overview" | "blueprint" | "candidates" | "vault";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
@@ -25,10 +27,12 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = React.useState<ProjectTab>("overview");
   const { hasPermission } = useAuth();
   const canRevealIdentity = hasPermission("identity_vault.reveal");
+  const canEditProject = hasPermission("projects.update");
 
   const tabOptions: { value: ProjectTab; label: string }[] = [
     { value: "overview", label: "Overview" },
     { value: "blueprint", label: "AI Hiring Blueprint" },
+    { value: "candidates", label: "Candidates" },
     ...(canRevealIdentity ? [{ value: "vault" as const, label: "Identity Vault" }] : []),
   ];
 
@@ -51,7 +55,10 @@ export default function ProjectDetailPage() {
             {PROJECT_STATUS_LABEL[project.status]}
           </Badge>
         </div>
-        <BurnProjectDialog projectId={project.id} projectTitle={project.title} />
+        <div className="flex items-center gap-2">
+          {canEditProject && <EditProjectDialog project={project} />}
+          <BurnProjectDialog projectId={project.id} projectTitle={project.title} />
+        </div>
       </div>
 
       <Tabs options={tabOptions} value={activeTab} onChange={setActiveTab} />
@@ -64,12 +71,17 @@ export default function ProjectDetailPage() {
           </div>
 
           <ProjectAnalyticsCard projectId={project.id} />
-
-          <CandidatesKanban projectId={project.id} />
         </>
       )}
 
       {activeTab === "blueprint" && <HiringBlueprintCard project={project} />}
+
+      {activeTab === "candidates" && (
+        <div className="flex flex-col gap-8">
+          <CandidatesKanban projectId={project.id} />
+          <CandidatesListTab projectId={project.id} />
+        </div>
+      )}
 
       {activeTab === "vault" && canRevealIdentity && <IdentityVaultTab projectId={project.id} />}
     </div>

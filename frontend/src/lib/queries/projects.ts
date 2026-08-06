@@ -40,6 +40,7 @@ interface UpdateProjectInput {
   department?: string;
   status?: ProjectStatus;
   role_brief?: string;
+  hiring_manager_id?: string | null;
 }
 
 export function useUpdateProject(projectId: string) {
