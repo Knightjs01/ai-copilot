@@ -13,6 +13,7 @@ class Permissions:
     CANDIDATES_UPDATE = "candidates.update"
     CANDIDATES_DELETE = "candidates.delete"
     IDENTITY_VAULT_REVEAL = "identity_vault.reveal"
+    HISTORIC_VAULT_VIEW = "historic_vault.view"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -30,6 +31,7 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.CANDIDATES_UPDATE: "Update candidates (including resume uploads)",
     Permissions.CANDIDATES_DELETE: "Archive candidates",
     Permissions.IDENTITY_VAULT_REVEAL: "Reveal candidate identity from the vault",
+    Permissions.HISTORIC_VAULT_VIEW: "View purged project records and the company audit trail",
 }
 
 
@@ -62,6 +64,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.CANDIDATES_VIEW,
         Permissions.CANDIDATES_UPDATE,
         Permissions.CANDIDATES_DELETE,
+        Permissions.HISTORIC_VAULT_VIEW,
     ],
     RoleName.MEMBER: [
         Permissions.USERS_VIEW,

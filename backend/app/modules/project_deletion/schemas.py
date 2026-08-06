@@ -4,9 +4,10 @@ from pydantic import BaseModel
 
 
 class PurgeCertificate(BaseModel):
-    """Not persisted anywhere — constructed and returned once, at burn time, for the recruiter to
-    copy/download. Long-term storage of this (and the reveal audit trail) belongs to the future
-    Historic Project Vault, which is a separate, not-yet-built feature."""
+    """Returned once, at burn time, for the recruiter to copy/download. A durable copy is also
+    written to historic_vault.PurgedProjectRecord in the same request (see
+    ProjectDeletionService.burn_project) so it remains visible in the Historic Project Vault
+    long after this response is gone."""
 
     project_title: str
     candidate_count: int

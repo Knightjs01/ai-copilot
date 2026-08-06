@@ -9,6 +9,7 @@ from app.modules.candidates.repository import CandidateRepository
 from app.modules.candidates.storage import FileStorage
 from app.modules.hiring_blueprint.repository import HiringBlueprintRepository
 from app.modules.hiring_manager_alignment.repository import HiringManagerAlignmentRepository
+from app.modules.historic_vault.repository import HistoricVaultRepository
 from app.modules.identity_vault.repository import (
     IdentityRevealEventRepository,
     IdentityVaultRepository,
@@ -51,6 +52,7 @@ class ProjectDeletionService:
         self._hiring_manager_alignment_repo = HiringManagerAlignmentRepository(session)
         self._vault_repo = IdentityVaultRepository(session)
         self._reveal_events_repo = IdentityRevealEventRepository(session)
+        self._historic_vault_repo = HistoricVaultRepository(session)
         self._audit = AuditService(session)
         self._storage = storage
 
@@ -98,6 +100,19 @@ class ProjectDeletionService:
             candidate_count=len(candidates),
             data_categories_destroyed=_DATA_CATEGORIES_DESTROYED,
             purged_at=datetime.now(timezone.utc),
+        )
+
+        # Durable copy for the Historic Project Vault — the certificate above is otherwise only
+        # ever returned once to the caller. purged_by_email is denormalized (not an actor FK) so
+        # this record still reads correctly if the actor is later removed from the team.
+        await self._historic_vault_repo.create(
+            company_id=actor.company_id,
+            project_id=project_id,
+            project_title=certificate.project_title,
+            candidate_count=certificate.candidate_count,
+            data_categories_destroyed=certificate.data_categories_destroyed,
+            purged_by_email=actor.email,
+            purged_at=certificate.purged_at,
         )
 
         await self._project_repo.delete_by_id(project_id)

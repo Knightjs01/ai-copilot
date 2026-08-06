@@ -17,8 +17,9 @@ function initials(name: string): string {
 }
 
 export function TopNav() {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const router = useRouter();
+  const canViewHistoricVault = hasPermission("historic_vault.view");
 
   const handleLogout = async () => {
     await logout();
@@ -46,6 +47,14 @@ export function TopNav() {
               >
                 Team
               </Link>
+              {canViewHistoricVault && (
+                <Link
+                  href="/historic-vault"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Historic Vault
+                </Link>
+              )}
             </nav>
           )}
         </div>

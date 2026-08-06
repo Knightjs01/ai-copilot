@@ -248,3 +248,29 @@ export interface DashboardStats {
   action_item_count: number;
   action_items: ActionItem[];
 }
+
+export interface PurgedProjectRecord {
+  id: string;
+  project_id: string;
+  project_title: string;
+  candidate_count: number;
+  data_categories_destroyed: string[];
+  purged_by_email: string;
+  purged_at: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  extra_data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface HistoricVaultOverview {
+  purged_project_count: number;
+  purged_projects: PurgedProjectRecord[];
+  recent_audit_entries: AuditLogEntry[];
+}
