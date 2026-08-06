@@ -1,5 +1,8 @@
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
+
+import { PhantomIcon } from "@/components/phantom-icon";
 
 export function AuthShell({
   title,
@@ -14,9 +17,17 @@ export function AuthShell({
 }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16">
-      <div className="mb-8 flex flex-col items-center gap-1">
-        <Link href="/" className="text-lg font-semibold tracking-tight text-foreground">
-          AI Interview Copilot
+      <div className="mb-8 flex flex-col items-center gap-3">
+        <Link href="/" aria-label="Phantom Hire home" className="flex flex-col items-center gap-3">
+          <PhantomIcon className="h-12" priority />
+          <Image
+            src="/phantom-wordmark.png"
+            alt="Phantom Hire"
+            width={830}
+            height={219}
+            className="h-7 w-auto"
+            priority
+          />
         </Link>
         <p className="text-sm text-muted-foreground">Pre-screen, powered by Claude.</p>
       </div>

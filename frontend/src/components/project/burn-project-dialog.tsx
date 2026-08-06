@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Flame } from "lucide-react";
 
 import { BurnOverlay } from "@/components/burn-overlay";
+import { PhantomIcon } from "@/components/phantom-icon";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { useBurnProject } from "@/lib/queries/project-deletion";
 
-// Minimum time the flame wipe plays before the API result is allowed to flip it to the success
-// state — an instant response shouldn't cut the animation short.
+// Minimum time the purge animation plays before the API result is allowed to flip it to the
+// success state — an instant response shouldn't cut the animation short.
 const MIN_ANIMATION_MS = 1400;
 const SUCCESS_HOLD_MS = 1600;
 
@@ -48,7 +48,7 @@ export function BurnProjectDialog({
       setTimeout(() => router.push("/projects"), SUCCESS_HOLD_MS);
     } catch {
       setPhase("idle");
-      setError("Couldn't burn this project — try again.");
+      setError("Couldn't purge this project — try again.");
     }
   };
 
@@ -56,14 +56,14 @@ export function BurnProjectDialog({
     <>
       <Dialog open={open} onOpenChange={(next) => phase === "idle" && setOpen(next)}>
         <DialogTrigger asChild>
-          <Button variant="danger" size="sm">
-            <Flame className="h-3.5 w-3.5" />
-            Delete hiring project
+          <Button variant="brand" size="sm">
+            <PhantomIcon className="brightness-0 invert" />
+            Purge my project
           </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Burn &ldquo;{projectTitle}&rdquo;?</DialogTitle>
+            <DialogTitle>Purge &ldquo;{projectTitle}&rdquo;?</DialogTitle>
             <DialogDescription>
               Permanently deletes this project and every candidate under it — resumes, AI notes,
               assessments, everything. This can&apos;t be undone. Typically done once a role is
@@ -75,9 +75,9 @@ export function BurnProjectDialog({
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" variant="danger" onClick={handleConfirm}>
-              <Flame className="h-3.5 w-3.5" />
-              Burn this project
+            <Button type="button" variant="brand" onClick={handleConfirm}>
+              <PhantomIcon className="brightness-0 invert" />
+              Purge this project
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,51 +1,71 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { Check, FileText } from "lucide-react";
+
+import { PhantomIcon } from "@/components/phantom-icon";
 
 interface BurnOverlayProps {
   phase: "burning" | "success";
 }
 
-const FLAME_LAYERS = [
-  { color: "#7c2d12", delay: 0, duration: 1.1, drift: -18 },
-  { color: "#b91c1c", delay: 0.08, duration: 1.05, drift: 14 },
-  { color: "#ea580c", delay: 0.16, duration: 1.0, drift: -10 },
-  { color: "#f97316", delay: 0.24, duration: 0.95, drift: 8 },
-  { color: "#facc15", delay: 0.32, duration: 0.9, drift: 0 },
+// Files fly in from scattered positions around the phantom and get "eaten" — shrinking and
+// fading out as they converge on it — staggered so it reads as a sequence, not one flash.
+const FILES = [
+  { x: -110, y: -70, delay: 0.1 },
+  { x: 120, y: -60, delay: 0.35 },
+  { x: -130, y: 50, delay: 0.6 },
+  { x: 110, y: 70, delay: 0.85 },
+  { x: 0, y: -120, delay: 1.1 },
+  { x: 0, y: 110, delay: 1.35 },
 ];
 
 export function BurnOverlay({ phase }: BurnOverlayProps) {
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden" aria-live="assertive">
-      {FLAME_LAYERS.map((layer, i) => (
-        <motion.div
-          key={i}
-          initial={{ y: "110%", x: layer.drift, borderRadius: "45% 45% 0 0" }}
-          animate={{
-            y: "0%",
-            x: 0,
-            borderRadius: ["45% 45% 0 0", "40% 60% 0 0", "50% 50% 0 0"],
-          }}
-          transition={{
-            y: { delay: layer.delay, duration: layer.duration, ease: [0.16, 1, 0.3, 1] },
-            x: { delay: layer.delay, duration: layer.duration, ease: [0.16, 1, 0.3, 1] },
-            borderRadius: { delay: layer.delay + layer.duration, duration: 1.6, repeat: Infinity },
-          }}
-          className="absolute inset-x-[-10%] bottom-0 h-full"
-          style={{ backgroundColor: layer.color }}
-        />
-      ))}
-      <AnimatePresence>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm"
+      aria-live="assertive"
+    >
+      <AnimatePresence mode="wait">
+        {phase === "burning" && (
+          <motion.div
+            key="burning"
+            exit={{ opacity: 0 }}
+            className="relative flex h-64 w-64 items-center justify-center"
+          >
+            {FILES.map((file, i) => (
+              <motion.div
+                key={i}
+                initial={{ x: file.x, y: file.y, opacity: 1, scale: 1 }}
+                animate={{ x: 0, y: 0, opacity: 0, scale: 0.15 }}
+                transition={{ delay: file.delay, duration: 0.5, ease: [0.4, 0, 1, 1] }}
+                className="absolute text-white"
+              >
+                <FileText className="h-7 w-7" strokeWidth={1.75} />
+              </motion.div>
+            ))}
+            <motion.div
+              animate={{ y: [0, -10, 0], scale: [1, 1.08, 1] }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+              className="drop-shadow-[0_0_30px_rgba(102,81,176,0.55)]"
+            >
+              <PhantomIcon className="h-36" />
+            </motion.div>
+          </motion.div>
+        )}
         {phase === "success" && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="absolute inset-0 flex items-center justify-center"
+            key="success"
+            initial={{ opacity: 0, scale: 0.92, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-white px-10 py-8 shadow-xl shadow-slate-900/10"
           >
-            <p className="text-2xl font-semibold tracking-tight text-white drop-shadow">
-              Project successfully burnt
-            </p>
+            <PhantomIcon className="h-14" />
+            <div className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+              <Check className="h-5 w-5 text-brand" />
+              Project successfully purged
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

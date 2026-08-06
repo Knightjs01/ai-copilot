@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
+import { PhantomIcon } from "@/components/phantom-icon";
 import { useAuth } from "@/lib/auth-context";
 
 function initials(name: string): string {
@@ -25,10 +27,10 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-white/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <div className="flex items-center gap-6">
-          <Link href="/projects" className="text-sm font-semibold tracking-tight text-foreground">
-            AI Interview Copilot
+      <div className="mx-auto grid h-16 max-w-6xl grid-cols-3 items-center px-6">
+        <div className="flex items-center gap-6 justify-self-start">
+          <Link href="/" aria-label="Phantom Hire home">
+            <PhantomIcon className="h-9" priority />
           </Link>
           {user && (
             <nav className="flex items-center gap-4">
@@ -47,8 +49,20 @@ export function TopNav() {
             </nav>
           )}
         </div>
+
+        <Link href="/" aria-label="Phantom Hire home" className="justify-self-center">
+          <Image
+            src="/phantom-wordmark.png"
+            alt="Phantom Hire"
+            width={830}
+            height={219}
+            className="h-9 w-auto"
+            priority
+          />
+        </Link>
+
         {user && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 justify-self-end">
             <span className="text-sm text-muted-foreground">{user.full_name}</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {initials(user.full_name)}

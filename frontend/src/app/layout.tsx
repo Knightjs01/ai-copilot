@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AI Interview Copilot",
+  title: "Phantom Hire",
   description: "Privacy-first AI decision support for hiring teams.",
 };
 
