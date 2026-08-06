@@ -29,6 +29,11 @@ export function HeroSection() {
             . No names left in your workspace. No CVs left in storage. Nothing left behind.
           </p>
 
+          <p className="text-sm font-medium text-muted-foreground">
+            Purpose-built for confidential, high-stakes hiring — where the search itself has to
+            stay off the record.
+          </p>
+
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild variant="brand" size="lg">
               <Link href="/signup">Start hiring with Phantom</Link>
