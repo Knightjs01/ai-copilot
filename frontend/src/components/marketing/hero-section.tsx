@@ -11,6 +11,14 @@ const PROMISE_ITEMS = [
   "Zero-retention when the project is done",
 ];
 
+const SPECIALIST_SECTORS = [
+  "Technology",
+  "Security & Intelligence",
+  "Financial Services",
+  "Defence",
+  "Aerospace & Executive Search",
+];
+
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden">
@@ -55,10 +63,21 @@ export function HeroSection() {
             </Button>
           </div>
 
-          <p className="max-w-xl text-sm text-muted-foreground">
-            Designed for candidates who value security and anonymity across the Defence,
-            Technology, Cyber Security, Financial Markets and Fintech sectors.
-          </p>
+          <div className="flex flex-col gap-2.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Built for specialist sectors
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {SPECIALIST_SECTORS.map((sector) => (
+                <span
+                  key={sector}
+                  className="rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-medium text-foreground"
+                >
+                  {sector}
+                </span>
+              ))}
+            </div>
+          </div>
 
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
