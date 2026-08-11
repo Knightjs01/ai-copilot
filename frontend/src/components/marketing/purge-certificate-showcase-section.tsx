@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { PurgeCertificateMockup } from "@/components/marketing/mockups/purge-certificate-mockup";
 
 export function PurgeCertificateShowcaseSection() {
@@ -5,9 +7,18 @@ export function PurgeCertificateShowcaseSection() {
     <section className="border-t border-border">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="flex flex-col gap-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            The Burn · Live now
-          </p>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/phantom-icon.png"
+              alt=""
+              width={234}
+              height={190}
+              className="h-4 w-auto"
+            />
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+              The Burn · Live now
+            </p>
+          </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Close the role. Burn the project. Get an audit certificate.
           </h2>

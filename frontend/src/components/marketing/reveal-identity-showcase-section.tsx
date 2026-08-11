@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { RevealIdentityMockup } from "@/components/marketing/mockups/reveal-identity-mockup";
 
 export function RevealIdentityShowcaseSection() {
@@ -9,9 +11,18 @@ export function RevealIdentityShowcaseSection() {
         </div>
 
         <div className="order-1 flex flex-col gap-5 lg:order-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            Identity Vault · Live now
-          </p>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/phantom-icon.png"
+              alt=""
+              width={234}
+              height={190}
+              className="h-4 w-auto"
+            />
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+              Identity Vault · Live now
+            </p>
+          </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Blind by default. Revealed on your terms.
           </h2>

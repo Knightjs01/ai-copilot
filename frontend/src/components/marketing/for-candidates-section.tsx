@@ -1,4 +1,5 @@
 import { BadgeCheck, EyeOff, Flame, Wand2 } from "lucide-react";
+import Image from "next/image";
 
 import { CandidatePortalMockup } from "@/components/marketing/mockups/candidate-portal-mockup";
 
@@ -31,9 +32,18 @@ export function ForCandidatesSection() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="flex flex-col gap-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-              For candidates
-            </p>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/shadow-icon.png"
+                alt=""
+                width={557}
+                height={550}
+                className="h-4 w-auto"
+              />
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                For candidates
+              </p>
+            </div>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               Explore your next move, quietly
             </h2>

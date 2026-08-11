@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { JobBoardMockup } from "@/components/marketing/mockups/job-board-mockup";
 
 export function JobBoardShowcaseSection() {
@@ -9,9 +11,18 @@ export function JobBoardShowcaseSection() {
         </div>
 
         <div className="order-1 flex flex-col gap-5 lg:order-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            The Job Board · Live now
-          </p>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/shadow-icon.png"
+              alt=""
+              width={557}
+              height={550}
+              className="h-4 w-auto"
+            />
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+              The Job Board · Live now
+            </p>
+          </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Roles worth discovering, employers worth trusting
           </h2>

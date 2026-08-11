@@ -1,4 +1,5 @@
 import { Ghost, Sparkles, Wand2 } from "lucide-react";
+import Image from "next/image";
 
 const STORY_BEATS = [
   {
@@ -23,7 +24,14 @@ export function PhantomStorySection() {
     <section id="phantom" className="border-t border-border bg-slate-50">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          <Image
+            src="/phantom-ghost-hero.png"
+            alt=""
+            width={668}
+            height={844}
+            className="mx-auto h-14 w-auto"
+          />
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Meet Phantom
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">

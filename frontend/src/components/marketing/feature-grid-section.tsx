@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   BrainCircuit,
   ClipboardCheck,
@@ -57,9 +58,18 @@ export function FeatureGridSection() {
     <section className="border-t border-border">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            For hiring teams
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <Image
+              src="/phantom-icon.png"
+              alt=""
+              width={234}
+              height={190}
+              className="h-4 w-auto"
+            />
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+              For hiring teams
+            </p>
+          </div>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Phantom ATS takes care of everything in the background
           </h2>
