@@ -20,7 +20,7 @@ from app.modules.privacy_gateway.repository import SanitizedProfileRepository
 from app.modules.project_deletion.schemas import PurgeCertificate
 from app.modules.projects.exceptions import ProjectNotFoundError
 from app.modules.projects.models import Project
-from app.modules.projects.repository import ProjectRepository
+from app.modules.projects.repository import ProjectMemberRepository, ProjectRepository
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 
@@ -34,6 +34,7 @@ _DATA_CATEGORIES_DESTROYED = [
     "Candidate records",
     "Hiring blueprint",
     "Hiring manager alignment",
+    "Project membership records",
 ]
 
 # Only appended to the certificate when a project actually has a linked Shadow job (project_id
@@ -54,6 +55,7 @@ class ProjectDeletionService:
 
     def __init__(self, session: AsyncSession, storage: FileStorage) -> None:
         self._project_repo = ProjectRepository(session)
+        self._project_member_repo = ProjectMemberRepository(session)
         self._candidate_repo = CandidateRepository(session)
         self._sanitized_profile_repo = SanitizedProfileRepository(session)
         self._intelligence_pack_repo = IntelligencePackRepository(session)
@@ -95,6 +97,7 @@ class ProjectDeletionService:
 
         await self._hiring_blueprint_repo.delete_by_project_id(project_id)
         await self._hiring_manager_alignment_repo.delete_by_project_id(project_id)
+        await self._project_member_repo.delete_by_project_id(project_id)
 
         # A project's linked Shadow job (if any — the FK is optional, see shadow_jobs/models.py)
         # isn't reachable through the candidate_ids above at all: Shadow applicants are

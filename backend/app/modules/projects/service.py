@@ -10,17 +10,19 @@ from app.modules.privacy_gateway.exceptions import ExtractionFailedError, Unsupp
 from app.modules.privacy_gateway.extraction import extract_text
 from app.modules.projects.exceptions import (
     InvalidHiringManagerError,
+    InvalidProjectMemberError,
     JDExtractionFailedError,
     ProjectNotFoundError,
     UnsupportedJDFileTypeError,
 )
-from app.modules.projects.models import Project, ProjectStatus
-from app.modules.projects.repository import ProjectRepository
+from app.modules.projects.models import Project, ProjectMember, ProjectStatus
+from app.modules.projects.repository import ProjectMemberRepository, ProjectRepository
 
 
 class ProjectService:
     def __init__(self, session: AsyncSession) -> None:
         self._repository = ProjectRepository(session)
+        self._members = ProjectMemberRepository(session)
         self._users = UserService(session)
         self._audit = AuditService(session)
 
@@ -45,6 +47,16 @@ class ProjectService:
             created_by_id=actor.id,
             role_brief=role_brief,
         )
+        # The creator (and hiring manager, if set) always get resource-level access to their own
+        # project — harmless even for Owner/Admin, who bypass this check anyway, but required for
+        # a Member who creates or is assigned a project to be able to see it afterwards.
+        await self._members.add_member(
+            company_id=actor.company_id, project_id=project.id, user_id=actor.id
+        )
+        if hiring_manager_id is not None:
+            await self._members.add_member(
+                company_id=actor.company_id, project_id=project.id, user_id=hiring_manager_id
+            )
         await self._audit.record(
             company_id=actor.company_id,
             actor_user_id=actor.id,
@@ -61,9 +73,53 @@ class ProjectService:
         return project
 
     async def list_projects(
-        self, *, company_id: uuid.UUID, limit: int = 50, offset: int = 0
+        self,
+        *,
+        company_id: uuid.UUID,
+        project_ids: list[uuid.UUID] | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list[Project]:
-        return await self._repository.list_by_company(company_id, limit=limit, offset=offset)
+        """project_ids restricts the result to that set when supplied — the API layer passes it
+        for Member-role actors (their accessible project ids), leaves it None for Owner/Admin."""
+
+        return await self._repository.list_by_company(
+            company_id, project_ids=project_ids, limit=limit, offset=offset
+        )
+
+    async def add_member(self, *, actor: User, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
+        project = await self.get_project(company_id=actor.company_id, project_id=project_id)
+        if not await self._users.is_company_member(company_id=actor.company_id, user_id=user_id):
+            raise InvalidProjectMemberError()
+        await self._members.add_member(
+            company_id=actor.company_id, project_id=project.id, user_id=user_id
+        )
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="project.member_added",
+            target_type="project",
+            target_id=project.id,
+            extra_data={"user_id": str(user_id)},
+        )
+
+    async def remove_member(
+        self, *, actor: User, project_id: uuid.UUID, user_id: uuid.UUID
+    ) -> None:
+        project = await self.get_project(company_id=actor.company_id, project_id=project_id)
+        await self._members.remove_member(project_id=project.id, user_id=user_id)
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="project.member_removed",
+            target_type="project",
+            target_id=project.id,
+            extra_data={"user_id": str(user_id)},
+        )
+
+    async def list_members(self, *, actor: User, project_id: uuid.UUID) -> list[ProjectMember]:
+        await self.get_project(company_id=actor.company_id, project_id=project_id)
+        return await self._members.list_members_for_project(project_id)
 
     async def update_project(
         self,

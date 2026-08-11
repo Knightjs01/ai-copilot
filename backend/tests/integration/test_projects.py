@@ -3,7 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, invite_and_accept, signup
+from tests.integration.helpers import auth_headers, create_project, invite_and_accept, signup
 
 
 async def test_project_crud_happy_path(client: AsyncClient) -> None:
@@ -76,6 +76,121 @@ async def test_member_can_view_but_not_create_update_delete_projects(
 
     delete_denied = await client.delete(f"/api/v1/projects/{project_id}", headers=member_headers)
     assert delete_denied.status_code == 403
+
+
+async def test_member_only_sees_projects_they_are_a_member_of(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@resourcescope.com", company_name="ResourceScope Co")
+    owner_headers = auth_headers(owner["access_token"])
+
+    assigned = await create_project(client, headers=owner_headers, title="Assigned Project")
+    unassigned = await create_project(client, headers=owner_headers, title="Unassigned Project")
+
+    member = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="member@resourcescope.com",
+        role="Member",
+        sent_emails=sent_emails,
+    )
+    member_headers = auth_headers(member["access_token"])
+    member_id = (await client.get("/api/v1/auth/me", headers=member_headers)).json()["id"]
+
+    # Not a member of either project yet — the list is empty and direct access 404s (not 403 —
+    # a Member should not be able to tell "doesn't exist" apart from "not assigned to me").
+    list_before = await client.get("/api/v1/projects", headers=member_headers)
+    assert list_before.json() == []
+    get_before = await client.get(f"/api/v1/projects/{assigned['id']}", headers=member_headers)
+    assert get_before.status_code == 404
+
+    add_response = await client.post(
+        f"/api/v1/projects/{assigned['id']}/members",
+        json={"user_id": member_id},
+        headers=owner_headers,
+    )
+    assert add_response.status_code == 201, add_response.text
+
+    list_after = await client.get("/api/v1/projects", headers=member_headers)
+    ids_after = {p["id"] for p in list_after.json()}
+    assert ids_after == {assigned["id"]}
+
+    get_after = await client.get(f"/api/v1/projects/{assigned['id']}", headers=member_headers)
+    assert get_after.status_code == 200
+
+    still_blocked = await client.get(f"/api/v1/projects/{unassigned['id']}", headers=member_headers)
+    assert still_blocked.status_code == 404
+
+    # Candidates inherit the same scoping through their project.
+    candidate_response = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": assigned["id"], "full_name": "Scoped Candidate"},
+        headers=owner_headers,
+    )
+    assert candidate_response.status_code == 201, candidate_response.text
+    candidate_id = candidate_response.json()["id"]
+
+    unassigned_candidate_response = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": unassigned["id"], "full_name": "Unscoped Candidate"},
+        headers=owner_headers,
+    )
+    unassigned_candidate_id = unassigned_candidate_response.json()["id"]
+
+    candidate_get = await client.get(f"/api/v1/candidates/{candidate_id}", headers=member_headers)
+    assert candidate_get.status_code == 200
+
+    other_candidate_get = await client.get(
+        f"/api/v1/candidates/{unassigned_candidate_id}", headers=member_headers
+    )
+    assert other_candidate_get.status_code == 404
+
+    # Member has no candidates.create permission at all today (only Owner/Admin do, and both
+    # bypass membership scoping) — the role check in require_permission rejects this before the
+    # project-membership check in create_candidate is ever reached. That membership check exists
+    # for defense-in-depth against a future role that has candidates.create without org-wide
+    # access; it isn't exercisable by any role in the current three-role system.
+    create_in_unassigned = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": unassigned["id"], "full_name": "Should Fail"},
+        headers=member_headers,
+    )
+    assert create_in_unassigned.status_code == 403
+
+    remove_response = await client.delete(
+        f"/api/v1/projects/{assigned['id']}/members/{member_id}", headers=owner_headers
+    )
+    assert remove_response.status_code == 204
+
+    get_after_removal = await client.get(
+        f"/api/v1/projects/{assigned['id']}", headers=member_headers
+    )
+    assert get_after_removal.status_code == 404
+
+
+async def test_owner_and_admin_bypass_project_membership_scoping(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@orgwide.com", company_name="OrgWide Co")
+    owner_headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=owner_headers, title="No Members Added")
+
+    admin = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="admin@orgwide.com",
+        role="Admin",
+        sent_emails=sent_emails,
+    )
+    admin_headers = auth_headers(admin["access_token"])
+
+    # Admin was never added as a ProjectMember of this project (only the Owner, its creator, is
+    # a member) — Admin's org-wide role bypass means it sees it company-wide anyway.
+    get_as_admin = await client.get(f"/api/v1/projects/{project['id']}", headers=admin_headers)
+    assert get_as_admin.status_code == 200
+
+    list_as_admin = await client.get("/api/v1/projects", headers=admin_headers)
+    assert any(p["id"] == project["id"] for p in list_as_admin.json())
 
 
 async def test_hiring_manager_must_belong_to_same_company(client: AsyncClient) -> None:

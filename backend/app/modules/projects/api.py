@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.auth.authorization import actor_has_org_wide_access
 from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
@@ -11,7 +12,15 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
-from app.modules.projects.schemas import ProjectCreate, ProjectRead, ProjectUpdate
+from app.modules.projects.dependencies import require_project_access
+from app.modules.projects.repository import ProjectMemberRepository
+from app.modules.projects.schemas import (
+    ProjectCreate,
+    ProjectMemberCreate,
+    ProjectMemberRead,
+    ProjectRead,
+    ProjectUpdate,
+)
 from app.modules.projects.service import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -43,8 +52,14 @@ async def list_projects(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[ProjectRead]:
+    # Owner/Admin see every company project; a Member only sees projects they've been added to
+    # via ProjectMember — resource-level scoping, not just the role check above.
+    project_ids: list[uuid.UUID] | None = None
+    if not await actor_has_org_wide_access(session, actor.id):
+        project_ids = await ProjectMemberRepository(session).list_project_ids_for_user(actor.id)
+
     projects = await ProjectService(session).list_projects(
-        company_id=actor.company_id, limit=limit, offset=offset
+        company_id=actor.company_id, project_ids=project_ids, limit=limit, offset=offset
     )
     return [ProjectRead.model_validate(p) for p in projects]
 
@@ -54,6 +69,7 @@ async def get_project(
     project_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_VIEW)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ProjectRead:
     project = await ProjectService(session).get_project(
@@ -62,12 +78,56 @@ async def get_project(
     return ProjectRead.model_validate(project)
 
 
+@router.get("/{project_id}/members", response_model=list[ProjectMemberRead])
+async def list_project_members(
+    project_id: uuid.UUID,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_VIEW)),
+    __: None = Depends(require_project_access),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[ProjectMemberRead]:
+    members = await ProjectService(session).list_members(actor=actor, project_id=project_id)
+    return [ProjectMemberRead.model_validate(m) for m in members]
+
+
+@router.post(
+    "/{project_id}/members", response_model=ProjectMemberRead, status_code=status.HTTP_201_CREATED
+)
+async def add_project_member(
+    project_id: uuid.UUID,
+    body: ProjectMemberCreate,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    __: None = Depends(require_project_access),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ProjectMemberRead:
+    await ProjectService(session).add_member(
+        actor=actor, project_id=project_id, user_id=body.user_id
+    )
+    members = await ProjectMemberRepository(session).list_members_for_project(project_id)
+    added = next(m for m in members if m.user_id == body.user_id)
+    return ProjectMemberRead.model_validate(added)
+
+
+@router.delete("/{project_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_project_member(
+    project_id: uuid.UUID,
+    user_id: uuid.UUID,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    __: None = Depends(require_project_access),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> None:
+    await ProjectService(session).remove_member(actor=actor, project_id=project_id, user_id=user_id)
+
+
 @router.patch("/{project_id}", response_model=ProjectRead)
 async def update_project(
     project_id: uuid.UUID,
     body: ProjectUpdate,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ProjectRead:
     fields_set = body.model_fields_set
@@ -90,6 +150,7 @@ async def upload_jd(
     file: UploadFile = File(...),
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ProjectRead:
     content = await file.read()
@@ -107,6 +168,7 @@ async def delete_project(
     project_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_DELETE)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> None:
     await ProjectService(session).delete_project(actor=actor, project_id=project_id)

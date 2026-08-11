@@ -50,6 +50,7 @@ class CandidateRepository:
         company_id: uuid.UUID,
         *,
         project_id: uuid.UUID | None = None,
+        accessible_project_ids: list[uuid.UUID] | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Candidate]:
@@ -58,6 +59,8 @@ class CandidateRepository:
         )
         if project_id is not None:
             query = query.where(Candidate.project_id == project_id)
+        elif accessible_project_ids is not None:
+            query = query.where(Candidate.project_id.in_(accessible_project_ids))
         query = query.order_by(Candidate.created_at.desc()).limit(limit).offset(offset)
 
         result = await self._session.execute(query)

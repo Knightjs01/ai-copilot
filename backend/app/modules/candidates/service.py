@@ -105,11 +105,16 @@ class CandidateService:
         *,
         company_id: uuid.UUID,
         project_id: uuid.UUID | None = None,
+        accessible_project_ids: list[uuid.UUID] | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Candidate]:
         return await self._repository.list_by_company(
-            company_id, project_id=project_id, limit=limit, offset=offset
+            company_id,
+            project_id=project_id,
+            accessible_project_ids=accessible_project_ids,
+            limit=limit,
+            offset=offset,
         )
 
     async def update_candidate(

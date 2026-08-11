@@ -16,6 +16,11 @@ class InvalidHiringManagerError(ProjectError):
     detail = "Hiring manager must belong to the same company"
 
 
+class InvalidProjectMemberError(ProjectError):
+    status_code = 400
+    detail = "User must belong to the same company"
+
+
 class UnsupportedJDFileTypeError(ProjectError):
     status_code = 400
     detail = "Unsupported job description file type for automatic text extraction"

@@ -32,3 +32,15 @@ class ProjectRead(BaseModel):
     hiring_manager_id: uuid.UUID | None
     created_by_id: uuid.UUID
     role_brief: str | None
+
+
+class ProjectMemberCreate(BaseModel):
+    user_id: uuid.UUID
+
+
+class ProjectMemberRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    user_id: uuid.UUID
