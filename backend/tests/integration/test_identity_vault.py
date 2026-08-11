@@ -201,16 +201,19 @@ async def test_reveal_identity_returns_snapshot_and_records_audit_trail(
             assert row[1] == 42
             assert row[2] is not None
 
-        audit_row = await conn.execute(
-            text(
-                "SELECT metadata FROM audit_logs "
-                "WHERE action = 'candidate.identity_revealed' AND target_id = :id"
-            ),
-            {"id": candidate["id"]},
-        )
-        audit = audit_row.fetchone()
-        assert audit is not None
-        assert audit[0]["reason"] == "Background Checks"
+            # Same transaction — SET LOCAL is transaction-scoped, and audit_logs is now RLS-backed
+            # too (Security: close RLS coverage gap), so this needs the company context just like
+            # the reveal_events query above.
+            audit_row = await conn.execute(
+                text(
+                    "SELECT metadata FROM audit_logs "
+                    "WHERE action = 'candidate.identity_revealed' AND target_id = :id"
+                ),
+                {"id": candidate["id"]},
+            )
+            audit = audit_row.fetchone()
+            assert audit is not None
+            assert audit[0]["reason"] == "Background Checks"
 
 
 async def test_callsigns_unique_per_project_but_may_collide_across_projects(

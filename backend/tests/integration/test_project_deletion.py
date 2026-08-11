@@ -251,6 +251,9 @@ async def test_burn_project_audit_entry_survives(client: AsyncClient) -> None:
     project = await create_project(client, headers=headers, title="Role To Burn")
     project_id = project["id"]
 
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    company_id = me.json()["company_id"]
+
     burn_response = await client.post(f"/api/v1/projects/{project_id}/burn", headers=headers)
     assert burn_response.status_code == 200
     body = burn_response.json()
@@ -260,17 +263,23 @@ async def test_burn_project_audit_entry_survives(client: AsyncClient) -> None:
     assert body["certificate"]["purged_at"]
 
     async with engine.connect() as conn:
-        result = await conn.execute(
-            text(
-                "SELECT metadata FROM audit_logs "
-                "WHERE action = 'project.burned' AND target_id = :id"
-            ),
-            {"id": project_id},
-        )
-        row = result.fetchone()
-        assert row is not None, "audit entry should survive even though the project is gone"
-        assert row[0]["title"] == "Role To Burn"
-        assert row[0]["candidate_count"] == 0
+        async with conn.begin():
+            # audit_logs is RLS-backed (Security: close RLS coverage gap) — needs the company
+            # context set, same as every other RLS-scoped table this suite queries directly.
+            await conn.execute(
+                text(f"SET LOCAL app.current_company_id = '{uuid_module.UUID(company_id)}'")
+            )
+            result = await conn.execute(
+                text(
+                    "SELECT metadata FROM audit_logs "
+                    "WHERE action = 'project.burned' AND target_id = :id"
+                ),
+                {"id": project_id},
+            )
+            row = result.fetchone()
+            assert row is not None, "audit entry should survive even though the project is gone"
+            assert row[0]["title"] == "Role To Burn"
+            assert row[0]["candidate_count"] == 0
 
 
 async def test_burn_project_requires_projects_delete_permission(
