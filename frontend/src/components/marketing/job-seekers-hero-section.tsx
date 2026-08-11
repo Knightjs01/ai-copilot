@@ -19,9 +19,9 @@ export function JobSeekersHeroSection() {
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            The Job Board and Candidate Portal are how Phantom Hire brings the same anonymity
-            companies already get to the people they&apos;re trying to hire — explore roles,
-            get AI-matched, and stay a Callsign until you decide otherwise.
+            Stay a &apos;Callsign&apos; on Shadow, our Anonymous Job Board. Explore roles, get
+            AI-matched to opportunities, and keep your identity private until you choose to
+            reveal it.
           </p>
 
           <span className="rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-medium text-muted-foreground">
