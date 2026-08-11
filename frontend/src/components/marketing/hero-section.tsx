@@ -31,7 +31,7 @@ export function HeroSection() {
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
             Phantom Hire is the private talent marketplace where exceptional people can explore
-            their next opportunity without announcing they&apos;re looking — and companies can
+            their next opportunity without revealing their identity — and companies can
             discover them with total anonymity.
           </p>
 
