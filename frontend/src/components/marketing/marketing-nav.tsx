@@ -12,6 +12,11 @@ const AUDIENCE_LINKS = [
   { href: "/hiring-teams", label: "Hiring Teams" },
 ];
 
+const INFO_LINKS = [
+  { href: "/#phantom", label: "Meet Phantom" },
+  { href: "/#security", label: "Security" },
+];
+
 export function MarketingNav() {
   const pathname = usePathname();
 
@@ -31,6 +36,15 @@ export function MarketingNav() {
                 "text-sm font-medium transition-colors hover:text-foreground",
                 pathname === link.href ? "text-foreground" : "text-muted-foreground"
               )}
+            >
+              {link.label}
+            </Link>
+          ))}
+          {INFO_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
             </Link>
