@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
@@ -8,6 +10,8 @@ interface Pillar {
   body: string;
   status: "Live now" | "Coming soon";
   image: { src: string; alt: string };
+  href: string;
+  cta: string;
 }
 
 const PILLARS: Pillar[] = [
@@ -17,6 +21,8 @@ const PILLARS: Pillar[] = [
     subtitle: "The anonymous job board",
     body: "Where candidates discover and apply to roles under a Callsign, not a name, staying in the shadows until they choose to step forward.",
     status: "Live now",
+    href: "/job-seekers",
+    cta: "Explore Shadow",
   },
   {
     image: { src: "/phantom-icon.png", alt: "" },
@@ -24,6 +30,8 @@ const PILLARS: Pillar[] = [
     subtitle: "Your hiring pipeline, end to end",
     body: "Hiring projects, candidate tracking, roles and permissions: the pipeline your team already runs on, built around Zero-Retention from day one.",
     status: "Live now",
+    href: "/hiring-teams",
+    cta: "Explore Phantom ATS",
   },
   {
     image: { src: "/phantom-ghost-hero.png", alt: "" },
@@ -31,6 +39,8 @@ const PILLARS: Pillar[] = [
     subtitle: "The AI Assistant",
     body: "Reads job descriptions, screens candidates, drafts questions, and briefs the hiring manager, automatically, in the background.",
     status: "Live now",
+    href: "/#phantom",
+    cta: "Meet Phantom",
   },
 ];
 
@@ -72,6 +82,13 @@ export function ThreeInOneSection() {
               <p className="relative text-sm leading-relaxed text-muted-foreground">
                 {pillar.body}
               </p>
+              <Link
+                href={pillar.href}
+                className="relative mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
+              >
+                {pillar.cta}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           ))}
         </div>
