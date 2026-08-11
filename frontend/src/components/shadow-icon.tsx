@@ -2,7 +2,7 @@ import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
-export function PhantomIcon({
+export function ShadowIcon({
   className,
   priority,
 }: {
@@ -11,11 +11,11 @@ export function PhantomIcon({
 }) {
   return (
     <Image
-      src="/phantom-icon.png"
+      src="/shadow-icon.png"
       alt=""
-      width={234}
-      height={190}
-      className={cn("h-3.5 w-auto", className)}
+      width={557}
+      height={550}
+      className={cn("h-8 w-auto", className)}
       priority={priority}
     />
   );

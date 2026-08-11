@@ -2,10 +2,15 @@ import type { BadgeProps } from "@/components/ui/badge";
 import type {
   CandidateSource,
   CandidateStatus,
+  CareerIntent,
+  EmploymentType,
   FitRating,
   NoticePeriod,
   PrescreenOutcome,
   ProjectStatus,
+  RemotePreference,
+  ShadowApplicationStatus,
+  ShadowJobStatus,
 } from "@/lib/types";
 
 type Variant = NonNullable<BadgeProps["variant"]>;
@@ -81,4 +86,55 @@ export const FIT_RATING_VARIANT: Record<FitRating, Variant> = {
   "Good Fit": "info",
   "Possible Fit": "warning",
   "Weak Fit": "danger",
+};
+
+export const SHADOW_JOB_STATUS_LABEL: Record<ShadowJobStatus, string> = {
+  draft: "Draft",
+  published: "Published",
+  closed: "Closed",
+};
+
+export const SHADOW_JOB_STATUS_VARIANT: Record<ShadowJobStatus, Variant> = {
+  draft: "neutral",
+  published: "success",
+  closed: "outline",
+};
+
+export const SHADOW_APPLICATION_STATUS_LABEL: Record<ShadowApplicationStatus, string> = {
+  submitted: "Submitted",
+  under_review: "Under review",
+  reveal_requested: "Reveal requested",
+  revealed: "Revealed",
+  declined: "Declined",
+  withdrawn: "Withdrawn",
+};
+
+export const SHADOW_APPLICATION_STATUS_VARIANT: Record<ShadowApplicationStatus, Variant> = {
+  submitted: "info",
+  under_review: "neutral",
+  reveal_requested: "warning",
+  revealed: "success",
+  declined: "outline",
+  withdrawn: "outline",
+};
+
+export const REMOTE_PREFERENCE_LABEL: Record<RemotePreference, string> = {
+  remote: "Remote",
+  hybrid: "Hybrid",
+  onsite: "Onsite",
+  flexible: "Flexible",
+};
+
+export const CAREER_INTENT_LABEL: Record<CareerIntent, string> = {
+  actively_looking: "Actively looking",
+  open_to_opportunity: "Open to opportunities",
+  just_exploring: "Just exploring",
+  not_looking: "Not looking",
+};
+
+export const EMPLOYMENT_TYPE_LABEL: Record<EmploymentType, string> = {
+  full_time: "Full-time",
+  part_time: "Part-time",
+  contract: "Contract",
+  fractional: "Fractional",
 };

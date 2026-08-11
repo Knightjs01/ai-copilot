@@ -274,3 +274,282 @@ export interface HistoricVaultOverview {
   purged_projects: PurgedProjectRecord[];
   recent_audit_entries: AuditLogEntry[];
 }
+
+// Shadow — the anonymous candidate job board. Candidates are a separate principal
+// (candidate_auth) with no company_id at all, distinct from the company User/MeResponse above —
+// see backend/app/modules/candidate_auth/__init__.py.
+
+export interface CandidateMeResponse {
+  id: string;
+  email: string;
+  full_name: string;
+  is_email_verified: boolean;
+}
+
+export interface CandidateTokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+export type CareerIntent =
+  | "actively_looking"
+  | "open_to_opportunity"
+  | "just_exploring"
+  | "not_looking";
+
+export type RemotePreference = "remote" | "hybrid" | "onsite" | "flexible";
+
+export type VerificationStatus = "unverified" | "pending" | "verified";
+
+export interface PersonalInfo {
+  legal_name: string;
+  phone: string | null;
+  address: string | null;
+}
+
+export interface PersonalInfoInput {
+  legal_name: string;
+  phone?: string | null;
+  address?: string | null;
+}
+
+// company_name is the real employer — only ever visible to the owning candidate themselves (via
+// GET /phantom-passport/me) or a company after an approved Reveal (see RevealedCareerEntry
+// below). Every other view of a career entry (ShadowCareerEntrySummary) shows only the
+// anonymized label.
+export interface CareerEntry {
+  id: string;
+  title: string;
+  company_name: string;
+  company_name_anonymized: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_current: boolean;
+  responsibilities: string | null;
+  achievements: string[];
+}
+
+export interface CareerEntryInput {
+  title: string;
+  company_name: string;
+  company_name_anonymized: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_current?: boolean;
+  responsibilities?: string | null;
+  achievements?: string[];
+}
+
+export interface PhantomPassport {
+  id: string;
+  headline: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  summary: string | null;
+  skills: string[];
+  industries: string[];
+  location: string | null;
+  remote_preference: RemotePreference | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  notice_period: NoticePeriod | null;
+  career_intent: CareerIntent;
+  verification_status: VerificationStatus;
+  completion_percentage: number;
+  personal_info: PersonalInfo;
+  career_entries: CareerEntry[];
+}
+
+export interface PassportUpdateInput {
+  headline?: string | null;
+  seniority?: string | null;
+  years_experience?: number | null;
+  summary?: string | null;
+  skills: string[];
+  industries: string[];
+  location?: string | null;
+  remote_preference?: RemotePreference | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  notice_period?: NoticePeriod | null;
+  career_intent?: CareerIntent | null;
+  personal_info: PersonalInfoInput;
+  career_entries: CareerEntryInput[];
+}
+
+export interface CvParseCareerEntry {
+  title: string;
+  company_name: string;
+  company_name_anonymized: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_current: boolean;
+  responsibilities: string | null;
+  achievements: string[];
+}
+
+// A preview only, returned by POST /phantom-passport/parse-cv — nothing here is persisted until
+// the candidate reviews it (and can edit it) and saves via PUT /phantom-passport/me.
+export interface CvParseResult {
+  headline: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  summary: string | null;
+  skills: string[];
+  industries: string[];
+  career_entries: CvParseCareerEntry[];
+  detected_phone: string | null;
+  detected_address: string | null;
+}
+
+export type EmploymentType = "full_time" | "part_time" | "contract" | "fractional";
+
+export type ShadowJobStatus = "draft" | "published" | "closed";
+
+export type ShadowApplicationStatus =
+  | "submitted"
+  | "under_review"
+  | "reveal_requested"
+  | "revealed"
+  | "declined"
+  | "withdrawn";
+
+// The company-side view of a job posting (own company only, any status) — see
+// ShadowJobBoardListing below for the public/candidate-facing view (published only, spans every
+// company).
+export interface ShadowJob {
+  id: string;
+  company_id: string;
+  project_id: string | null;
+  title: string;
+  department: string | null;
+  seniority: string | null;
+  employment_type: EmploymentType;
+  location: string | null;
+  remote_preference: RemotePreference | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  summary: string;
+  description: string;
+  requirements: string[];
+  status: ShadowJobStatus;
+  published_at: string | null;
+  applicant_count: number;
+}
+
+export interface ShadowJobCreateInput {
+  title: string;
+  department?: string | null;
+  seniority?: string | null;
+  employment_type?: EmploymentType;
+  location?: string | null;
+  remote_preference?: RemotePreference | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  summary: string;
+  description: string;
+  requirements?: string[];
+  project_id?: string | null;
+}
+
+export type ShadowJobUpdateInput = Partial<Omit<ShadowJobCreateInput, "project_id">>;
+
+// Company identity is shown by name deliberately — Shadow anonymizes the CANDIDATE to the
+// recruiter, not the employer to the candidate. See backend shadow_jobs/schemas.py.
+export interface ShadowJobBoardListing {
+  id: string;
+  company_name: string;
+  title: string;
+  department: string | null;
+  seniority: string | null;
+  employment_type: EmploymentType;
+  location: string | null;
+  remote_preference: RemotePreference | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  summary: string;
+  description: string;
+  requirements: string[];
+  published_at: string | null;
+}
+
+export interface ShadowApplication {
+  id: string;
+  shadow_job_id: string;
+  job_title: string;
+  company_name: string;
+  callsign: string;
+  status: ShadowApplicationStatus;
+  applied_at: string;
+}
+
+export interface ShadowCareerEntrySummary {
+  title: string;
+  company_name_anonymized: string;
+  is_current: boolean;
+}
+
+// The recruiter-facing anonymized applicant card — deliberately has no field that could hold a
+// name, email, phone, or real employer. See backend shadow_jobs/__init__.py.
+export interface ShadowProfile {
+  application_id: string;
+  callsign: string;
+  status: ShadowApplicationStatus;
+  applied_at: string;
+  headline: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  summary: string | null;
+  skills: string[];
+  industries: string[];
+  location: string | null;
+  remote_preference: RemotePreference | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  notice_period: NoticePeriod | null;
+  career_intent: CareerIntent;
+  career_entries: ShadowCareerEntrySummary[];
+}
+
+export type RevealRequestStatus = "pending" | "approved" | "declined";
+
+// The company-side view of a Reveal Request it created.
+export interface RevealRequest {
+  id: string;
+  shadow_application_id: string;
+  callsign: string;
+  reason: string | null;
+  status: RevealRequestStatus;
+  requested_at: string;
+  responded_at: string | null;
+}
+
+// What the candidate sees before deciding — job/company context plus the company's stated
+// reason, nothing more.
+export interface CandidateRevealRequest {
+  id: string;
+  shadow_application_id: string;
+  job_title: string;
+  company_name: string;
+  reason: string | null;
+  status: RevealRequestStatus;
+  requested_at: string;
+}
+
+export interface RevealedCareerEntry {
+  title: string;
+  company_name: string;
+  is_current: boolean;
+}
+
+// The minimum-necessary disclosure snapshot, only reachable after the candidate has approved a
+// Reveal Request. Deliberately excludes the Passport address — see shadow_reveal/__init__.py.
+export interface RevealedIdentity {
+  application_id: string;
+  callsign: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  career_entries: RevealedCareerEntry[];
+  revealed_at: string;
+}
