@@ -4,9 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import Image from "next/image";
 
 import { PhantomIcon } from "@/components/phantom-icon";
-import { PhantomWordmark } from "@/components/phantom-wordmark";
 import { useAuth } from "@/lib/auth-context";
 
 function initials(name: string): string {
@@ -68,8 +68,15 @@ export function TopNav() {
           )}
         </div>
 
-        <Link href="/" aria-label="Phantom Hire home" className="justify-self-center">
-          <PhantomWordmark />
+        <Link href="/" aria-label="Phantom ATS home" className="justify-self-center">
+          <Image
+            src="/phantom-ats-wordmark.png"
+            alt="Phantom ATS"
+            width={1388}
+            height={339}
+            className="h-8 w-auto"
+            priority
+          />
         </Link>
 
         {user && (

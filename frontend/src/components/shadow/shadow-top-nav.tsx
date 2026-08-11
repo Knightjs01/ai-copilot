@@ -64,12 +64,15 @@ export function ShadowTopNav() {
           </nav>
         </div>
 
-        <Link
-          href="/shadow"
-          aria-label="Shadow home"
-          className="justify-self-center text-lg font-extrabold tracking-tight"
-        >
-          <span className="text-foreground">SHADOW</span>
+        <Link href="/shadow" aria-label="Shadow home" className="justify-self-center">
+          <Image
+            src="/shadow-wordmark.png"
+            alt="Shadow: Anonymous Job Board"
+            width={1629}
+            height={1049}
+            className="h-9 w-auto"
+            priority
+          />
         </Link>
 
         {candidate ? (
