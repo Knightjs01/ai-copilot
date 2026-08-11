@@ -17,7 +17,7 @@ interface Pillar {
 const PILLARS: Pillar[] = [
   {
     image: { src: "/shadow-icon.png", alt: "" },
-    title: "Shadow",
+    title: "Shadow Job Board",
     subtitle: "The anonymous job board",
     body: "Where candidates discover and apply to roles under a Callsign, not a name, staying in the shadows until they choose to step forward.",
     status: "Live now",
@@ -35,7 +35,7 @@ const PILLARS: Pillar[] = [
   },
   {
     image: { src: "/phantom-ghost-hero.png", alt: "" },
-    title: "Phantom",
+    title: "Phantom AI",
     subtitle: "The AI Assistant",
     body: "Reads job descriptions, screens candidates, drafts questions, and briefs the hiring manager, automatically, in the background.",
     status: "Live now",
