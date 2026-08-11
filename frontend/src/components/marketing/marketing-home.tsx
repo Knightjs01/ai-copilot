@@ -19,8 +19,8 @@ export function MarketingHome() {
       <MarketingNav />
       <main className="flex-1">
         <HeroSection />
-        <TriangleSection />
         <ThreeInOneSection />
+        <TriangleSection />
         <AtsShowcaseSection />
         <JobBoardShowcaseSection />
         <ForCandidatesSection />

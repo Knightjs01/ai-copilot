@@ -1,24 +1,27 @@
-import { Bot, Briefcase, KanbanSquare } from "lucide-react";
+import { Bot, EyeOff, KanbanSquare } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
 const PILLARS = [
   {
-    icon: Briefcase,
-    title: "Job Board",
-    body: "Where candidates discover and apply to your roles — under a Callsign, not a name, from the moment they land on it.",
+    icon: EyeOff,
+    title: "Shadow",
+    subtitle: "The anonymous job board",
+    body: "Where candidates discover and apply to roles under a Callsign, not a name — staying in the shadows until they choose to step forward.",
     status: "Coming soon" as const,
   },
   {
     icon: KanbanSquare,
-    title: "ATS",
-    body: "The pipeline your team already runs on: hiring projects, candidate tracking, roles, permissions — end to end.",
+    title: "Talent ATS",
+    subtitle: "Your hiring pipeline, end to end",
+    body: "Hiring projects, candidate tracking, roles and permissions — the pipeline your team already runs on, built around Zero-Retention from day one.",
     status: "Live now" as const,
   },
   {
     icon: Bot,
-    title: "Hiring Phantom Assistant",
-    body: "The AI that reads job descriptions, screens candidates, drafts questions, and briefs the hiring manager — automatically.",
+    title: "Phantom",
+    subtitle: "The AI Assistant",
+    body: "Reads job descriptions, screens candidates, drafts questions, and briefs the hiring manager — automatically, in the background.",
     status: "Live now" as const,
   },
 ];
@@ -29,7 +32,7 @@ export function ThreeInOneSection() {
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Anonymous Job Board, ATS, and Phantom Hiring Assistant — all in one platform.
+            Three core services. One platform.
           </h2>
           <p className="mt-3 text-muted-foreground">
             Most tools make you stitch these together yourself. Phantom Hire doesn&apos;t.
@@ -50,7 +53,10 @@ export function ThreeInOneSection() {
                   {pillar.status}
                 </Badge>
               </div>
-              <h3 className="text-base font-semibold text-foreground">{pillar.title}</h3>
+              <div>
+                <h3 className="text-base font-semibold text-foreground">{pillar.title}</h3>
+                <p className="text-xs font-medium text-brand">{pillar.subtitle}</p>
+              </div>
               <p className="text-sm leading-relaxed text-muted-foreground">{pillar.body}</p>
             </div>
           ))}
