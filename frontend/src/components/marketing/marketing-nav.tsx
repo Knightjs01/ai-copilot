@@ -25,10 +25,10 @@ export function MarketingNav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" aria-label="Phantom Hire home">
           <Image
-            src="/phantom-wordmark.png"
+            src="/phantom-ats-wordmark.png"
             alt="Phantom Hire"
-            width={829}
-            height={193}
+            width={1388}
+            height={339}
             className="h-7 w-auto"
             priority
           />

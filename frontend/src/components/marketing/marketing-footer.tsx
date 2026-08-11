@@ -9,10 +9,10 @@ export function MarketingFooter() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-6 py-10 sm:flex-row sm:justify-between">
         <div className="flex items-center gap-3">
           <Image
-            src="/phantom-wordmark.png"
+            src="/phantom-ats-wordmark.png"
             alt="Phantom Hire"
-            width={829}
-            height={193}
+            width={1388}
+            height={339}
             className="h-6 w-auto"
           />
           <span className="text-xs text-muted-foreground">

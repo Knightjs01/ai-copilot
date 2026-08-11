@@ -30,10 +30,10 @@ export default function LoginChooserPage() {
       <Link href="/" aria-label="Phantom Hire home" className="mb-10 flex flex-col items-center gap-3">
         <PhantomIcon className="h-12" priority />
         <Image
-          src="/phantom-wordmark.png"
+          src="/phantom-ats-wordmark.png"
           alt="Phantom Hire"
-          width={829}
-          height={193}
+          width={1388}
+          height={339}
           className="h-9 w-auto"
           priority
         />
