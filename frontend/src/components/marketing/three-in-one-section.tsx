@@ -1,6 +1,4 @@
 import Image from "next/image";
-import { Bot } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
@@ -9,8 +7,7 @@ interface Pillar {
   subtitle: string;
   body: string;
   status: "Live now" | "Coming soon";
-  icon?: LucideIcon;
-  image?: { src: string; alt: string };
+  image: { src: string; alt: string };
 }
 
 const PILLARS: Pillar[] = [
@@ -29,7 +26,7 @@ const PILLARS: Pillar[] = [
     status: "Live now",
   },
   {
-    icon: Bot,
+    image: { src: "/phantom-ghost-hero.png", alt: "" },
     title: "Phantom",
     subtitle: "The AI Assistant",
     body: "Reads job descriptions, screens candidates, drafts questions, and briefs the hiring manager, automatically, in the background.",
@@ -58,17 +55,13 @@ export function ThreeInOneSection() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                  {pillar.image ? (
-                    <Image
-                      src={pillar.image.src}
-                      alt={pillar.image.alt}
-                      width={40}
-                      height={40}
-                      className="h-6 w-6 object-contain"
-                    />
-                  ) : pillar.icon ? (
-                    <pillar.icon className="h-5 w-5" />
-                  ) : null}
+                  <Image
+                    src={pillar.image.src}
+                    alt={pillar.image.alt}
+                    width={40}
+                    height={40}
+                    className="h-6 w-6 object-contain"
+                  />
                 </div>
                 <Badge variant={pillar.status === "Live now" ? "success" : "outline"}>
                   {pillar.status}
