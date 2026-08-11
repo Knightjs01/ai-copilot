@@ -61,7 +61,7 @@ export function FeatureGridSection() {
             For hiring teams
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Everything Phantom takes care of in the background
+            Phantom ATS takes care of everything in the background
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             A full hiring workflow, running quietly behind every project.
