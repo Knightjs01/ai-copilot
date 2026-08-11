@@ -29,7 +29,7 @@ export function MarketingNav() {
             alt="Phantom Hire"
             width={1388}
             height={339}
-            className="h-7 w-auto"
+            className="h-9 w-auto"
             priority
           />
         </Link>
