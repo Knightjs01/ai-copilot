@@ -58,7 +58,7 @@ export function ThreeInOneSection() {
                 alt={pillar.image.alt}
                 width={200}
                 height={200}
-                className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 object-contain opacity-[0.08]"
+                className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 object-contain opacity-25"
               />
               <div className="relative flex items-center justify-between">
                 <Badge variant={pillar.status === "Live now" ? "success" : "outline"}>
