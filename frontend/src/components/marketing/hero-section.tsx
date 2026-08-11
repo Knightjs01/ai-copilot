@@ -53,6 +53,11 @@ export function HeroSection() {
             </Button>
           </div>
 
+          <p className="max-w-xl text-sm text-muted-foreground">
+            Designed for candidates who value security and anonymity across the Defence,
+            Technology, Cyber Security, Financial Markets and Fintech sectors.
+          </p>
+
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
