@@ -55,7 +55,7 @@ const FEATURES = [
 export function FeatureGridSection() {
   return (
     <section className="border-t border-border">
-      <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+      <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
             For hiring teams

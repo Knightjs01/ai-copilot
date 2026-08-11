@@ -21,7 +21,7 @@ const TRIANGLE = [
 export function TriangleSection() {
   return (
     <section id="triangle" className="border-t border-border bg-slate-50">
-      <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+      <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Why it works

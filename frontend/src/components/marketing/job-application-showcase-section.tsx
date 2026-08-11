@@ -3,7 +3,7 @@ import { JobApplicationMockup } from "@/components/marketing/mockups/job-applica
 export function JobApplicationShowcaseSection() {
   return (
     <section className="border-t border-border">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:py-28">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="flex flex-col gap-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
             Applying, anonymously

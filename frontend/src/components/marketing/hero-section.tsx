@@ -22,7 +22,7 @@ const SPECIALIST_SECTORS = [
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:py-28">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="flex flex-col items-start gap-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3.5 py-1.5">
             <Sparkles className="h-3.5 w-3.5 text-brand" />

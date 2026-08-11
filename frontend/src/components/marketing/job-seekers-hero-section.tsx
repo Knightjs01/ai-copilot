@@ -26,7 +26,7 @@ const OVERVIEW_STEPS = [
 export function JobSeekersHeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-border">
-      <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+      <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
           <div className="flex flex-col items-start gap-6">
             <Image

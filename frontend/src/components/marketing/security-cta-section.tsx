@@ -53,7 +53,7 @@ const CANDIDATE_BENEFITS = [
 export function SecurityCtaSection() {
   return (
     <section id="security" className="border-t border-border bg-slate-50">
-      <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+      <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5">
             <Award className="h-3.5 w-3.5 text-brand" />

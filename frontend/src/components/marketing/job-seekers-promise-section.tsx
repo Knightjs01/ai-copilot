@@ -26,7 +26,7 @@ const PROMISE = [
 export function JobSeekersPromiseSection() {
   return (
     <section className="border-t border-border bg-slate-50">
-      <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+      <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             The same anonymity companies get, built for you too

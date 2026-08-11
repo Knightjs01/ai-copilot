@@ -3,7 +3,7 @@ import { JobBoardMockup } from "@/components/marketing/mockups/job-board-mockup"
 export function JobBoardShowcaseSection() {
   return (
     <section className="border-t border-border bg-slate-50">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:py-28">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="order-2 lg:order-1">
           <JobBoardMockup />
         </div>
