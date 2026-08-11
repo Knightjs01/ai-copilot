@@ -21,9 +21,10 @@ export function HiringTeamsHeroSection() {
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Phantom Hire is the ATS built for hiring that can&apos;t be seen — access to talent
-            that isn&apos;t on the open market, an AI partner that does the screening work, and a
-            product that&apos;s designed to hold nothing once the role is filled.
+            Phantom Hire is the ATS built for confidential hiring. Gain access to talent that
+            isn&apos;t on the open market, a feature-rich ATS, and &apos;Phantom&apos; — our AI
+            partner that helps build hiring blueprints, assists with screening, and burns your
+            project once it&apos;s complete.
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
