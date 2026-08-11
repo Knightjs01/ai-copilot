@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!isLoading && !user) {
-      router.replace("/login");
+      router.replace("/login/recruiter");
     }
   }, [isLoading, user, router]);
 

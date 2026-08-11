@@ -7,11 +7,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { ShadowAuthShell } from "@/components/shadow/shadow-auth-shell";
+import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import { useAuth } from "@/lib/auth-context";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -20,9 +20,9 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export default function ShadowLoginPage() {
+export default function RecruiterLoginPage() {
   const router = useRouter();
-  const { login } = useCandidateAuth();
+  const { login } = useAuth();
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const {
@@ -35,29 +35,26 @@ export default function ShadowLoginPage() {
     setFormError(null);
     try {
       await login(values.email, values.password);
-      router.push("/shadow/passport");
+      router.push("/projects");
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Couldn't sign in — try again.");
     }
   };
 
   return (
-    <ShadowAuthShell
+    <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your Phantom Passport."
+      subtitle="Sign in to your Talent Acquisition workspace."
       footer={
         <div className="flex flex-col items-center gap-2">
           <span>
-            Don&apos;t have a Passport yet?{" "}
-            <Link
-              href="/shadow/signup"
-              className="font-medium text-foreground underline underline-offset-4"
-            >
+            Don&apos;t have a workspace yet?{" "}
+            <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
               Create one
             </Link>
           </span>
           <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground">
-            ← Not a candidate? Choose a different login
+            ← Not a recruiter? Choose a different login
           </Link>
         </div>
       }
@@ -75,10 +72,10 @@ export default function ShadowLoginPage() {
           />
         </Field>
         {formError && <p className="text-sm font-medium text-danger">{formError}</p>}
-        <Button type="submit" variant="brand" size="lg" className="mt-2 w-full" disabled={isSubmitting}>
+        <Button type="submit" size="lg" className="mt-2 w-full" disabled={isSubmitting}>
           {isSubmitting ? "Signing in…" : "Sign in"}
         </Button>
       </form>
-    </ShadowAuthShell>
+    </AuthShell>
   );
 }

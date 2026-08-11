@@ -24,7 +24,7 @@ export function TopNav() {
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
+    router.push("/login/recruiter");
   };
 
   return (

@@ -32,7 +32,7 @@ export function HiringTeamsHeroSection() {
               <Link href="/signup">Start hiring with Phantom</Link>
             </Button>
             <Button asChild variant="secondary" size="lg">
-              <Link href="/login">Log in</Link>
+              <Link href="/login/recruiter">Log in</Link>
             </Button>
           </div>
         </div>

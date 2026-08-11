@@ -50,7 +50,10 @@ export default function SignupPage() {
       footer={
         <>
           Already have a workspace?{" "}
-          <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
+          <Link
+            href="/login/recruiter"
+            className="font-medium text-foreground underline underline-offset-4"
+          >
             Sign in
           </Link>
         </>

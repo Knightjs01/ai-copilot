@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { EyeOff } from "lucide-react";
 
 import { CandidatePortalMockup } from "@/components/marketing/mockups/candidate-portal-mockup";
+import { Button } from "@/components/ui/button";
 
 export function JobSeekersHeroSection() {
   return (
@@ -24,9 +26,14 @@ export function JobSeekersHeroSection() {
             reveal it.
           </p>
 
-          <span className="rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-medium text-muted-foreground">
-            In development — here&apos;s what it looks like
-          </span>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild variant="brand" size="lg">
+              <Link href="/shadow/signup">Build your Phantom Passport</Link>
+            </Button>
+            <Button asChild variant="secondary" size="lg">
+              <Link href="/shadow/login">Log in</Link>
+            </Button>
+          </div>
         </div>
 
         <CandidatePortalMockup />
