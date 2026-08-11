@@ -51,27 +51,27 @@ export function ThreeInOneSection() {
           {PILLARS.map((pillar) => (
             <div
               key={pillar.title}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
+              className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                  <Image
-                    src={pillar.image.src}
-                    alt={pillar.image.alt}
-                    width={40}
-                    height={40}
-                    className="h-6 w-6 object-contain"
-                  />
-                </div>
+              <Image
+                src={pillar.image.src}
+                alt={pillar.image.alt}
+                width={200}
+                height={200}
+                className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 object-contain opacity-[0.08]"
+              />
+              <div className="relative flex items-center justify-between">
                 <Badge variant={pillar.status === "Live now" ? "success" : "outline"}>
                   {pillar.status}
                 </Badge>
               </div>
-              <div>
+              <div className="relative">
                 <h3 className="text-base font-semibold text-foreground">{pillar.title}</h3>
                 <p className="text-xs font-medium text-brand">{pillar.subtitle}</p>
               </div>
-              <p className="text-sm leading-relaxed text-muted-foreground">{pillar.body}</p>
+              <p className="relative text-sm leading-relaxed text-muted-foreground">
+                {pillar.body}
+              </p>
             </div>
           ))}
         </div>
