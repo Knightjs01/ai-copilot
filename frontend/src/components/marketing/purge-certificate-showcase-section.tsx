@@ -9,7 +9,7 @@ export function PurgeCertificateShowcaseSection() {
             The Burn — live now
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Close the role. Burn the project. Get a receipt.
+            Close the role. Burn the project. Get an audit certificate.
           </h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
             One click permanently destroys every resume, sanitized CV, AI note and identity tied
