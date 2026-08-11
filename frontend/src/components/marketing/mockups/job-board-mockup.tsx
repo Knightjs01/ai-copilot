@@ -24,7 +24,7 @@ const LISTINGS = [
 
 export function JobBoardMockup() {
   return (
-    <BrowserFrame url="jobs.phantomhire.com" badge="Coming soon">
+    <BrowserFrame url="jobs.phantomhire.com" badge="Live now">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2.5">
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

@@ -10,7 +10,7 @@ export function JobBoardShowcaseSection() {
 
         <div className="order-1 flex flex-col gap-5 lg:order-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            The Job Board — coming soon
+            The Job Board — live now
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Roles worth discovering, employers worth trusting

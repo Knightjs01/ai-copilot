@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export function JobApplicationMockup() {
   return (
-    <BrowserFrame url="jobs.phantomhire.com/senior-backend-engineer" badge="Coming soon">
+    <BrowserFrame url="jobs.phantomhire.com/senior-backend-engineer" badge="Live now">
       <div className="flex flex-col gap-4">
         <div>
           <p className="text-sm font-semibold text-foreground">Senior Backend Engineer</p>

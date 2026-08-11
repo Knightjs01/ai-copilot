@@ -10,7 +10,7 @@ const MATCHES = [
 
 export function CandidatePortalMockup() {
   return (
-    <BrowserFrame url="app.phantomhire.com/passport" badge="Coming soon">
+    <BrowserFrame url="app.phantomhire.com/passport" badge="Live now">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3 rounded-xl border border-border bg-white p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
