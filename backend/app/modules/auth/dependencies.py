@@ -70,6 +70,14 @@ async def get_tenant_db(
     transaction. SET LOCAL is transaction-scoped — it stays in effect because this session's
     implicit transaction spans the whole request (no commit happens until the end)."""
 
+    # A candidate access token (see candidate_auth.security.create_candidate_access_token) has
+    # no company_id at all — candidates are a separate principal, not scoped to any one tenant.
+    # Reject it here with a clean 401 rather than letting the KeyError below surface as a 500.
+    if "company_id" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        )
+
     # Postgres's SET LOCAL does not accept bind parameters ($1) — it needs a literal in the SQL
     # text. Validating as a UUID first (raises on anything malformed) makes interpolating it safe:
     # a parsed UUID can only stringify back to hex-and-dashes, nothing SQL-syntax-relevant.

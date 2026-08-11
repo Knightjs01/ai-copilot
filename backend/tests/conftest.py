@@ -42,6 +42,10 @@ from app.modules.intelligence.llm_client import (  # noqa: E402
     CandidateProfileExtraction,
     EducationEntry,
 )
+from app.modules.phantom_passport.llm_client import (  # noqa: E402
+    CareerEntryExtraction,
+    PassportExtraction,
+)
 from app.modules.prescreen_assessment.llm_client import AssessmentExtraction  # noqa: E402
 
 
@@ -78,7 +82,11 @@ async def _clean_tables() -> AsyncGenerator[None, None]:
     admin_engine = create_async_engine(_test_admin_url)
     try:
         async with admin_engine.begin() as conn:
-            await conn.execute(text("TRUNCATE TABLE companies CASCADE"))
+            # candidate_users is a separate root from companies — it has no FK to companies at
+            # all (see app/modules/candidate_auth/__init__.py) — so it needs its own entry here;
+            # CASCADE from it transitively covers candidate_refresh_tokens, phantom_passports,
+            # passport_personal_info and passport_career_entries.
+            await conn.execute(text("TRUNCATE TABLE companies, candidate_users CASCADE"))
     finally:
         await admin_engine.dispose()
 
@@ -199,6 +207,40 @@ def fake_prescreen_assessment_llm_client() -> FakePrescreenAssessmentLLMClient:
     return FakePrescreenAssessmentLLMClient()
 
 
+class FakePassportLLMClient:
+    """Test double for app.modules.phantom_passport.llm_client.LLMClient — returns a canned,
+    deterministic Passport extraction instead of calling the real Claude API."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def extract_passport_from_cv(self, *, redacted_text: str) -> PassportExtraction:
+        self.calls.append(redacted_text)
+        return PassportExtraction(
+            headline="Senior Product Leader",
+            seniority="Senior",
+            years_experience=12,
+            summary="A fake but deterministic professional summary for testing.",
+            skills=["Product Strategy", "Team Leadership"],
+            industries=["FinTech", "B2B SaaS"],
+            career_entries=[
+                CareerEntryExtraction(
+                    title="VP Product",
+                    company_name="Stripe",
+                    company_name_anonymized="Global Payments Platform",
+                    is_current=True,
+                    responsibilities="Led product strategy for the platform.",
+                    achievements=["Scaled product org from 12 to 40"],
+                )
+            ],
+        )
+
+
+@pytest.fixture
+def fake_passport_llm_client() -> FakePassportLLMClient:
+    return FakePassportLLMClient()
+
+
 @pytest.fixture
 def test_storage(tmp_path: Path) -> LocalFileStorage:
     # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
@@ -214,6 +256,7 @@ async def client(
     fake_llm_client: FakeLLMClient,
     fake_hiring_blueprint_llm_client: FakeHiringBlueprintLLMClient,
     fake_prescreen_assessment_llm_client: FakePrescreenAssessmentLLMClient,
+    fake_passport_llm_client: FakePassportLLMClient,
     test_storage: LocalFileStorage,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
@@ -221,6 +264,9 @@ async def client(
     from app.modules.candidates.dependencies import get_file_storage
     from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
     from app.modules.intelligence.dependencies import get_llm_client
+    from app.modules.phantom_passport.dependencies import (
+        get_llm_client as get_passport_llm_client,
+    )
     from app.modules.prescreen_assessment.dependencies import get_prescreen_assessment_llm_client
 
     app.dependency_overrides[get_email_sender] = lambda: sent_emails
@@ -232,6 +278,7 @@ async def client(
     app.dependency_overrides[get_prescreen_assessment_llm_client] = (
         lambda: fake_prescreen_assessment_llm_client
     )
+    app.dependency_overrides[get_passport_llm_client] = lambda: fake_passport_llm_client
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -242,3 +289,4 @@ async def client(
         app.dependency_overrides.pop(get_llm_client, None)
         app.dependency_overrides.pop(get_hiring_blueprint_llm_client, None)
         app.dependency_overrides.pop(get_prescreen_assessment_llm_client, None)
+        app.dependency_overrides.pop(get_passport_llm_client, None)

@@ -23,6 +23,17 @@ def auth_headers(access_token: str) -> dict:
     return {"Authorization": f"Bearer {access_token}"}
 
 
+async def candidate_signup(
+    client: AsyncClient, *, email: str, full_name: str = "Jamie Candidate"
+) -> dict:
+    response = await client.post(
+        "/api/v1/candidate-auth/signup",
+        json={"email": email, "password": "correct horse battery staple", "full_name": full_name},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def extract_token_from_email(sent_emails: CapturingEmailSender) -> str:
     for email in reversed(sent_emails.sent):
         match = re.search(r"token=([\w-]+)", email["body"])

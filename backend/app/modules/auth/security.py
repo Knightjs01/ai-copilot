@@ -45,6 +45,25 @@ def create_access_token(*, user_id: uuid.UUID, company_id: uuid.UUID) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
 
 
+def create_candidate_access_token(*, candidate_id: uuid.UUID) -> str:
+    """Candidates are a separate principal from company Users — no company_id, because a
+    Phantom Passport is owned by the candidate directly and exists independently of any single
+    company's tenant. scope="candidate" is what get_current_candidate (candidate_auth.dependencies)
+    checks to make sure a company User's access token can never be replayed against a candidate
+    route, and vice versa — decode_access_token below is generic enough to decode either."""
+
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(candidate_id),
+        "scope": "candidate",
+        "jti": str(uuid.uuid4()),
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
 def decode_access_token(token: str) -> dict[str, Any]:
     settings = get_settings()
     try:

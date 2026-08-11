@@ -1,0 +1,63 @@
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.candidate_auth.models import CandidateRefreshToken, CandidateUser
+
+
+class CandidateUserRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(self, *, email: str, hashed_password: str, full_name: str) -> CandidateUser:
+        candidate = CandidateUser(email=email, hashed_password=hashed_password, full_name=full_name)
+        self._session.add(candidate)
+        await self._session.flush()
+        return candidate
+
+    async def get_by_id(self, candidate_id: uuid.UUID) -> CandidateUser | None:
+        return await self._session.get(CandidateUser, candidate_id)
+
+    async def get_by_email(self, email: str) -> CandidateUser | None:
+        result = await self._session.execute(
+            select(CandidateUser).where(CandidateUser.email == email)
+        )
+        return result.scalar_one_or_none()
+
+
+class CandidateRefreshTokenRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(
+        self, *, candidate_user_id: uuid.UUID, token_hash: str, expires_at: datetime
+    ) -> CandidateRefreshToken:
+        token = CandidateRefreshToken(
+            candidate_user_id=candidate_user_id, token_hash=token_hash, expires_at=expires_at
+        )
+        self._session.add(token)
+        await self._session.flush()
+        return token
+
+    async def get_by_hash(self, token_hash: str) -> CandidateRefreshToken | None:
+        result = await self._session.execute(
+            select(CandidateRefreshToken).where(CandidateRefreshToken.token_hash == token_hash)
+        )
+        return result.scalar_one_or_none()
+
+    async def revoke(self, token: CandidateRefreshToken) -> None:
+        token.revoked_at = datetime.now(timezone.utc)
+        await self._session.flush()
+
+    async def revoke_all_for_candidate(self, candidate_user_id: uuid.UUID) -> None:
+        await self._session.execute(
+            update(CandidateRefreshToken)
+            .where(
+                CandidateRefreshToken.candidate_user_id == candidate_user_id,
+                CandidateRefreshToken.revoked_at.is_(None),
+            )
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
+        await self._session.flush()
