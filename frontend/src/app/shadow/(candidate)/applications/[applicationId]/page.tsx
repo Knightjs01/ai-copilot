@@ -49,7 +49,7 @@ export default function ApplicationDetailPage() {
     try {
       await respond.mutateAsync(approve);
     } catch {
-      setRespondError("Couldn't submit your decision — try again.");
+      setRespondError("Couldn't submit your decision. Try again.");
     }
   };
 
@@ -77,7 +77,7 @@ export default function ApplicationDetailPage() {
             <p className="text-sm text-foreground">
               <strong>{revealRequest.company_name}</strong> wants to see who&apos;s behind{" "}
               {application.callsign}. If you approve, they&apos;ll see your name, email, phone,
-              and real employer history — nothing else.
+              and real employer history. Nothing else.
             </p>
             {revealRequest.reason && (
               <p className="rounded-xl bg-slate-50 p-3 text-sm text-muted-foreground">
@@ -108,7 +108,7 @@ export default function ApplicationDetailPage() {
       {!revealLoading && revealRequest && revealRequest.status === "approved" && (
         <Card>
           <CardContent className="py-4 text-sm text-success">
-            You approved this reveal — {revealRequest.company_name} can now see your identity.
+            You approved this reveal. {revealRequest.company_name} can now see your identity.
           </CardContent>
         </Card>
       )}

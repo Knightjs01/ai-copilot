@@ -13,7 +13,7 @@ const FEATURES = [
   {
     icon: Sparkles,
     title: "AI Hiring Blueprint",
-    body: "Turns a job description into a structured brief — must-haves, nice-to-haves, and what good actually looks like.",
+    body: "Turns a job description into a structured brief: must-haves, nice-to-haves, and what good actually looks like.",
   },
   {
     icon: BrainCircuit,
@@ -33,12 +33,12 @@ const FEATURES = [
   {
     icon: Flame,
     title: "One-Click Purge",
-    body: "Burn a project and everything tied to it — resumes, AI notes, identities — is destroyed for good.",
+    body: "Burn a project and everything tied to it: resumes, AI notes, identities. All destroyed for good.",
   },
   {
     icon: ScrollText,
     title: "Historic Vault & Audit Trail",
-    body: "A permanent, non-identifying record of every purge and every access — proof without the exposure.",
+    body: "A permanent, non-identifying record of every purge and every access, proof without the exposure.",
   },
   {
     icon: Users,

@@ -16,7 +16,7 @@ export default function ApplicationsPage() {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Your applications</h1>
         <p className="text-sm text-muted-foreground">
-          Each application gets its own Callsign — a company can never correlate you across
+          Each application gets its own Callsign. A company can never correlate you across
           projects.
         </p>
       </div>
@@ -30,7 +30,7 @@ export default function ApplicationsPage() {
       {!isLoading && applications?.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            You haven&apos;t applied to any roles yet — browse the{" "}
+            You haven&apos;t applied to any roles yet. Browse the{" "}
             <Link href="/shadow" className="font-medium text-foreground underline underline-offset-4">
               job board
             </Link>

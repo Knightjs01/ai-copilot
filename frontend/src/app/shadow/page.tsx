@@ -29,8 +29,8 @@ export default function ShadowBoardPage() {
             The Shadow job board
           </h1>
           <p className="text-sm text-muted-foreground">
-            Apply with your Phantom Passport. Companies see your skills and experience — not your
-            name — until you choose to reveal it.
+            Apply with your Phantom Passport. Companies see your skills and experience, not your
+            name, until you choose to reveal it.
           </p>
         </div>
 
@@ -43,7 +43,7 @@ export default function ShadowBoardPage() {
         {!isLoading && jobs?.length === 0 && (
           <Card>
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No open roles right now — check back soon.
+              No open roles right now. Check back soon.
             </CardContent>
           </Card>
         )}

@@ -100,7 +100,7 @@ export default function PassportPage() {
       );
       setLoadedOnce(true);
     } else if (passport === null && candidate) {
-      // No Passport yet — pre-fill the legal name from signup so it's one less field to type.
+      // No Passport yet, pre-fill the legal name from signup so it's one less field to type.
       setLegalName(candidate.full_name);
       setLoadedOnce(true);
     }
@@ -144,7 +144,7 @@ export default function PassportPage() {
         );
       }
     } catch {
-      setCvError("Couldn't parse that file — you can still fill in your Passport by hand.");
+      setCvError("Couldn't parse that file. You can still fill in your Passport by hand.");
     }
   };
 
@@ -176,7 +176,7 @@ export default function PassportPage() {
       });
       setSaveMessage("Passport saved.");
     } catch {
-      setSaveMessage("Couldn't save — check the required fields and try again.");
+      setSaveMessage("Couldn't save. Check the required fields and try again.");
     }
   };
 
@@ -196,7 +196,7 @@ export default function PassportPage() {
             Your Phantom Passport
           </h1>
           <p className="text-sm text-muted-foreground">
-            Professional data and personal data are stored separately — recruiters only ever see
+            Professional data and personal data are stored separately, recruiters only ever see
             what&apos;s below the line, never your name.
           </p>
         </div>
@@ -210,7 +210,7 @@ export default function PassportPage() {
         <CardContent className="flex flex-col gap-3">
           <Dropzone
             label="Drop your CV here"
-            hint="PDF or Word — we'll pre-fill the fields below. Nothing is saved until you review and save."
+            hint="PDF or Word. We'll pre-fill the fields below. Nothing is saved until you review and save."
             isUploading={parseCv.isPending}
             onFileSelected={handleParseCv}
           />
@@ -353,7 +353,7 @@ export default function PassportPage() {
               >
                 <Input
                   id={`anon-${index}`}
-                  placeholder='e.g. "Global Payments Platform" instead of "Stripe" — this is what recruiters see'
+                  placeholder='e.g. "Global Payments Platform" instead of "Stripe": this is what recruiters see'
                   value={entry.company_name_anonymized}
                   onChange={(e) => updateEntry(index, { company_name_anonymized: e.target.value })}
                 />

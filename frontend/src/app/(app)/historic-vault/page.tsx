@@ -20,7 +20,7 @@ function StatTile({ label, value }: { label: string; value: number }) {
 function formatAuditAction(action: string): string {
   const [subject = "", ...rest] = action.split(".");
   const verb = rest.join(" ").replace(/_/g, " ");
-  return `${subject.charAt(0).toUpperCase()}${subject.slice(1)} — ${verb}`;
+  return `${subject.charAt(0).toUpperCase()}${subject.slice(1)}: ${verb}`;
 }
 
 export default function HistoricVaultPage() {
@@ -61,7 +61,7 @@ export default function HistoricVaultPage() {
         <ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
         <p className="text-sm text-foreground">
           Admin+ governance view. Purge certificates and audit entries here outlive the projects
-          and candidates they describe — every burn is recorded permanently.
+          and candidates they describe. Every burn is recorded permanently.
         </p>
       </div>
 

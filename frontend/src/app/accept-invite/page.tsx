@@ -46,7 +46,7 @@ function AcceptInviteForm() {
   if (!token) {
     return (
       <p className="text-sm text-danger">
-        This invite link is missing its token — ask whoever invited you to resend it.
+        This invite link is missing its token. Ask whoever invited you to resend it.
       </p>
     );
   }

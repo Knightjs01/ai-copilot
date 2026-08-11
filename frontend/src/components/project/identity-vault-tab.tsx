@@ -38,7 +38,7 @@ export function IdentityVaultTab({ projectId }: { projectId: string }) {
         <ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
         <p className="text-sm text-foreground">
           Owner-only governance view. This tab is never visible to other roles, and never exposes
-          candidate identity directly — only Reveal actions surface decrypted data, and every one
+          candidate identity directly. Only Reveal actions surface decrypted data, and every one
           is audited below.
         </p>
       </div>
@@ -97,7 +97,7 @@ export function IdentityVaultTab({ projectId }: { projectId: string }) {
                 <div key={event.id} className="flex flex-col gap-0.5 py-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">
-                      {event.actor_email} viewed identity — {event.callsign}
+                      {event.actor_email} viewed identity · {event.callsign}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(event.revealed_at), { addSuffix: true })}

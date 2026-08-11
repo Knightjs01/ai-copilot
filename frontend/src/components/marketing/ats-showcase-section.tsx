@@ -9,14 +9,14 @@ export function AtsShowcaseSection() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:py-28">
         <div className="flex flex-col gap-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            The ATS — live now
+            The ATS · Live now
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             The pipeline your team already runs on
           </h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
             Hiring projects, Callsigns instead of names, AI fit ratings, and a live dashboard of
-            exactly what needs your attention next — this is the actual platform, not a concept.
+            exactly what needs your attention next. This is the actual platform, not a concept.
           </p>
           <div>
             <Button asChild variant="brand" size="lg">

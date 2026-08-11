@@ -81,7 +81,7 @@ export function InviteTeammateDialog() {
           </Field>
           {inviteUser.isError && (
             <p className="text-sm font-medium text-danger">
-              Couldn&apos;t send the invite — check the email and try again.
+              Couldn&apos;t send the invite. Check the email and try again.
             </p>
           )}
           <DialogFooter>

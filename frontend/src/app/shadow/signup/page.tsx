@@ -45,7 +45,7 @@ export default function ShadowSignupPage() {
   return (
     <ShadowAuthShell
       title="Build your Phantom Passport"
-      subtitle="One reusable profile, built once, applied anywhere — stay pseudonymous until you choose to reveal who you are."
+      subtitle="One reusable profile, built once, applied anywhere. Stay pseudonymous until you choose to reveal who you are."
       footer={
         <>
           Already have a Passport?{" "}

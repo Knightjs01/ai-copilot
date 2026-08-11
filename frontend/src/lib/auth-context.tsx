@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (isMfaChallenge(res)) {
         throw new Error(
-          "This account has multi-factor authentication enabled, which this preview UI doesn't support yet — disable MFA on the account or use the API directly."
+          "This account has multi-factor authentication enabled, which this preview UI doesn't support yet. Disable MFA on the account or use the API directly."
         );
       }
       setAccessToken(res.access_token);

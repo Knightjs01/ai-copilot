@@ -9,12 +9,12 @@ export function JobApplicationShowcaseSection() {
             Applying, anonymously
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            One click to apply — no name attached
+            One click to apply, no name attached
           </h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
             You&apos;re issued a Callsign the moment you apply. Your CV is automatically
             redacted before it reaches anyone on the other side, so the first thing a hiring
-            team sees is your experience — not your name, current employer, or contact details.
+            team sees is your experience, not your name, current employer, or contact details.
           </p>
         </div>
 

@@ -9,27 +9,27 @@ const PILLARS = [
   {
     icon: Vault,
     title: "The Identity Vault",
-    body: "Real names, emails, phone numbers and CVs are encrypted and locked away from the day-to-day workspace — revealed only by an Owner, with a reason, on the record.",
+    body: "Real names, emails, phone numbers and CVs are encrypted and locked away from the day-to-day workspace, revealed only by an Owner, with a reason, on the record.",
   },
   {
     icon: Sparkles,
     title: "Automatic redaction",
-    body: "Every CV that touches Phantom's AI is stripped of personal details first. The model reasons about a candidate's skills — never their identity.",
+    body: "Every CV that touches Phantom's AI is stripped of personal details first. The model reasons about a candidate's skills, never their identity.",
   },
   {
     icon: Flame,
     title: "The Burn",
-    body: "One click permanently destroys every trace of a hiring project: resumes, sanitized CVs, AI notes, identities. Not archived. Not soft-deleted. Gone — on purpose.",
+    body: "One click permanently destroys every trace of a hiring project: resumes, sanitized CVs, AI notes, identities. Not archived. Not soft-deleted. Gone on purpose.",
   },
   {
     icon: ShieldCheck,
     title: "The Purge Certificate",
-    body: "Every burn produces a certificate confirming exactly what was destroyed and when — a receipt for the erasure, without a single re-identifiable detail in it.",
+    body: "Every burn produces a certificate confirming exactly what was destroyed and when: a receipt for the erasure, without a single re-identifiable detail in it.",
   },
   {
     icon: ScrollText,
     title: "The Historic Vault",
-    body: "Only the critical, non-identifying facts survive the burn — project title, candidate count, purge certificate, audit trail. Enough to prove it happened. Never enough to re-identify anyone.",
+    body: "Only the critical, non-identifying facts survive the burn: project title, candidate count, purge certificate, audit trail. Enough to prove it happened. Never enough to re-identify anyone.",
   },
 ];
 
@@ -43,8 +43,8 @@ export function ZeroRetentionSection() {
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             Every other hiring platform asks you to trust it with your candidates&apos; personal
-            data forever. Phantom Hire doesn&apos;t. Retention isn&apos;t a setting you turn
-            off — it was never built in.
+            data forever. Phantom Hire doesn&apos;t. Retention isn&apos;t a setting you turn off.
+            It was never built in.
           </p>
         </div>
 

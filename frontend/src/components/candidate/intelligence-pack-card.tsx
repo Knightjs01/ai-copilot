@@ -108,7 +108,7 @@ export function IntelligencePackCard({
         )}
         {generate.isError && (
           <p className="mt-3 text-sm font-medium text-danger">
-            Generation failed — give it another try.
+            Generation failed. Give it another try.
           </p>
         )}
       </CardContent>

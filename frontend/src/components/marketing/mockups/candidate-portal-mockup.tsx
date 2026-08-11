@@ -20,7 +20,7 @@ export function CandidatePortalMockup() {
             <p className="text-sm font-medium text-foreground">Pulse-78</p>
             <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <EyeOff className="h-3 w-3 shrink-0" />
-              Identity hidden — reveal only when you choose
+              Identity hidden, reveal only when you choose
             </p>
           </div>
         </div>

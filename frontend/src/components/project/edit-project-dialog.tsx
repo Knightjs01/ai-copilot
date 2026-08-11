@@ -102,7 +102,7 @@ export function EditProjectDialog({ project }: { project: Project }) {
           </Field>
           {updateProject.isError && (
             <p className="text-sm font-medium text-danger">
-              Couldn&apos;t save — try again.
+              Couldn&apos;t save. Try again.
             </p>
           )}
         </div>

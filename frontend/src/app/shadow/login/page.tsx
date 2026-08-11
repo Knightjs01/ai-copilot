@@ -37,7 +37,7 @@ export default function ShadowLoginPage() {
       await login(values.email, values.password);
       router.push("/shadow/passport");
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Couldn't sign in — try again.");
+      setFormError(err instanceof Error ? err.message : "Couldn't sign in. Try again.");
     }
   };
 

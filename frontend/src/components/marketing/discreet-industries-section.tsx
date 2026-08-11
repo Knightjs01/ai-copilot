@@ -21,7 +21,7 @@ export function DiscreetIndustriesSection() {
           Built for hiring that can&apos;t be seen
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-          Phantom Hire was designed for the moments a hire can&apos;t hit the grapevine — a
+          Phantom Hire was designed for the moments a hire can&apos;t hit the grapevine: a
           confidential leadership change, a sensitive government role, a poach from a rival, a
           restructuring the market isn&apos;t ready for yet.
         </p>

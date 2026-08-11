@@ -18,7 +18,7 @@ const OPTIONS = [
     href: "/shadow/login",
     title: "Candidate",
     description:
-      "Build your Phantom Passport, browse the Shadow job board, and manage your applications — pseudonymously, on your terms.",
+      "Build your Phantom Passport, browse the Shadow job board, and manage your applications, pseudonymously, on your terms.",
     cta: "Log in as a candidate",
     icon: <ShadowIcon className="h-6 w-auto" />,
   },
@@ -44,7 +44,7 @@ export default function LoginChooserPage() {
           Who&apos;s logging in?
         </h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          Phantom Hire and Shadow are separate workspaces with separate logins — pick the one
+          Phantom Hire and Shadow are separate workspaces with separate logins. Pick the one
           that&apos;s yours.
         </p>
       </div>

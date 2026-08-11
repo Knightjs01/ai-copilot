@@ -45,7 +45,7 @@ export default function ShadowJobDetailPage() {
       } else if (err instanceof ApiError && err.status === 409) {
         setApplyError("You've already applied to this role.");
       } else {
-        setApplyError("Couldn't submit your application — try again.");
+        setApplyError("Couldn't submit your application. Try again.");
       }
     }
   };
@@ -114,12 +114,12 @@ export default function ShadowJobDetailPage() {
               <CardContent className="flex flex-col items-start gap-3 py-6">
                 {applied ? (
                   <p className="text-sm font-medium text-success">
-                    Application submitted — track its status from your Applications page.
+                    Application submitted. Track its status from your Applications page.
                   </p>
                 ) : (
                   <>
                     <p className="text-sm text-muted-foreground">
-                      One-click apply with whatever your Phantom Passport already holds — nothing
+                      One-click apply with whatever your Phantom Passport already holds. Nothing
                       new to fill in.
                     </p>
                     {applyError && <p className="text-sm font-medium text-danger">{applyError}</p>}

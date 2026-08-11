@@ -8,17 +8,17 @@ const LISTINGS = [
   {
     title: "Senior Backend Engineer",
     meta: "Remote · £90k–£110k",
-    employer: "Confidential — Series C Fintech",
+    employer: "Confidential · Series C Fintech",
   },
   {
     title: "VP of Sales",
     meta: "London · Competitive",
-    employer: "Confidential — Enterprise SaaS",
+    employer: "Confidential · Enterprise SaaS",
   },
   {
     title: "Staff Product Designer",
     meta: "Remote · £85k–£100k",
-    employer: "Confidential — Consumer App",
+    employer: "Confidential · Consumer App",
   },
 ];
 

@@ -40,7 +40,7 @@ export function RequestRevealDialog({
       setError(
         err instanceof ApiError
           ? err.detail
-          : "Couldn't send the reveal request — try again."
+          : "Couldn't send the reveal request. Try again."
       );
     }
   };
@@ -54,7 +54,7 @@ export function RequestRevealDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Request identity reveal — {callsign}</DialogTitle>
+          <DialogTitle>Request identity reveal: {callsign}</DialogTitle>
           <DialogDescription>
             {callsign} will see this reason and can approve or decline. Nothing about their
             identity is disclosed unless they approve.

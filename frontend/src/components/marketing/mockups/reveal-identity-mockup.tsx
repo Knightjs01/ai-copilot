@@ -9,7 +9,7 @@ export function RevealIdentityMockup() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
-          <p className="text-sm font-semibold text-foreground">Reveal Identity — Pulse-78</p>
+          <p className="text-sm font-semibold text-foreground">Reveal Identity: Pulse-78</p>
         </div>
 
         <div className="rounded-xl border border-border bg-white p-3.5">
@@ -17,7 +17,7 @@ export function RevealIdentityMockup() {
             Reason
           </p>
           <p className="mt-1 text-xs text-foreground">
-            Final interview scheduled — need a real name for the calendar invite.
+            Final interview scheduled, need a real name for the calendar invite.
           </p>
         </div>
 
@@ -46,7 +46,7 @@ export function RevealIdentityMockup() {
 
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <ScrollText className="h-3 w-3 shrink-0" />
-          This reveal was logged — visible in the Historic Vault audit trail.
+          This reveal was logged and is visible in the Historic Vault audit trail.
         </p>
       </div>
     </BrowserFrame>

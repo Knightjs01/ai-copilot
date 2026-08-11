@@ -69,7 +69,7 @@ export function ResumeCard({ candidate }: { candidate: Candidate }) {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-sm text-foreground">
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              Resume redacted — safe to send to AI
+              Resume redacted, safe to send to AI
             </div>
             <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <FileText className="h-3.5 w-3.5" />

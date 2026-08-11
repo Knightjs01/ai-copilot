@@ -4,12 +4,12 @@ const TRIANGLE = [
   {
     icon: ShieldCheck,
     quote: "Zero-Retention is the reason people trust Phantom.",
-    body: "Every project is built to disappear. There's no growing archive of personal data sitting around to leak, get subpoenaed, or be misused — because it doesn't exist once the job is done.",
+    body: "Every project is built to disappear. There's no growing archive of personal data sitting around to leak, get subpoenaed, or be misused, because it doesn't exist once the job is done.",
   },
   {
     icon: Users,
     quote: "Hidden talent is the reason companies buy it.",
-    body: "Access to exceptional people who aren't on the open market — because they're not job-searching in public, they're quietly exploring through Phantom.",
+    body: "Access to exceptional people who aren't on the open market, because they're not job-searching in public. They're quietly exploring through Phantom.",
   },
   {
     icon: Eye,

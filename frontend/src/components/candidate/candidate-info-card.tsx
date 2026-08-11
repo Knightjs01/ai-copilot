@@ -60,7 +60,7 @@ export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-xs text-muted-foreground">
-          Employer, title, and location are Owner-only Identity Vault fields — edit them from the
+          Employer, title, and location are Owner-only Identity Vault fields. Edit them from the
           project&apos;s Identity Vault tab.
         </p>
 

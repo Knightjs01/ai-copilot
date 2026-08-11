@@ -11,9 +11,9 @@ import { RevealIdentityShowcaseSection } from "@/components/marketing/reveal-ide
 import { SecurityCtaSection } from "@/components/marketing/security-cta-section";
 
 export const metadata: Metadata = {
-  title: "For Hiring Teams — Phantom Hire",
+  title: "For Hiring Teams | Phantom Hire",
   description:
-    "The ATS built for hiring that can't be seen — hidden talent, AI screening, and zero-retention when the project is done.",
+    "The ATS built for hiring that can't be seen: hidden talent, AI screening, and zero-retention when the project is done.",
 };
 
 export default function HiringTeamsPage() {

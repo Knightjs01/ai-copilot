@@ -60,7 +60,7 @@ export function HiringBlueprintCard({ project }: { project: Project }) {
           </p>
         ) : !blueprint ? (
           <p className="text-sm text-muted-foreground">
-            No blueprint yet — generate one from the role brief.
+            No blueprint yet. Generate one from the role brief.
           </p>
         ) : (
           <div className="flex flex-col gap-4">
@@ -76,7 +76,7 @@ export function HiringBlueprintCard({ project }: { project: Project }) {
         )}
         {generate.isError && (
           <p className="mt-3 text-sm font-medium text-danger">
-            Generation failed — give it another try.
+            Generation failed. Give it another try.
           </p>
         )}
       </CardContent>

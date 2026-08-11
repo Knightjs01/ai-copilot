@@ -11,7 +11,7 @@ import { PhantomStorySection } from "@/components/marketing/phantom-story-sectio
 import { ZeroRetentionSection } from "@/components/marketing/zero-retention-section";
 
 export const metadata: Metadata = {
-  title: "For Job Seekers — Phantom Hire",
+  title: "For Job Seekers | Phantom Hire",
   description:
     "Explore your next opportunity without announcing you're looking. Anonymous by default, AI-matched, verified when it matters, zero-retention when you're done.",
 };

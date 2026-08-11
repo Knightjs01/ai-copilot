@@ -44,14 +44,14 @@ export function RoleInfoCard({ project }: { project: Project }) {
       <CardContent className="flex flex-col gap-4">
         <Dropzone
           label="Drop the job description here"
-          hint="PDF or DOCX — we'll pull the role details out automatically"
+          hint="PDF or DOCX. We'll pull the role details out automatically"
           accept=".pdf,.doc,.docx"
           isUploading={uploadJd.isPending}
           onFileSelected={handleFile}
         />
         {uploadJd.isError && (
           <p className="text-sm font-medium text-danger">
-            Couldn&apos;t read that file — try a PDF or DOCX.
+            Couldn&apos;t read that file. Try a PDF or DOCX.
           </p>
         )}
         <Textarea

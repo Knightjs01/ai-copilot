@@ -47,7 +47,7 @@ export function ApplicantCard({ jobId, profile }: { jobId: string; profile: Shad
           <div className="flex flex-col gap-1 text-sm text-muted-foreground">
             {profile.career_entries.map((entry, i) => (
               <p key={i}>
-                {entry.title} — {entry.company_name_anonymized}
+                {entry.title} · {entry.company_name_anonymized}
                 {entry.is_current ? " (current)" : ""}
               </p>
             ))}
@@ -65,7 +65,7 @@ export function ApplicantCard({ jobId, profile }: { jobId: string; profile: Shad
             {identity.phone && <p className="text-sm text-muted-foreground">{identity.phone}</p>}
             {identity.career_entries.map((entry, i) => (
               <p key={i} className="text-xs text-muted-foreground">
-                {entry.title} — {entry.company_name}
+                {entry.title} · {entry.company_name}
                 {entry.is_current ? " (current)" : ""}
               </p>
             ))}

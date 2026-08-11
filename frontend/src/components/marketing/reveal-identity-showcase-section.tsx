@@ -10,13 +10,13 @@ export function RevealIdentityShowcaseSection() {
 
         <div className="order-1 flex flex-col gap-5 lg:order-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            Identity Vault — live now
+            Identity Vault · Live now
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Blind by default. Revealed on your terms.
           </h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
-            Every candidate stays a Callsign until an Owner reveals them — with a reason recorded
+            Every candidate stays a Callsign until an Owner reveals them, with a reason recorded
             against their name and an entry in the audit trail. No silent lookups, no shared
             spreadsheet of names floating around your team.
           </p>

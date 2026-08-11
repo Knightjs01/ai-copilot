@@ -71,7 +71,7 @@ export function PrescreenAssessmentCard({ candidate }: { candidate: Candidate })
           </p>
         ) : !assessment ? (
           <p className="text-sm text-muted-foreground">
-            Everything&apos;s ready — generate the assessment before the call.
+            Everything&apos;s ready. Generate the assessment before the call.
           </p>
         ) : (
           <div className="flex flex-col gap-4">
@@ -91,7 +91,7 @@ export function PrescreenAssessmentCard({ candidate }: { candidate: Candidate })
         )}
         {generate.isError && (
           <p className="mt-3 text-sm font-medium text-danger">
-            Generation failed — give it another try.
+            Generation failed. Give it another try.
           </p>
         )}
       </CardContent>

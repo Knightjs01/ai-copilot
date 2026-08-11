@@ -7,17 +7,17 @@ const STEPS = [
   {
     number: "02",
     title: "Add candidates",
-    body: "Each candidate is issued a Callsign the moment they're added. Their CV is sanitized and vault-encrypted automatically — no manual redaction required.",
+    body: "Each candidate is issued a Callsign the moment they're added. Their CV is sanitized and vault-encrypted automatically, no manual redaction required.",
   },
   {
     number: "03",
     title: "Screen with AI",
-    body: "Candidate Intelligence, fit ratings, pre-screen assessments and hand-off notes for the hiring manager — generated without a single real name in sight.",
+    body: "Candidate Intelligence, fit ratings, pre-screen assessments and hand-off notes for the hiring manager, generated without a single real name in sight.",
   },
   {
     number: "04",
     title: "Close the loop",
-    body: "Make your hire, then burn the project. Every resume, identity and record goes with Phantom — only the critical, non-identifying facts stay behind in the Historic Vault.",
+    body: "Make your hire, then burn the project. Every resume, identity and record goes with Phantom. Only the critical, non-identifying facts stay behind in the Historic Vault.",
   },
 ];
 

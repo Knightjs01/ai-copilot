@@ -97,7 +97,7 @@ export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
           </Field>
           {reveal.isError && (
             <p className="mt-2 text-sm font-medium text-danger">
-              Couldn&apos;t reveal identity — try again.
+              Couldn&apos;t reveal identity. Try again.
             </p>
           )}
           <DialogFooter>

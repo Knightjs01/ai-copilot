@@ -49,7 +49,7 @@ export function BurnProjectDialog({
       setPhase("success");
     } catch {
       setPhase("idle");
-      setError("Couldn't purge this project — try again.");
+      setError("Couldn't purge this project. Try again.");
     }
   };
 
@@ -66,7 +66,7 @@ export function BurnProjectDialog({
           <DialogHeader>
             <DialogTitle>Purge &ldquo;{projectTitle}&rdquo;?</DialogTitle>
             <DialogDescription>
-              Permanently deletes this project and every candidate under it — resumes, AI notes,
+              Permanently deletes this project and every candidate under it: resumes, AI notes,
               assessments, everything. This can&apos;t be undone. Typically done once a role is
               closed, to keep the platform GDPR-compliant.
             </DialogDescription>

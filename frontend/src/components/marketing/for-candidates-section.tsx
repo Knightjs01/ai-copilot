@@ -11,12 +11,12 @@ const PROMISE = [
   {
     icon: Wand2,
     title: "AI-matched",
-    body: "Matched to roles based on your actual skills and experience — not keywords, not guesswork.",
+    body: "Matched to roles based on your actual skills and experience, not keywords, not guesswork.",
   },
   {
     icon: BadgeCheck,
     title: "Verified when it matters",
-    body: "Identity and credentials confirmed only at the point a real opportunity is on the table — not before.",
+    body: "Identity and credentials confirmed only at the point a real opportunity is on the table, not before.",
   },
   {
     icon: Flame,

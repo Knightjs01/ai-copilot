@@ -19,7 +19,7 @@ export function ShadowAuthShell({
         <Link href="/shadow" aria-label="Shadow home" className="flex flex-col items-center gap-3">
           <Image
             src="/shadow-wordmark.png"
-            alt="Shadow — Anonymous Job Board"
+            alt="Shadow: Anonymous Job Board"
             width={1629}
             height={1049}
             className="h-14 w-auto"

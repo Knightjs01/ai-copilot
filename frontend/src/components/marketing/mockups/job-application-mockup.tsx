@@ -9,7 +9,7 @@ export function JobApplicationMockup() {
       <div className="flex flex-col gap-4">
         <div>
           <p className="text-sm font-semibold text-foreground">Senior Backend Engineer</p>
-          <p className="text-xs text-muted-foreground">Confidential — Series C Fintech · Remote</p>
+          <p className="text-xs text-muted-foreground">Confidential · Series C Fintech · Remote</p>
         </div>
 
         <div className="flex items-center gap-3 rounded-xl border border-border bg-white p-3.5">
@@ -27,7 +27,7 @@ export function JobApplicationMockup() {
 
         <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border bg-white p-3.5">
           <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <p className="text-xs text-muted-foreground">resume.pdf — auto-redacted before it&apos;s shared</p>
+          <p className="text-xs text-muted-foreground">resume.pdf, auto-redacted before it&apos;s shared</p>
         </div>
 
         <Button variant="brand" size="sm" className="w-full" tabIndex={-1}>

@@ -26,7 +26,7 @@ const FILES = [
 
 function handleCopyCertificate(certificate: PurgeCertificate) {
   const text = [
-    `Purge Certificate — ${certificate.project_title}`,
+    `Purge Certificate: ${certificate.project_title}`,
     `Purged at: ${new Date(certificate.purged_at).toLocaleString()}`,
     `Candidates purged: ${certificate.candidate_count}`,
     "Data categories destroyed:",

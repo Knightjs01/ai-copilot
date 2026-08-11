@@ -37,7 +37,7 @@ export default function RecruiterLoginPage() {
       await login(values.email, values.password);
       router.push("/projects");
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Couldn't sign in — try again.");
+      setFormError(err instanceof Error ? err.message : "Couldn't sign in. Try again.");
     }
   };
 
