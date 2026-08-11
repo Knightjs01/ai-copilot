@@ -4,6 +4,13 @@ import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+const PROMISE_ITEMS = [
+  "Anonymous by default",
+  "AI-matched",
+  "Verified when it matters",
+  "Zero-retention when the project is done",
+];
+
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden">
@@ -17,22 +24,25 @@ export function HeroSection() {
           </div>
 
           <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            The invisible TA partner who never leaves a trace.
+            Quietly looking. Quietly found.
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Phantom appears the moment you open a role, does the heavy lifting of hiring
-            alongside you, then disappears the instant you&apos;re done —{" "}
-            <span className="font-medium text-foreground">
-              taking every candidate record with him
-            </span>
-            . No names left in your workspace. No CVs left in storage. Nothing left behind.
+            Phantom Hire is the private talent marketplace where exceptional people can explore
+            their next opportunity without announcing they&apos;re looking — and companies can
+            discover them with total anonymity.
           </p>
 
-          <p className="text-sm font-medium text-muted-foreground">
-            Purpose-built for confidential, high-stakes hiring — where the search itself has to
-            stay off the record.
-          </p>
+          <ul className="flex flex-wrap gap-2">
+            {PROMISE_ITEMS.map((item) => (
+              <li
+                key={item}
+                className="rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-medium text-foreground"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild variant="brand" size="lg">

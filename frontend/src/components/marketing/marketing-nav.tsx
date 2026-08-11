@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const NAV_LINKS = [
+  { href: "#triangle", label: "Why it works" },
   { href: "#phantom", label: "Meet Phantom" },
   { href: "#zero-retention", label: "Zero-Retention" },
   { href: "#how-it-works", label: "How it works" },
