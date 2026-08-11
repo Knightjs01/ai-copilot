@@ -121,6 +121,13 @@ class ShadowApplicationRepository:
     async def get_by_id(self, application_id: uuid.UUID) -> ShadowApplication | None:
         return await self._session.get(ShadowApplication, application_id)
 
+    async def update_status(
+        self, application: ShadowApplication, *, status: str
+    ) -> ShadowApplication:
+        application.status = status
+        await self._session.flush()
+        return application
+
     async def get_by_job_and_candidate(
         self, *, shadow_job_id: uuid.UUID, candidate_user_id: uuid.UUID
     ) -> ShadowApplication | None:
