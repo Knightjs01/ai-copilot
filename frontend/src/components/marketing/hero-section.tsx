@@ -24,7 +24,7 @@ export function HeroSection() {
           </div>
 
           <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Quietly looking. Quietly found.
+            Zero-Retention, Anonymous Hiring.
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
