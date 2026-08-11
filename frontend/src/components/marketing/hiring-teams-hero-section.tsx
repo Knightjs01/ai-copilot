@@ -17,7 +17,7 @@ export function HiringTeamsHeroSection() {
           </div>
 
           <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl">
-            Hire quietly. Screen smart. Leave nothing behind.
+            Hire privately, screen smart, and leave no trace.
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
