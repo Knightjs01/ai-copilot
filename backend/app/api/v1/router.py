@@ -17,6 +17,7 @@ from app.modules.prescreen_assessment.api import router as prescreen_assessment_
 from app.modules.privacy_gateway.api import router as privacy_gateway_router
 from app.modules.project_deletion.api import router as project_deletion_router
 from app.modules.projects.api import router as projects_router
+from app.modules.shadow_jobs.api import router as shadow_jobs_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
@@ -36,6 +37,7 @@ api_router.include_router(dashboard_router)
 api_router.include_router(historic_vault_router)
 api_router.include_router(candidate_auth_router)
 api_router.include_router(phantom_passport_router)
+api_router.include_router(shadow_jobs_router)
 
 # Everything past pre-screen (interview loops, scorecards, offer, decision) is handled in the
 # company's ATS (Greenhouse), not this platform — see README Roadmap.

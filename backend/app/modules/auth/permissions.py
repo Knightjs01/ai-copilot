@@ -14,6 +14,9 @@ class Permissions:
     CANDIDATES_DELETE = "candidates.delete"
     IDENTITY_VAULT_REVEAL = "identity_vault.reveal"
     HISTORIC_VAULT_VIEW = "historic_vault.view"
+    SHADOW_JOBS_CREATE = "shadow_jobs.create"
+    SHADOW_JOBS_VIEW = "shadow_jobs.view"
+    SHADOW_JOBS_UPDATE = "shadow_jobs.update"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -32,6 +35,9 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.CANDIDATES_DELETE: "Archive candidates",
     Permissions.IDENTITY_VAULT_REVEAL: "Reveal candidate identity from the vault",
     Permissions.HISTORIC_VAULT_VIEW: "View purged project records and the company audit trail",
+    Permissions.SHADOW_JOBS_CREATE: "Post jobs to the Shadow job board",
+    Permissions.SHADOW_JOBS_VIEW: "View Shadow job postings and their anonymized applicants",
+    Permissions.SHADOW_JOBS_UPDATE: "Edit, publish, or close Shadow job postings",
 }
 
 
@@ -65,10 +71,14 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.CANDIDATES_UPDATE,
         Permissions.CANDIDATES_DELETE,
         Permissions.HISTORIC_VAULT_VIEW,
+        Permissions.SHADOW_JOBS_CREATE,
+        Permissions.SHADOW_JOBS_VIEW,
+        Permissions.SHADOW_JOBS_UPDATE,
     ],
     RoleName.MEMBER: [
         Permissions.USERS_VIEW,
         Permissions.PROJECTS_VIEW,
         Permissions.CANDIDATES_VIEW,
+        Permissions.SHADOW_JOBS_VIEW,
     ],
 }
