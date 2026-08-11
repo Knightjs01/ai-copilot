@@ -1,5 +1,7 @@
 import { BadgeCheck, EyeOff, Flame, Wand2 } from "lucide-react";
 
+import { CandidatePortalMockup } from "@/components/marketing/mockups/candidate-portal-mockup";
+
 const PROMISE = [
   {
     icon: EyeOff,
@@ -26,30 +28,34 @@ const PROMISE = [
 export function ForCandidatesSection() {
   return (
     <section className="border-t border-border">
-      <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            For candidates
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Explore your next move, quietly
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Your next role, without the risk of your current one finding out.
-          </p>
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:py-28">
+        <div className="flex flex-col gap-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+              For candidates
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              Explore your next move, quietly
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Your next role, without the risk of your current one finding out.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {PROMISE.map((item) => (
+              <div key={item.title} className="flex flex-col gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground">
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PROMISE.map((item) => (
-            <div key={item.title} className="flex flex-col gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground">
-                <item.icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-            </div>
-          ))}
-        </div>
+        <CandidatePortalMockup />
       </div>
     </section>
   );

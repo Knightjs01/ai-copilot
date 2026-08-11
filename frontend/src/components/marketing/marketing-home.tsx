@@ -1,8 +1,10 @@
+import { AtsShowcaseSection } from "@/components/marketing/ats-showcase-section";
 import { DiscreetIndustriesSection } from "@/components/marketing/discreet-industries-section";
 import { FeatureGridSection } from "@/components/marketing/feature-grid-section";
 import { ForCandidatesSection } from "@/components/marketing/for-candidates-section";
 import { HeroSection } from "@/components/marketing/hero-section";
 import { HowItWorksSection } from "@/components/marketing/how-it-works-section";
+import { JobBoardShowcaseSection } from "@/components/marketing/job-board-showcase-section";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { PhantomStorySection } from "@/components/marketing/phantom-story-section";
@@ -19,6 +21,8 @@ export function MarketingHome() {
         <HeroSection />
         <TriangleSection />
         <ThreeInOneSection />
+        <AtsShowcaseSection />
+        <JobBoardShowcaseSection />
         <ForCandidatesSection />
         <FeatureGridSection />
         <DiscreetIndustriesSection />
