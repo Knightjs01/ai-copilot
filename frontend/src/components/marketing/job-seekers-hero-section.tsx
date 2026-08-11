@@ -15,7 +15,7 @@ export function JobSeekersHeroSection() {
           </div>
 
           <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl">
-            Look for your next move without looking like you&apos;re looking.
+            Look for your next role, with total anonymity.
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
