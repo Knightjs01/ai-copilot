@@ -14,6 +14,7 @@ from app.modules.phantom_passport.repository import (
     PhantomPassportRepository,
 )
 from app.modules.shadow_jobs.exceptions import (
+    ApplicationAlreadyWithdrawnError,
     CallsignGenerationExhaustedError,
     DuplicateApplicationError,
     PassportRequiredError,
@@ -324,6 +325,38 @@ class ShadowJobService:
             id=application.id,
             shadow_job_id=job.id,
             job_title=job.title,
+            company_name=company.name if company else "Unknown company",
+            callsign=application.callsign,
+            status=ShadowApplicationStatus(application.status),
+            applied_at=application.created_at,
+        )
+
+    async def withdraw_application(
+        self, *, candidate: CandidateUser, application_id: uuid.UUID
+    ) -> ShadowApplicationRead:
+        application = await self._applications.get_by_id(application_id)
+        if application is None or application.candidate_user_id != candidate.id:
+            raise ShadowApplicationNotFoundError()
+        if application.status == ShadowApplicationStatus.WITHDRAWN.value:
+            raise ApplicationAlreadyWithdrawnError()
+
+        application = await self._applications.update_status(
+            application, status=ShadowApplicationStatus.WITHDRAWN.value
+        )
+        await self._audit.record(
+            company_id=application.company_id,
+            actor_user_id=None,
+            action="shadow_application.withdrawn",
+            target_type="shadow_application",
+            target_id=application.id,
+        )
+
+        job = await self._jobs.get_by_id(application.shadow_job_id)
+        company = await self._session.get(Company, job.company_id) if job else None
+        return ShadowApplicationRead(
+            id=application.id,
+            shadow_job_id=application.shadow_job_id,
+            job_title=job.title if job else "Unknown role",
             company_name=company.name if company else "Unknown company",
             callsign=application.callsign,
             status=ShadowApplicationStatus(application.status),

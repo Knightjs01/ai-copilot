@@ -189,3 +189,14 @@ async def get_my_application(
     return await ShadowJobService(session).get_my_application(
         candidate=candidate, application_id=application_id
     )
+
+
+@router.post("/applications/me/{application_id}/withdraw", response_model=ShadowApplicationRead)
+async def withdraw_application(
+    application_id: uuid.UUID,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> ShadowApplicationRead:
+    return await ShadowJobService(session).withdraw_application(
+        candidate=candidate, application_id=application_id
+    )

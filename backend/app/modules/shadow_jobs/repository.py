@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.shadow_jobs.models import ShadowApplication, ShadowJob, ShadowJobStatus
@@ -51,6 +51,15 @@ class ShadowJobRepository:
 
     async def get_by_id(self, job_id: uuid.UUID) -> ShadowJob | None:
         return await self._session.get(ShadowJob, job_id)
+
+    async def get_by_project_id(self, project_id: uuid.UUID) -> ShadowJob | None:
+        result = await self._session.execute(
+            select(ShadowJob).where(ShadowJob.project_id == project_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def delete_by_id(self, job_id: uuid.UUID) -> None:
+        await self._session.execute(delete(ShadowJob).where(ShadowJob.id == job_id))
 
     async def list_by_company(
         self, company_id: uuid.UUID, *, limit: int = 50, offset: int = 0
@@ -169,3 +178,8 @@ class ShadowApplicationRepository:
             select(func.count()).where(ShadowApplication.shadow_job_id == shadow_job_id)
         )
         return result.scalar_one()
+
+    async def delete_by_job_id(self, shadow_job_id: uuid.UUID) -> None:
+        await self._session.execute(
+            delete(ShadowApplication).where(ShadowApplication.shadow_job_id == shadow_job_id)
+        )

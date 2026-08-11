@@ -21,6 +21,8 @@ from app.modules.project_deletion.schemas import PurgeCertificate
 from app.modules.projects.exceptions import ProjectNotFoundError
 from app.modules.projects.models import Project
 from app.modules.projects.repository import ProjectRepository
+from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
+from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 
 _DATA_CATEGORIES_DESTROYED = [
     "Uploaded resumes",
@@ -32,6 +34,14 @@ _DATA_CATEGORIES_DESTROYED = [
     "Candidate records",
     "Hiring blueprint",
     "Hiring manager alignment",
+]
+
+# Only appended to the certificate when a project actually has a linked Shadow job (project_id
+# on shadow_jobs is nullable and optional) — unlike the categories above, which every project has
+# by the time it reaches pre-screen, most projects will never have one of these.
+_SHADOW_DATA_CATEGORIES_DESTROYED = [
+    "Shadow job board listing and applicants",
+    "Identity reveal requests and audit trail",
 ]
 
 
@@ -53,6 +63,9 @@ class ProjectDeletionService:
         self._vault_repo = IdentityVaultRepository(session)
         self._reveal_events_repo = IdentityRevealEventRepository(session)
         self._historic_vault_repo = HistoricVaultRepository(session)
+        self._shadow_job_repo = ShadowJobRepository(session)
+        self._shadow_application_repo = ShadowApplicationRepository(session)
+        self._shadow_reveal_repo = ShadowRevealRequestRepository(session)
         self._audit = AuditService(session)
         self._storage = storage
 
@@ -83,6 +96,21 @@ class ProjectDeletionService:
         await self._hiring_blueprint_repo.delete_by_project_id(project_id)
         await self._hiring_manager_alignment_repo.delete_by_project_id(project_id)
 
+        # A project's linked Shadow job (if any — the FK is optional, see shadow_jobs/models.py)
+        # isn't reachable through the candidate_ids above at all: Shadow applicants are
+        # CandidateUsers via a Phantom Passport, an entirely different principal from the
+        # Candidate rows just deleted. Reveal requests before applications before the job itself
+        # — each FKs to the one before it.
+        data_categories_destroyed = list(_DATA_CATEGORIES_DESTROYED)
+        shadow_job = await self._shadow_job_repo.get_by_project_id(project_id)
+        if shadow_job is not None:
+            applications = await self._shadow_application_repo.list_by_job(shadow_job.id)
+            application_ids = [a.id for a in applications]
+            await self._shadow_reveal_repo.delete_by_application_ids(application_ids)
+            await self._shadow_application_repo.delete_by_job_id(shadow_job.id)
+            await self._shadow_job_repo.delete_by_id(shadow_job.id)
+            data_categories_destroyed += _SHADOW_DATA_CATEGORIES_DESTROYED
+
         # Recorded before the project row is deleted so its title is available to embed —
         # audit_logs.target_id carries no FK constraint, so this entry survives the burn
         # regardless of ordering and stands as the compliance record that the erasure happened.
@@ -98,7 +126,7 @@ class ProjectDeletionService:
         certificate = PurgeCertificate(
             project_title=project.title,
             candidate_count=len(candidates),
-            data_categories_destroyed=_DATA_CATEGORIES_DESTROYED,
+            data_categories_destroyed=data_categories_destroyed,
             purged_at=datetime.now(timezone.utc),
         )
 

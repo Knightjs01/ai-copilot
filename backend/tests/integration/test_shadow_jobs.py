@@ -254,3 +254,38 @@ async def test_company_applicant_list_is_anonymized(client: AsyncClient) -> None
 
     job_with_count = await client.get(f"/api/v1/shadow-jobs/mine/{job['id']}", headers=headers)
     assert job_with_count.json()["applicant_count"] == 1
+
+
+async def test_candidate_can_withdraw_application(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-withdraw.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    await _publish_job(client, headers=headers, job_id=job["id"])
+
+    candidate_tokens = await candidate_signup(client, email="applicant@shadowjobs-withdraw.com")
+    candidate_headers = auth_headers(candidate_tokens["access_token"])
+    await _save_passport(client, headers=candidate_headers)
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{job['id']}/apply", headers=candidate_headers
+    )
+    application_id = apply_response.json()["id"]
+
+    withdraw_response = await client.post(
+        f"/api/v1/shadow-jobs/applications/me/{application_id}/withdraw",
+        headers=candidate_headers,
+    )
+    assert withdraw_response.status_code == 200, withdraw_response.text
+    assert withdraw_response.json()["status"] == "withdrawn"
+
+    # Withdrawing twice is rejected.
+    second_withdraw = await client.post(
+        f"/api/v1/shadow-jobs/applications/me/{application_id}/withdraw",
+        headers=candidate_headers,
+    )
+    assert second_withdraw.status_code == 400
+
+    # Company still sees the withdrawn application, with its status updated.
+    applicants_response = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert applicants_response.json()[0]["status"] == "withdrawn"

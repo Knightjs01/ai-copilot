@@ -1,6 +1,6 @@
-# AI Interview Copilot
+# Phantom Hire
 
-A secure, enterprise-grade, multi-tenant AI hiring platform — an operating system for recruitment, from role creation through hiring decisions, built with privacy-first AI and evidence-based assessments.
+A secure, enterprise-grade, multi-tenant AI hiring platform — an operating system for recruitment, from role creation through hiring decisions, built with privacy-first AI and evidence-based assessments. Alongside the private TA workflow, **Shadow** is Phantom Hire's anonymous talent marketplace: candidates build a reusable Phantom Passport and apply to jobs across companies without revealing their identity until they explicitly consent to a Reveal Request.
 
 This repo is being built **iteratively, phase by phase**. Each phase is designed, implemented, tested, and committed before the next one starts. See [Roadmap](#roadmap) below for where things stand.
 
@@ -69,7 +69,7 @@ poetry run pytest
 
 ## Roadmap
 
-**Product scope**: this platform covers the Talent Acquisition team's **pre-screen phase only** — from opening a hiring project through the TA-run pre-screen call and its Advance/Reject/Hold outcome. It is used exclusively by the TA team; hiring managers and other stakeholders never log in. Once a candidate clears pre-screen, everything downstream (interview loops, panel scorecards, offer, decision) is managed in the company's ATS (Greenhouse) — not in this platform. This scopes down what earlier phase names implied ("interviews," "scorecards," "decision support" were provisional placeholders, not commitments).
+**Product scope**: this platform now serves two audiences. The Talent Acquisition team runs the private hiring workflow — from opening a hiring project through the TA-run pre-screen call and its Advance/Reject/Hold outcome — using Companies/Users/RBAC auth. Job-seeking candidates use **Shadow**, an anonymous job board with its own separate `candidate_auth` principal (no company, no tenant): they build a reusable Phantom Passport once, browse and apply to jobs across every company, and stay pseudonymous (a per-application Callsign, not their name) until they explicitly approve a company's Reveal Request. Hiring managers and other stakeholders still never log in — their input flows through the TA team via Hiring Manager Alignment. Once a candidate clears pre-screen, everything downstream (interview loops, panel scorecards, offer, decision) is managed in the company's own ATS (Greenhouse), not this platform.
 
 | Phase | Scope | Status |
 |---|---|---|
@@ -85,6 +85,11 @@ poetry run pytest
 | 9 | Frontend — design system (Tailwind slate + Paraform-style restraint), auth, and the full pre-screen workflow UI: project list/detail, drag-and-drop JD/resume dropzones, a `@dnd-kit` candidate pipeline Kanban board, and every AI-generation card from Phases 5-8 | ✅ Done |
 | 10 | Burn Project — permanent GDPR hard-delete of a project and every candidate under it (resumes, sanitized text, AI artifacts, all of it), distinct from the existing archive/soft-delete; confirmation flow with a fire-wipe animation | ✅ Done |
 | 11 | Production deployment (Railway, real email via Brevo) + Team/Invite UI so a second user can log in and share a company's data | ✅ Done |
-| 12+ | Anything further is scoped only if it's still needed inside the pre-screen boundary above — everything past pre-screen lives in Greenhouse | Not planned |
+| 12 | Candidate Identity Vault — Callsigns + a permanent Candidate ID replace stored PII on the `candidates` table itself; PII moves into an encrypted, Owner-only vault revealed only via a reason-justified, audited Reveal action; Historic Project Vault retains Purge Certificates after a project is burned | ✅ Done |
+| 13 | Marketing site — public home page, Job Seekers and Hiring Teams pages, product mockups, brand system | ✅ Done |
+| 14 | Shadow foundation — `candidate_auth` (a principal with no tenant/company, authorization enforced entirely at the application layer), the Phantom Passport (schema-level split between professional data and encrypted personal data — no PII column exists on the professional-data table at all), and CV parsing that redacts PII before any text reaches an LLM | ✅ Done |
+| 15 | Shadow job board — companies post/publish/close listings; candidates browse a public board spanning every company and apply one-click with their Phantom Passport, minted a per-job Callsign; recruiters see an anonymized applicant card built from a code path that never imports the Passport's personal-info repository at all | ✅ Done |
+| 16 | Reveal Request workflow — a company requests a specific applicant's identity; the candidate sees the job/company/reason and explicitly approves or declines before anything crosses over; approval discloses only name/email/phone/real employer, never the Passport address; Project Purge now cascades a project's linked Shadow job, applications, and reveal requests too | ✅ Done |
+| 17+ | AI matching/traffic-light ranking, Recruiter AI Copilot, Candidate AI assistant, Employer Protection blocklists, and the Shadow frontend — scoped as their own phases when started | Not started |
 
 Each phase gets its own module, its own migration(s), its own tests, and its own commit — see `backend/app/modules/__init__.py` for the module contract.

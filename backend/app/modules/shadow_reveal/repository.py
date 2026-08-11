@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.shadow_reveal.models import RevealRequestStatus, ShadowRevealRequest
@@ -49,3 +49,12 @@ class ShadowRevealRequestRepository:
         request.responded_at = datetime.now(timezone.utc)
         await self._session.flush()
         return request
+
+    async def delete_by_application_ids(self, application_ids: list[uuid.UUID]) -> None:
+        if not application_ids:
+            return
+        await self._session.execute(
+            delete(ShadowRevealRequest).where(
+                ShadowRevealRequest.shadow_application_id.in_(application_ids)
+            )
+        )

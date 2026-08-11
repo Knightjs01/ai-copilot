@@ -6,7 +6,13 @@ from sqlalchemy import text
 
 from app.modules.candidates.storage import LocalFileStorage
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, create_project, invite_and_accept, signup
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    create_project,
+    invite_and_accept,
+    signup,
+)
 
 
 def _build_resume_pdf(*, full_name: str) -> bytes:
@@ -316,6 +322,104 @@ async def test_burn_project_cross_tenant_fails(client: AsyncClient) -> None:
     # Company A's project must be untouched.
     still_there = await client.get(f"/api/v1/projects/{project_a['id']}", headers=headers_a)
     assert still_there.status_code == 200
+
+
+async def test_burn_project_purges_linked_shadow_job(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@burnshadow.com", company_name="Burn Shadow Co")
+    headers = auth_headers(owner["access_token"])
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    company_id = me.json()["company_id"]
+    project = await create_project(client, headers=headers, title="Role With Shadow Job")
+    project_id = project["id"]
+
+    job_response = await client.post(
+        "/api/v1/shadow-jobs",
+        json={
+            "title": "Staff Engineer",
+            "summary": "Own our core platform.",
+            "description": "Full role description.",
+            "project_id": project_id,
+        },
+        headers=headers,
+    )
+    assert job_response.status_code == 201, job_response.text
+    job_id = job_response.json()["id"]
+    publish_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job_id}/publish", headers=headers
+    )
+    assert publish_response.status_code == 200, publish_response.text
+
+    candidate_tokens = await candidate_signup(client, email="applicant@burnshadow.com")
+    candidate_headers = auth_headers(candidate_tokens["access_token"])
+    passport_response = await client.put(
+        "/api/v1/phantom-passport/me",
+        json={
+            "headline": "Staff Engineer",
+            "personal_info": {"legal_name": "Shadow Applicant"},
+            "career_entries": [],
+        },
+        headers=candidate_headers,
+    )
+    assert passport_response.status_code == 200, passport_response.text
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_id}/apply", headers=candidate_headers
+    )
+    assert apply_response.status_code == 201, apply_response.text
+    application_id = apply_response.json()["id"]
+
+    reveal_request_response = await client.post(
+        f"/api/v1/shadow-reveal/mine/{job_id}/applicants/{application_id}/request",
+        json={},
+        headers=headers,
+    )
+    assert reveal_request_response.status_code == 201, reveal_request_response.text
+
+    assert await _table_row_count("shadow_jobs", "id", job_id, company_id=company_id) == 1
+    assert (
+        await _table_row_count(
+            "shadow_applications", "shadow_job_id", job_id, company_id=company_id
+        )
+        == 1
+    )
+    assert (
+        await _table_row_count(
+            "shadow_reveal_requests", "shadow_application_id", application_id, company_id=company_id
+        )
+        == 1
+    )
+
+    burn_response = await client.post(f"/api/v1/projects/{project_id}/burn", headers=headers)
+    assert burn_response.status_code == 200, burn_response.text
+    categories = burn_response.json()["certificate"]["data_categories_destroyed"]
+    assert "Shadow job board listing and applicants" in categories
+    assert "Identity reveal requests and audit trail" in categories
+
+    assert await _table_row_count("shadow_jobs", "id", job_id, company_id=company_id) == 0
+    assert (
+        await _table_row_count(
+            "shadow_applications", "shadow_job_id", job_id, company_id=company_id
+        )
+        == 0
+    )
+    assert (
+        await _table_row_count(
+            "shadow_reveal_requests", "shadow_application_id", application_id, company_id=company_id
+        )
+        == 0
+    )
+
+
+async def test_burn_project_without_shadow_job_omits_shadow_categories(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@burnnoshadowjob.com")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+
+    burn_response = await client.post(f"/api/v1/projects/{project['id']}/burn", headers=headers)
+    assert burn_response.status_code == 200, burn_response.text
+    categories = burn_response.json()["certificate"]["data_categories_destroyed"]
+    assert "Shadow job board listing and applicants" not in categories
 
 
 async def test_burn_already_soft_deleted_project(client: AsyncClient) -> None:

@@ -34,3 +34,8 @@ class PassportRequiredError(ShadowJobError):
 class CallsignGenerationExhaustedError(ShadowJobError):
     status_code = 500
     detail = "Could not generate a unique callsign for this application"
+
+
+class ApplicationAlreadyWithdrawnError(ShadowJobError):
+    status_code = 400
+    detail = "This application has already been withdrawn"
