@@ -29,7 +29,7 @@ export function ThreeInOneSection() {
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            One platform. Job board, ATS, and AI hiring assistant — together.
+            Anonymous Job Board, ATS, and Phantom Hiring Assistant — all in one platform.
           </h2>
           <p className="mt-3 text-muted-foreground">
             Most tools make you stitch these together yourself. Phantom Hire doesn&apos;t.
