@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { PhantomWordmark } from "@/components/phantom-wordmark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -19,14 +19,7 @@ export function MarketingNav() {
     <header className="sticky top-0 z-40 border-b border-border bg-white/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" aria-label="Phantom Hire home">
-          <Image
-            src="/phantom-wordmark.png"
-            alt="Phantom Hire"
-            width={830}
-            height={219}
-            className="h-8 w-auto"
-            priority
-          />
+          <PhantomWordmark />
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">

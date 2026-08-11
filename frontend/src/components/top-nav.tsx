@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
 import { PhantomIcon } from "@/components/phantom-icon";
+import { PhantomWordmark } from "@/components/phantom-wordmark";
 import { useAuth } from "@/lib/auth-context";
 
 function initials(name: string): string {
@@ -60,14 +60,7 @@ export function TopNav() {
         </div>
 
         <Link href="/" aria-label="Phantom Hire home" className="justify-self-center">
-          <Image
-            src="/phantom-wordmark.png"
-            alt="Phantom Hire"
-            width={830}
-            height={219}
-            className="h-9 w-auto"
-            priority
-          />
+          <PhantomWordmark />
         </Link>
 
         {user && (
