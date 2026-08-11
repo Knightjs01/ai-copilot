@@ -11,8 +11,8 @@ export function MarketingFooter() {
           <Image
             src="/phantom-wordmark.png"
             alt="Phantom Hire"
-            width={830}
-            height={219}
+            width={829}
+            height={193}
             className="h-6 w-auto"
           />
           <span className="text-xs text-muted-foreground">

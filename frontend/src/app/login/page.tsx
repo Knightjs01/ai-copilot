@@ -32,8 +32,8 @@ export default function LoginChooserPage() {
         <Image
           src="/phantom-wordmark.png"
           alt="Phantom Hire"
-          width={830}
-          height={219}
+          width={829}
+          height={193}
           className="h-9 w-auto"
           priority
         />

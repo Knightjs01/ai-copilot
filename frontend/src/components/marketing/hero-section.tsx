@@ -90,7 +90,7 @@ export function HeroSection() {
         <div className="relative flex items-center justify-center">
           <div className="absolute h-72 w-72 rounded-full bg-brand/10 blur-3xl" aria-hidden />
           <Image
-            src="/phantom-icon.png"
+            src="/phantom-ghost-hero.png"
             alt="Phantom, the invisible TA partner"
             width={668}
             height={844}

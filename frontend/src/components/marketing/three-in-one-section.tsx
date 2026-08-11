@@ -1,28 +1,39 @@
-import { Bot, EyeOff, KanbanSquare } from "lucide-react";
+import Image from "next/image";
+import { Bot } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
-const PILLARS = [
+interface Pillar {
+  title: string;
+  subtitle: string;
+  body: string;
+  status: "Live now" | "Coming soon";
+  icon?: LucideIcon;
+  image?: { src: string; alt: string };
+}
+
+const PILLARS: Pillar[] = [
   {
-    icon: EyeOff,
+    image: { src: "/shadow-icon.png", alt: "" },
     title: "Shadow",
     subtitle: "The anonymous job board",
     body: "Where candidates discover and apply to roles under a Callsign, not a name — staying in the shadows until they choose to step forward.",
-    status: "Coming soon" as const,
+    status: "Live now",
   },
   {
-    icon: KanbanSquare,
-    title: "Talent ATS",
+    image: { src: "/phantom-icon.png", alt: "" },
+    title: "Phantom ATS",
     subtitle: "Your hiring pipeline, end to end",
     body: "Hiring projects, candidate tracking, roles and permissions — the pipeline your team already runs on, built around Zero-Retention from day one.",
-    status: "Live now" as const,
+    status: "Live now",
   },
   {
     icon: Bot,
     title: "Phantom",
     subtitle: "The AI Assistant",
     body: "Reads job descriptions, screens candidates, drafts questions, and briefs the hiring manager — automatically, in the background.",
-    status: "Live now" as const,
+    status: "Live now",
   },
 ];
 
@@ -47,7 +58,17 @@ export function ThreeInOneSection() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                  <pillar.icon className="h-5 w-5" />
+                  {pillar.image ? (
+                    <Image
+                      src={pillar.image.src}
+                      alt={pillar.image.alt}
+                      width={40}
+                      height={40}
+                      className="h-6 w-6 object-contain"
+                    />
+                  ) : pillar.icon ? (
+                    <pillar.icon className="h-5 w-5" />
+                  ) : null}
                 </div>
                 <Badge variant={pillar.status === "Live now" ? "success" : "outline"}>
                   {pillar.status}
