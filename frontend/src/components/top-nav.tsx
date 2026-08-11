@@ -20,6 +20,7 @@ export function TopNav() {
   const { user, logout, hasPermission } = useAuth();
   const router = useRouter();
   const canViewHistoricVault = hasPermission("historic_vault.view");
+  const canViewShadowJobs = hasPermission("shadow_jobs.view");
 
   const handleLogout = async () => {
     await logout();
@@ -47,6 +48,14 @@ export function TopNav() {
               >
                 Team
               </Link>
+              {canViewShadowJobs && (
+                <Link
+                  href="/shadow-jobs"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Shadow Jobs
+                </Link>
+              )}
               {canViewHistoricVault && (
                 <Link
                   href="/historic-vault"
