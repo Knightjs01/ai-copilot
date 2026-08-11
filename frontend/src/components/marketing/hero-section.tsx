@@ -23,8 +23,10 @@ export function HeroSection() {
             </span>
           </div>
 
-          <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Zero-Retention, Anonymous Hiring.
+          <h1 className="text-3xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            Zero-Retention
+            <br />
+            Anonymous Hiring
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
