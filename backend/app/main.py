@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.exceptions import AppError
 from app.core.rate_limit import limiter
+from app.core.security_headers import SecurityHeadersMiddleware
 
 
 def create_app() -> FastAPI:
@@ -23,12 +24,14 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
+    app.add_middleware(SecurityHeadersMiddleware, hsts_enabled=settings.cookie_secure)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
     )
 
     app.state.limiter = limiter
