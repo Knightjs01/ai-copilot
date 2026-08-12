@@ -114,6 +114,32 @@ def decode_candidate_mfa_challenge_token(token: str) -> dict[str, Any]:
     return payload
 
 
+def create_step_up_token(*, user_id: uuid.UUID) -> str:
+    """Proof that the holder of a valid access token has, moments ago, also re-supplied their
+    password (and MFA code, if enrolled) — see auth.service.auth_service.AuthService.step_up
+    and auth.dependencies.require_step_up. An access token alone proves "this session is
+    authenticated"; a step-up token additionally proves "the actual person is at the keyboard
+    right now", which is the bar high-risk actions (identity reveal, project purge, admin
+    invite) need — a stolen bearer token by itself is not enough to perform them."""
+
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "scope": "step_up",
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.step_up_token_expire_minutes),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
+def decode_step_up_token(token: str) -> dict[str, Any]:
+    payload = decode_access_token(token)
+    if payload.get("scope") != "step_up":
+        raise TokenError("Not a step-up token")
+    return payload
+
+
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 

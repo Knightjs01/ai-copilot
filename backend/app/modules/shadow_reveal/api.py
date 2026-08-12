@@ -9,6 +9,7 @@ from app.modules.auth.dependencies import (
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
+    require_step_up,
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
@@ -51,7 +52,7 @@ async def request_reveal(
 async def get_revealed_identity(
     job_id: uuid.UUID,
     application_id: uuid.UUID,
-    actor: User = Depends(require_mfa_enrolled),
+    actor: User = Depends(require_step_up),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> RevealedIdentity:

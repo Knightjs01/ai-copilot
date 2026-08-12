@@ -2,7 +2,7 @@ import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any, NamedTuple
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -144,6 +144,41 @@ async def require_mfa_enrolled(user: User = Depends(get_current_user_model)) -> 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="MFA enrollment is required to continue. Set up MFA via POST /auth/mfa/setup.",
+        )
+    return user
+
+
+async def require_step_up(
+    x_step_up_token: str | None = Header(default=None, alias="X-Step-Up-Token"),
+    user: User = Depends(require_mfa_enrolled),
+) -> User:
+    """Gate for a small set of the highest-risk actions (identity reveal, project purge, admin
+    invite) — see security.create_step_up_token. Built on top of require_mfa_enrolled, not
+    get_current_user_model directly: an account that hasn't enrolled MFA yet (and is still
+    inside its grace period) can't reach a step-up-gated action at all, since step-up's whole
+    purpose is proving MFA-backed identity moments ago. Callers get a token from
+    POST /auth/step-up (which re-checks password, and MFA code if enrolled) and pass it back as
+    the X-Step-Up-Token header on the actual request."""
+
+    if x_step_up_token is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Step-up verification required for this action. "
+                "Call POST /auth/step-up first and retry with an X-Step-Up-Token header."
+            ),
+        )
+    try:
+        payload = security.decode_step_up_token(x_step_up_token)
+    except security.TokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Step-up verification required for this action.",
+        ) from exc
+    if payload.get("sub") != str(user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Step-up verification required for this action.",
         )
     return user
 

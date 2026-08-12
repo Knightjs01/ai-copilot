@@ -277,6 +277,34 @@ class AuthService:
             target_id=user.id,
         )
 
+    async def step_up(self, *, user: User, password: str, mfa_code: str | None) -> str:
+        # Same narrowing as disable_mfa: an authenticated user always has a real password.
+        if user.hashed_password is None or not security.verify_password(
+            password, user.hashed_password
+        ):
+            raise InvalidCredentialsError()
+
+        if user.mfa_enabled:
+            if not mfa_code or not user.mfa_secret_encrypted:
+                raise InvalidMfaCodeError()
+            secret = security.decrypt_secret(user.mfa_secret_encrypted)
+            if not security.verify_totp_code(secret=secret, code=mfa_code):
+                backup_code = await self._tokens.get_unused_backup_code_by_hash(
+                    user_id=user.id, code_hash=security.hash_opaque_token(mfa_code.strip().upper())
+                )
+                if backup_code is None:
+                    raise InvalidMfaCodeError()
+                await self._tokens.consume_backup_code(backup_code)
+
+        await self._audit.record(
+            company_id=user.company_id,
+            actor_user_id=user.id,
+            action="user.step_up_verified",
+            target_type="user",
+            target_id=user.id,
+        )
+        return security.create_step_up_token(user_id=user.id)
+
     async def _send_verification_email(self, user: User) -> None:
         await self._tokens.invalidate_pending_tokens(
             user_id=user.id, purpose=TokenPurpose.EMAIL_VERIFY

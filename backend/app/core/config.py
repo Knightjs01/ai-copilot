@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     # enrollment (auth/me and the mfa/* endpoints themselves are always reachable, so an
     # account can never be locked out of enrolling).
     mfa_grace_period_days: int = 7
+    # Step-up auth (see app/modules/auth/dependencies.py:require_step_up) — how long a
+    # freshly-verified password+MFA assertion stays valid for gating a single high-risk action
+    # (identity reveal, project purge, admin invite). Short and single-purpose on purpose: this
+    # is not a session, it's proof of "the person at the keyboard right now" for one action.
+    step_up_token_expire_minutes: int = 5
 
     cookie_secure: bool = False
     frontend_base_url: str = "http://localhost:3000"

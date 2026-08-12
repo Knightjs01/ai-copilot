@@ -1,7 +1,13 @@
 from httpx import AsyncClient
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, create_project, invite_and_accept, signup
+from tests.integration.helpers import (
+    auth_headers,
+    create_project,
+    invite_and_accept,
+    signup,
+    step_up_headers,
+)
 
 
 async def test_historic_vault_shows_purged_project_after_burn(client: AsyncClient) -> None:
@@ -9,7 +15,10 @@ async def test_historic_vault_shows_purged_project_after_burn(client: AsyncClien
     headers = auth_headers(owner["access_token"])
     project = await create_project(client, headers=headers, title="Role To Purge")
 
-    burn_response = await client.post(f"/api/v1/projects/{project['id']}/burn", headers=headers)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project['id']}/burn",
+        headers=await step_up_headers(client, headers=headers),
+    )
     assert burn_response.status_code == 200, burn_response.text
 
     response = await client.get("/api/v1/historic-vault", headers=headers)
@@ -31,7 +40,10 @@ async def test_historic_vault_includes_burn_audit_entry(client: AsyncClient) -> 
     headers = auth_headers(owner["access_token"])
     project = await create_project(client, headers=headers, title="Audited Role")
 
-    burn_response = await client.post(f"/api/v1/projects/{project['id']}/burn", headers=headers)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project['id']}/burn",
+        headers=await step_up_headers(client, headers=headers),
+    )
     assert burn_response.status_code == 200
 
     response = await client.get("/api/v1/historic-vault", headers=headers)
@@ -79,7 +91,10 @@ async def test_historic_vault_is_scoped_to_company(client: AsyncClient) -> None:
     owner_a = await signup(client, email="owner@histvault-tenant-a.com", company_name="Hist A")
     headers_a = auth_headers(owner_a["access_token"])
     project_a = await create_project(client, headers=headers_a, title="Tenant A Role")
-    burn_response = await client.post(f"/api/v1/projects/{project_a['id']}/burn", headers=headers_a)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project_a['id']}/burn",
+        headers=await step_up_headers(client, headers=headers_a),
+    )
     assert burn_response.status_code == 200
 
     owner_b = await signup(client, email="owner@histvault-tenant-b.com", company_name="Hist B")

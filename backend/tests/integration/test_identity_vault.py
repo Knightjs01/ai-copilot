@@ -6,7 +6,13 @@ from sqlalchemy.exc import DBAPIError
 
 from app.modules.auth import security
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, create_project, invite_and_accept, signup
+from tests.integration.helpers import (
+    auth_headers,
+    create_project,
+    invite_and_accept,
+    signup,
+    step_up_headers,
+)
 
 
 async def _create_candidate(
@@ -138,7 +144,7 @@ async def test_reveal_identity_requires_owner_role(
     owner_allowed = await client.post(
         f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
         json={"reason": "Hiring Manager Interview"},
-        headers=owner_headers,
+        headers=await step_up_headers(client, headers=owner_headers),
     )
     assert owner_allowed.status_code == 200, owner_allowed.text
 
@@ -162,7 +168,7 @@ async def test_reveal_identity_returns_snapshot_and_records_audit_trail(
     reveal_response = await client.post(
         f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
         json={"reason": "Background Checks"},
-        headers=headers,
+        headers=await step_up_headers(client, headers=headers),
     )
     assert reveal_response.status_code == 200, reveal_response.text
     snapshot = reveal_response.json()
@@ -327,7 +333,7 @@ async def test_vault_field_update_not_overwritten_by_later_sanitize(client: Asyn
     reveal_response = await client.post(
         f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
         json={"reason": "Other"},
-        headers=headers,
+        headers=await step_up_headers(client, headers=headers),
     )
     assert reveal_response.status_code == 200, reveal_response.text
     assert reveal_response.json()["current_employer"] == "Manually Entered Corp"

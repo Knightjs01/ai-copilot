@@ -1,6 +1,6 @@
 from httpx import AsyncClient
 
-from tests.integration.helpers import auth_headers, candidate_signup, signup
+from tests.integration.helpers import auth_headers, candidate_signup, signup, step_up_headers
 
 _JOB_PAYLOAD = {
     "title": "Staff Product Designer",
@@ -124,7 +124,8 @@ async def test_candidate_can_view_and_approve_reveal_request(client: AsyncClient
 
     # Company cannot see the identity before the candidate approves.
     premature_view = await client.get(
-        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}", headers=headers
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
     )
     assert premature_view.status_code == 400
 
@@ -137,7 +138,8 @@ async def test_candidate_can_view_and_approve_reveal_request(client: AsyncClient
     assert approve_response.json()["status"] == "approved"
 
     revealed_response = await client.get(
-        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}", headers=headers
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
     )
     assert revealed_response.status_code == 200, revealed_response.text
     revealed = revealed_response.json()
@@ -174,7 +176,8 @@ async def test_candidate_can_decline_reveal_request(client: AsyncClient) -> None
     assert decline_response.json()["status"] == "declined"
 
     still_hidden = await client.get(
-        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}", headers=headers
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
     )
     assert still_hidden.status_code == 400
 

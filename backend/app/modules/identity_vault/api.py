@@ -9,6 +9,7 @@ from app.modules.auth.dependencies import (
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
+    require_step_up,
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
@@ -34,7 +35,7 @@ async def reveal_identity(
     candidate_id: uuid.UUID,
     body: RevealRequest,
     request: Request,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_step_up),
     _: CurrentUser = Depends(require_permission(Permissions.IDENTITY_VAULT_REVEAL)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> IdentitySnapshot:

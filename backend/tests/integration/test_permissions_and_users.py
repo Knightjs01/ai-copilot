@@ -1,7 +1,7 @@
 from httpx import AsyncClient
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, invite_and_accept, signup
+from tests.integration.helpers import auth_headers, invite_and_accept, signup, step_up_headers
 
 
 async def test_member_cannot_invite_but_admin_can(
@@ -41,17 +41,20 @@ async def test_member_cannot_invite_but_admin_can(
     allowed = await client.post(
         "/api/v1/users/invite",
         json={"email": "y@perms.com", "full_name": "Y", "role": "Member"},
-        headers=admin_headers,
+        headers=await step_up_headers(
+            client, headers=admin_headers, password="a secure password 123"
+        ),
     )
     assert allowed.status_code == 201
 
 
 async def test_cannot_invite_directly_as_owner(client: AsyncClient) -> None:
     owner = await signup(client, email="owner2@perms.com")
+    owner_headers = auth_headers(owner["access_token"])
     response = await client.post(
         "/api/v1/users/invite",
         json={"email": "wannabe-owner@perms.com", "full_name": "X", "role": "Owner"},
-        headers=auth_headers(owner["access_token"]),
+        headers=await step_up_headers(client, headers=owner_headers),
     )
     assert response.status_code == 403
 

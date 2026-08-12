@@ -12,6 +12,7 @@ from tests.integration.helpers import (
     create_project,
     invite_and_accept,
     signup,
+    step_up_headers,
 )
 
 
@@ -181,7 +182,10 @@ async def test_burn_project_purges_everything(
         == 1
     )
 
-    burn_response = await client.post(f"/api/v1/projects/{project_id}/burn", headers=headers)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project_id}/burn",
+        headers=await step_up_headers(client, headers=headers),
+    )
     assert burn_response.status_code == 200, burn_response.text
     body = burn_response.json()
     assert body["candidate_count"] == 2
@@ -254,7 +258,10 @@ async def test_burn_project_audit_entry_survives(client: AsyncClient) -> None:
     me = await client.get("/api/v1/auth/me", headers=headers)
     company_id = me.json()["company_id"]
 
-    burn_response = await client.post(f"/api/v1/projects/{project_id}/burn", headers=headers)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project_id}/burn",
+        headers=await step_up_headers(client, headers=headers),
+    )
     assert burn_response.status_code == 200
     body = burn_response.json()
     assert body["candidate_count"] == 0
@@ -312,7 +319,10 @@ async def test_burn_project_requires_projects_delete_permission(
     )
     admin_headers = auth_headers(admin["access_token"])
     allowed_response = await client.post(
-        f"/api/v1/projects/{project['id']}/burn", headers=admin_headers
+        f"/api/v1/projects/{project['id']}/burn",
+        headers=await step_up_headers(
+            client, headers=admin_headers, password="a secure password 123"
+        ),
     )
     assert allowed_response.status_code == 200
 
@@ -325,7 +335,10 @@ async def test_burn_project_cross_tenant_fails(client: AsyncClient) -> None:
     owner_b = await signup(client, email="owner@burntenant-b.com", company_name="Burn Tenant B")
     headers_b = auth_headers(owner_b["access_token"])
 
-    response = await client.post(f"/api/v1/projects/{project_a['id']}/burn", headers=headers_b)
+    response = await client.post(
+        f"/api/v1/projects/{project_a['id']}/burn",
+        headers=await step_up_headers(client, headers=headers_b),
+    )
     assert response.status_code == 404
 
     # Company A's project must be untouched.
@@ -397,7 +410,10 @@ async def test_burn_project_purges_linked_shadow_job(client: AsyncClient) -> Non
         == 1
     )
 
-    burn_response = await client.post(f"/api/v1/projects/{project_id}/burn", headers=headers)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project_id}/burn",
+        headers=await step_up_headers(client, headers=headers),
+    )
     assert burn_response.status_code == 200, burn_response.text
     categories = burn_response.json()["certificate"]["data_categories_destroyed"]
     assert "Shadow job board listing and applicants" in categories
@@ -425,7 +441,10 @@ async def test_burn_project_without_shadow_job_omits_shadow_categories(
     headers = auth_headers(owner["access_token"])
     project = await create_project(client, headers=headers)
 
-    burn_response = await client.post(f"/api/v1/projects/{project['id']}/burn", headers=headers)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project['id']}/burn",
+        headers=await step_up_headers(client, headers=headers),
+    )
     assert burn_response.status_code == 200, burn_response.text
     categories = burn_response.json()["certificate"]["data_categories_destroyed"]
     assert "Shadow job board listing and applicants" not in categories
@@ -441,6 +460,9 @@ async def test_burn_already_soft_deleted_project(client: AsyncClient) -> None:
     delete_response = await client.delete(f"/api/v1/projects/{project['id']}", headers=headers)
     assert delete_response.status_code == 204
 
-    burn_response = await client.post(f"/api/v1/projects/{project['id']}/burn", headers=headers)
+    burn_response = await client.post(
+        f"/api/v1/projects/{project['id']}/burn",
+        headers=await step_up_headers(client, headers=headers),
+    )
     assert burn_response.status_code == 200
     assert await _table_row_count("projects", "id", project["id"], company_id=company_id) == 0

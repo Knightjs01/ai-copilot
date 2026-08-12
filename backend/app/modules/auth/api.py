@@ -15,6 +15,7 @@ from app.modules.auth.dependencies import (
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
+    require_step_up,
 )
 from app.modules.auth.email import EmailSender
 from app.modules.auth.exceptions import InvalidOrExpiredTokenError
@@ -37,6 +38,8 @@ from app.modules.auth.schemas import (
     ResendVerificationRequest,
     ResetPasswordRequest,
     SignupRequest,
+    StepUpRequest,
+    StepUpResponse,
     TokenResponse,
     UserRead,
     VerifyEmailRequest,
@@ -257,10 +260,24 @@ async def disable_mfa(
     await AuthService(session).disable_mfa(user=user, password=body.password)
 
 
+@router.post("/auth/step-up", response_model=StepUpResponse)
+@limiter.limit("10/minute")
+async def step_up(
+    request: Request,
+    body: StepUpRequest,
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> StepUpResponse:
+    token = await AuthService(session).step_up(
+        user=user, password=body.password, mfa_code=body.mfa_code
+    )
+    return StepUpResponse(step_up_token=token)
+
+
 @router.post("/users/invite", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def invite_user(
     body: InviteUserRequest,
-    actor: User = Depends(require_mfa_enrolled),
+    actor: User = Depends(require_step_up),
     _: CurrentUser = Depends(require_permission(Permissions.USERS_INVITE)),
     session: AsyncSession = Depends(get_tenant_db),
     email_sender: EmailSender = Depends(get_email_sender),

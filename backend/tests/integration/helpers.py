@@ -23,6 +23,16 @@ def auth_headers(access_token: str) -> dict:
     return {"Authorization": f"Bearer {access_token}"}
 
 
+async def step_up_headers(
+    client: AsyncClient, *, headers: dict, password: str = "correct horse battery staple"
+) -> dict:
+    response = await client.post(
+        "/api/v1/auth/step-up", json={"password": password}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    return {**headers, "X-Step-Up-Token": response.json()["step_up_token"]}
+
+
 async def candidate_signup(
     client: AsyncClient, *, email: str, full_name: str = "Jamie Candidate"
 ) -> dict:
@@ -49,11 +59,12 @@ async def invite_and_accept(
     email: str,
     role: str,
     sent_emails: CapturingEmailSender,
+    inviter_password: str = "correct horse battery staple",
 ) -> dict:
     invite_response = await client.post(
         "/api/v1/users/invite",
         json={"email": email, "full_name": "Invited Person", "role": role},
-        headers=inviter_headers,
+        headers=await step_up_headers(client, headers=inviter_headers, password=inviter_password),
     )
     assert invite_response.status_code == 201, invite_response.text
     token = extract_token_from_email(sent_emails)

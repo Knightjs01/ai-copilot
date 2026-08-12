@@ -78,6 +78,18 @@ class MfaDisableRequest(BaseModel):
     password: str
 
 
+class StepUpRequest(BaseModel):
+    password: str
+    # Required only if the account has MFA enrolled — AuthService.step_up enforces that, not
+    # this schema, since whether it's required depends on the authenticated user, not the shape
+    # of the request. Accepts a TOTP code or an "XXXXX-XXXXX" backup code, same as mfa/verify.
+    mfa_code: str | None = Field(default=None, min_length=6, max_length=11)
+
+
+class StepUpResponse(BaseModel):
+    step_up_token: str
+
+
 class InviteUserRequest(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=1, max_length=255)

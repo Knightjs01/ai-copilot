@@ -5,10 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.dependencies import (
     CurrentUser,
-    get_current_user_model,
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
+    require_step_up,
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
@@ -25,7 +25,7 @@ router = APIRouter(
 @router.post("/{project_id}/burn", response_model=BurnProjectResponse)
 async def burn_project(
     project_id: uuid.UUID,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_step_up),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_DELETE)),
     session: AsyncSession = Depends(get_tenant_db),
     storage: FileStorage = Depends(get_file_storage),
