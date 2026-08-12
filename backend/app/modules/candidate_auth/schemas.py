@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -55,3 +56,12 @@ class CandidateMeResponse(BaseModel):
     full_name: str
     is_email_verified: bool
     mfa_enabled: bool
+
+
+class CandidateSessionRead(BaseModel):
+    id: uuid.UUID
+    user_agent: str | None
+    ip_address: str | None
+    created_at: datetime
+    last_used_at: datetime | None
+    is_current: bool

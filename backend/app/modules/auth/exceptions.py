@@ -44,3 +44,8 @@ class LastOwnerError(AuthError):
 class InvalidRoleError(AuthError):
     status_code = 400
     detail = "Invalid role"
+
+
+class SessionNotFoundError(AuthError):
+    status_code = 404
+    detail = "Session not found"

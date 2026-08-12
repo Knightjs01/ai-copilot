@@ -87,7 +87,13 @@ class UserService:
         return user
 
     async def accept_invite(
-        self, *, token_plain: str, password: str, full_name: str | None = None
+        self,
+        *,
+        token_plain: str,
+        password: str,
+        full_name: str | None = None,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> IssuedTokens:
         token = await self._auth.consume_verification_token(
             token_plain, purpose=TokenPurpose.INVITE
@@ -109,7 +115,7 @@ class UserService:
             target_type="user",
             target_id=user.id,
         )
-        return await self._auth.issue_tokens(user)
+        return await self._auth.issue_tokens(user, user_agent=user_agent, ip_address=ip_address)
 
     async def list_company_users(
         self, *, company_id: uuid.UUID, limit: int = 50, offset: int = 0

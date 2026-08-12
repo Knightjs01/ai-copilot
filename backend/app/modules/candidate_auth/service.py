@@ -12,8 +12,9 @@ from app.modules.candidate_auth.exceptions import (
     CandidateInvalidCredentialsError,
     CandidateInvalidMfaCodeError,
     CandidateInvalidOrExpiredTokenError,
+    CandidateSessionNotFoundError,
 )
-from app.modules.candidate_auth.models import CandidateUser
+from app.modules.candidate_auth.models import CandidateRefreshToken, CandidateUser
 from app.modules.candidate_auth.repository import (
     CandidateMfaBackupCodeRepository,
     CandidateRefreshTokenRepository,
@@ -40,7 +41,13 @@ class CandidateAuthService:
         self._mfa_backup_codes = CandidateMfaBackupCodeRepository(session)
 
     async def signup(
-        self, *, email: str, password: str, full_name: str
+        self,
+        *,
+        email: str,
+        password: str,
+        full_name: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> tuple[CandidateUser, IssuedCandidateTokens]:
         if await self._candidates.get_by_email(email) is not None:
             raise CandidateEmailAlreadyRegisteredError()
@@ -50,11 +57,16 @@ class CandidateAuthService:
             hashed_password=security.hash_password(password),
             full_name=full_name,
         )
-        tokens = await self.issue_tokens(candidate)
+        tokens = await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
         return candidate, tokens
 
     async def login(
-        self, *, email: str, password: str
+        self,
+        *,
+        email: str,
+        password: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> IssuedCandidateTokens | CandidateMfaChallenge:
         throttle = LoginAttemptTracker(realm="candidate")
         # Same InvalidCredentialsError a wrong password produces — a throttled response must not
@@ -79,10 +91,15 @@ class CandidateAuthService:
                 )
             )
 
-        return await self.issue_tokens(candidate)
+        return await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
 
     async def verify_mfa_and_login(
-        self, *, challenge_token: str, code: str
+        self,
+        *,
+        challenge_token: str,
+        code: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> IssuedCandidateTokens:
         try:
             payload = security.decode_candidate_mfa_challenge_token(challenge_token)
@@ -105,9 +122,15 @@ class CandidateAuthService:
                 raise CandidateInvalidMfaCodeError()
             await self._mfa_backup_codes.consume_backup_code(backup_code)
 
-        return await self.issue_tokens(candidate)
+        return await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
 
-    async def refresh(self, *, refresh_token_plain: str) -> IssuedCandidateTokens:
+    async def refresh(
+        self,
+        *,
+        refresh_token_plain: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedCandidateTokens:
         token_hash = security.hash_opaque_token(refresh_token_plain)
         stored = await self._tokens.get_by_hash(token_hash)
 
@@ -125,13 +148,37 @@ class CandidateAuthService:
             raise CandidateInvalidOrExpiredTokenError()
 
         await self._tokens.revoke(stored)
-        return await self.issue_tokens(candidate)
+        return await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
 
     async def logout(self, *, refresh_token_plain: str) -> None:
         token_hash = security.hash_opaque_token(refresh_token_plain)
         stored = await self._tokens.get_by_hash(token_hash)
         if stored is not None and stored.revoked_at is None:
             await self._tokens.revoke(stored)
+
+    async def list_sessions(self, candidate: CandidateUser) -> list[CandidateRefreshToken]:
+        return await self._tokens.list_active_sessions_for_candidate(candidate.id)
+
+    async def revoke_session(self, *, candidate: CandidateUser, session_id: uuid.UUID) -> None:
+        session = await self._tokens.get_active_session_for_candidate(
+            candidate_user_id=candidate.id, session_id=session_id
+        )
+        if session is None:
+            raise CandidateSessionNotFoundError()
+        await self._tokens.revoke(session)
+
+    async def revoke_other_sessions(
+        self, *, candidate: CandidateUser, current_refresh_token_plain: str | None
+    ) -> None:
+        current_session_id = None
+        if current_refresh_token_plain is not None:
+            current = await self._tokens.get_by_hash(
+                security.hash_opaque_token(current_refresh_token_plain)
+            )
+            current_session_id = current.id if current is not None else None
+        await self._tokens.revoke_all_for_candidate(
+            candidate.id, except_session_id=current_session_id
+        )
 
     async def setup_mfa(self, *, candidate: CandidateUser) -> tuple[str, str]:
         secret = security.generate_totp_secret()
@@ -162,7 +209,13 @@ class CandidateAuthService:
         candidate.mfa_secret_encrypted = None
         await self._mfa_backup_codes.delete_all_backup_codes_for_candidate(candidate.id)
 
-    async def issue_tokens(self, candidate: CandidateUser) -> IssuedCandidateTokens:
+    async def issue_tokens(
+        self,
+        candidate: CandidateUser,
+        *,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedCandidateTokens:
         access_token = security.create_candidate_access_token(candidate_id=candidate.id)
         refresh_token_plain = security.generate_opaque_token()
         await self._tokens.create(
@@ -170,5 +223,7 @@ class CandidateAuthService:
             token_hash=security.hash_opaque_token(refresh_token_plain),
             expires_at=datetime.now(timezone.utc)
             + timedelta(days=self._settings.refresh_token_expire_days),
+            user_agent=user_agent,
+            ip_address=ip_address,
         )
         return IssuedCandidateTokens(access_token=access_token, refresh_token=refresh_token_plain)

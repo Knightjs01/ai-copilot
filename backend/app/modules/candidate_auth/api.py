@@ -1,3 +1,4 @@
+import uuid
 from typing import Literal
 
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
@@ -6,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
+from app.modules.auth import security
 from app.modules.candidate_auth.dependencies import get_current_candidate
 from app.modules.candidate_auth.exceptions import CandidateInvalidOrExpiredTokenError
 from app.modules.candidate_auth.models import CandidateUser
@@ -18,6 +20,7 @@ from app.modules.candidate_auth.schemas import (
     CandidateMfaEnableResponse,
     CandidateMfaSetupResponse,
     CandidateMfaVerifyRequest,
+    CandidateSessionRead,
     CandidateSignupRequest,
     CandidateTokenResponse,
 )
@@ -47,6 +50,12 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(key=_REFRESH_COOKIE_NAME, path=_REFRESH_COOKIE_PATH)
 
 
+def _client_context(request: Request) -> tuple[str | None, str | None]:
+    user_agent = request.headers.get("user-agent")
+    ip_address = request.client.host if request.client else None
+    return user_agent, ip_address
+
+
 @router.post("/signup", response_model=CandidateTokenResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def signup(
@@ -55,8 +64,13 @@ async def signup(
     response: Response,
     session: AsyncSession = Depends(get_db),
 ) -> CandidateTokenResponse:
+    user_agent, ip_address = _client_context(request)
     _, tokens = await CandidateAuthService(session).signup(
-        email=body.email, password=body.password, full_name=body.full_name
+        email=body.email,
+        password=body.password,
+        full_name=body.full_name,
+        user_agent=user_agent,
+        ip_address=ip_address,
     )
     _set_refresh_cookie(response, tokens.refresh_token)
     return CandidateTokenResponse(access_token=tokens.access_token)
@@ -70,7 +84,10 @@ async def login(
     response: Response,
     session: AsyncSession = Depends(get_db),
 ) -> CandidateTokenResponse | CandidateMfaChallengeResponse:
-    result = await CandidateAuthService(session).login(email=body.email, password=body.password)
+    user_agent, ip_address = _client_context(request)
+    result = await CandidateAuthService(session).login(
+        email=body.email, password=body.password, user_agent=user_agent, ip_address=ip_address
+    )
     if isinstance(result, CandidateMfaChallenge):
         return CandidateMfaChallengeResponse(challenge_token=result.challenge_token)
 
@@ -86,8 +103,12 @@ async def verify_mfa(
     response: Response,
     session: AsyncSession = Depends(get_db),
 ) -> CandidateTokenResponse:
+    user_agent, ip_address = _client_context(request)
     tokens = await CandidateAuthService(session).verify_mfa_and_login(
-        challenge_token=body.challenge_token, code=body.code
+        challenge_token=body.challenge_token,
+        code=body.code,
+        user_agent=user_agent,
+        ip_address=ip_address,
     )
     _set_refresh_cookie(response, tokens.refresh_token)
     return CandidateTokenResponse(access_token=tokens.access_token)
@@ -104,7 +125,10 @@ async def refresh(
     if refresh_token is None:
         raise CandidateInvalidOrExpiredTokenError()
 
-    tokens = await CandidateAuthService(session).refresh(refresh_token_plain=refresh_token)
+    user_agent, ip_address = _client_context(request)
+    tokens = await CandidateAuthService(session).refresh(
+        refresh_token_plain=refresh_token, user_agent=user_agent, ip_address=ip_address
+    )
     _set_refresh_cookie(response, tokens.refresh_token)
     return CandidateTokenResponse(access_token=tokens.access_token)
 
@@ -165,3 +189,44 @@ async def disable_mfa(
     session: AsyncSession = Depends(get_db),
 ) -> None:
     await CandidateAuthService(session).disable_mfa(candidate=candidate, password=body.password)
+
+
+@router.get("/sessions", response_model=list[CandidateSessionRead])
+async def list_sessions(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+    refresh_token: str | None = Cookie(default=None, alias=_REFRESH_COOKIE_NAME),
+) -> list[CandidateSessionRead]:
+    current_hash = security.hash_opaque_token(refresh_token) if refresh_token else None
+    sessions = await CandidateAuthService(session).list_sessions(candidate)
+    return [
+        CandidateSessionRead(
+            id=s.id,
+            user_agent=s.user_agent,
+            ip_address=s.ip_address,
+            created_at=s.created_at,
+            last_used_at=s.last_used_at,
+            is_current=s.token_hash == current_hash,
+        )
+        for s in sessions
+    ]
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_session(
+    session_id: uuid.UUID,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await CandidateAuthService(session).revoke_session(candidate=candidate, session_id=session_id)
+
+
+@router.post("/sessions/revoke-others", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_other_sessions(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+    refresh_token: str | None = Cookie(default=None, alias=_REFRESH_COOKIE_NAME),
+) -> None:
+    await CandidateAuthService(session).revoke_other_sessions(
+        candidate=candidate, current_refresh_token_plain=refresh_token
+    )

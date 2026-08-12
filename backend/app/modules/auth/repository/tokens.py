@@ -12,12 +12,50 @@ class TokenRepository:
         self._session = session
 
     async def create_refresh_token(
-        self, *, user_id: uuid.UUID, token_hash: str, expires_at: datetime
+        self,
+        *,
+        user_id: uuid.UUID,
+        token_hash: str,
+        expires_at: datetime,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> RefreshToken:
-        token = RefreshToken(user_id=user_id, token_hash=token_hash, expires_at=expires_at)
+        now = datetime.now(timezone.utc)
+        token = RefreshToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            user_agent=user_agent,
+            ip_address=ip_address,
+            last_used_at=now,
+        )
         self._session.add(token)
         await self._session.flush()
         return token
+
+    async def list_active_sessions_for_user(self, user_id: uuid.UUID) -> list[RefreshToken]:
+        result = await self._session.execute(
+            select(RefreshToken)
+            .where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.revoked_at.is_(None),
+                RefreshToken.expires_at > datetime.now(timezone.utc),
+            )
+            .order_by(RefreshToken.last_used_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_active_session_for_user(
+        self, *, user_id: uuid.UUID, session_id: uuid.UUID
+    ) -> RefreshToken | None:
+        result = await self._session.execute(
+            select(RefreshToken).where(
+                RefreshToken.id == session_id,
+                RefreshToken.user_id == user_id,
+                RefreshToken.revoked_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def get_refresh_token_by_hash(self, token_hash: str) -> RefreshToken | None:
         result = await self._session.execute(
@@ -29,11 +67,14 @@ class TokenRepository:
         token.revoked_at = datetime.now(timezone.utc)
         await self._session.flush()
 
-    async def revoke_all_refresh_tokens_for_user(self, user_id: uuid.UUID) -> None:
+    async def revoke_all_refresh_tokens_for_user(
+        self, user_id: uuid.UUID, *, except_session_id: uuid.UUID | None = None
+    ) -> None:
+        conditions = [RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None)]
+        if except_session_id is not None:
+            conditions.append(RefreshToken.id != except_session_id)
         await self._session.execute(
-            update(RefreshToken)
-            .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
-            .values(revoked_at=datetime.now(timezone.utc))
+            update(RefreshToken).where(*conditions).values(revoked_at=datetime.now(timezone.utc))
         )
         await self._session.flush()
 

@@ -73,6 +73,11 @@ class UserRole(Base):
 
 
 class RefreshToken(UUIDPrimaryKeyMixin, Base):
+    """Also the unit of "session" for the Active Sessions view — one row per device/browser.
+    Refresh rotates the token (see AuthService.refresh) by revoking this row and creating a new
+    one, so a listed session's id can go stale if it refreshes between a list call and a revoke
+    call; a revoke against a stale id 404s harmlessly and the caller just re-lists."""
+
     __tablename__ = "refresh_tokens"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -81,6 +86,9 @@ class RefreshToken(UUIDPrimaryKeyMixin, Base):
     token_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

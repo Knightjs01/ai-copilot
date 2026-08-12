@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
+from app.modules.auth import security
 from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user,
@@ -37,6 +38,7 @@ from app.modules.auth.schemas import (
     MfaVerifyRequest,
     ResendVerificationRequest,
     ResetPasswordRequest,
+    SessionRead,
     SignupRequest,
     StepUpRequest,
     StepUpResponse,
@@ -74,6 +76,12 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/v1/auth")
 
 
+def _client_context(request: Request) -> tuple[str | None, str | None]:
+    user_agent = request.headers.get("user-agent")
+    ip_address = request.client.host if request.client else None
+    return user_agent, ip_address
+
+
 def _user_read(user: User, role_names: list[str]) -> UserRead:
     return UserRead(
         id=user.id,
@@ -94,11 +102,14 @@ async def signup(
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> TokenResponse:
+    user_agent, ip_address = _client_context(request)
     _, tokens = await AuthService(session, email_sender=email_sender).signup(
         company_name=body.company_name,
         email=body.email,
         password=body.password,
         full_name=body.full_name,
+        user_agent=user_agent,
+        ip_address=ip_address,
     )
     _set_refresh_cookie(response, tokens.refresh_token)
     return TokenResponse(access_token=tokens.access_token)
@@ -112,7 +123,10 @@ async def login(
     response: Response,
     session: AsyncSession = Depends(get_db),
 ) -> TokenResponse | MfaChallengeResponse:
-    result = await AuthService(session).login(email=body.email, password=body.password)
+    user_agent, ip_address = _client_context(request)
+    result = await AuthService(session).login(
+        email=body.email, password=body.password, user_agent=user_agent, ip_address=ip_address
+    )
     if isinstance(result, MfaChallenge):
         return MfaChallengeResponse(challenge_token=result.challenge_token)
 
@@ -129,8 +143,12 @@ async def verify_mfa(
     response: Response,
     session: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
+    user_agent, ip_address = _client_context(request)
     tokens = await AuthService(session).verify_mfa_and_login(
-        challenge_token=body.challenge_token, code=body.code
+        challenge_token=body.challenge_token,
+        code=body.code,
+        user_agent=user_agent,
+        ip_address=ip_address,
     )
     _set_refresh_cookie(response, tokens.refresh_token)
     return TokenResponse(access_token=tokens.access_token)
@@ -147,7 +165,10 @@ async def refresh(
     if refresh_token is None:
         raise InvalidOrExpiredTokenError()
 
-    tokens = await AuthService(session).refresh(refresh_token_plain=refresh_token)
+    user_agent, ip_address = _client_context(request)
+    tokens = await AuthService(session).refresh(
+        refresh_token_plain=refresh_token, user_agent=user_agent, ip_address=ip_address
+    )
     _set_refresh_cookie(response, tokens.refresh_token)
     return TokenResponse(access_token=tokens.access_token)
 
@@ -296,8 +317,13 @@ async def accept_invite(
     response: Response,
     session: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
+    user_agent, ip_address = _client_context(request)
     tokens = await UserService(session).accept_invite(
-        token_plain=body.token, password=body.password, full_name=body.full_name
+        token_plain=body.token,
+        password=body.password,
+        full_name=body.full_name,
+        user_agent=user_agent,
+        ip_address=ip_address,
     )
     _set_refresh_cookie(response, tokens.refresh_token)
     return TokenResponse(access_token=tokens.access_token)
@@ -337,3 +363,44 @@ async def remove_user(
     session: AsyncSession = Depends(get_tenant_db),
 ) -> None:
     await UserService(session).remove_user(actor=actor, target_user_id=user_id)
+
+
+@router.get("/auth/sessions", response_model=list[SessionRead])
+async def list_sessions(
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+) -> list[SessionRead]:
+    current_hash = security.hash_opaque_token(refresh_token) if refresh_token else None
+    sessions = await AuthService(session).list_sessions(user)
+    return [
+        SessionRead(
+            id=s.id,
+            user_agent=s.user_agent,
+            ip_address=s.ip_address,
+            created_at=s.created_at,
+            last_used_at=s.last_used_at,
+            is_current=s.token_hash == current_hash,
+        )
+        for s in sessions
+    ]
+
+
+@router.delete("/auth/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_session(
+    session_id: uuid.UUID,
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> None:
+    await AuthService(session).revoke_session(user=user, session_id=session_id)
+
+
+@router.post("/auth/sessions/revoke-others", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_other_sessions(
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+) -> None:
+    await AuthService(session).revoke_other_sessions(
+        user=user, current_refresh_token_plain=refresh_token
+    )

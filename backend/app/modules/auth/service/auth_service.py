@@ -18,9 +18,10 @@ from app.modules.auth.exceptions import (
     InvalidCredentialsError,
     InvalidMfaCodeError,
     InvalidOrExpiredTokenError,
+    SessionNotFoundError,
 )
 from app.modules.auth.login_throttle import LoginAttemptTracker
-from app.modules.auth.models import TokenPurpose, User, VerificationToken
+from app.modules.auth.models import RefreshToken, TokenPurpose, User, VerificationToken
 from app.modules.auth.permissions import RoleName
 from app.modules.auth.repository.roles import RoleRepository
 from app.modules.auth.repository.tokens import TokenRepository
@@ -53,7 +54,14 @@ class AuthService:
         self._email_sender = email_sender or ConsoleEmailSender()
 
     async def signup(
-        self, *, company_name: str, email: str, password: str, full_name: str
+        self,
+        *,
+        company_name: str,
+        email: str,
+        password: str,
+        full_name: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> tuple[User, IssuedTokens]:
         if await self._users.get_by_email(email) is not None:
             raise EmailAlreadyRegisteredError()
@@ -78,10 +86,17 @@ class AuthService:
             target_id=user.id,
         )
 
-        tokens = await self.issue_tokens(user)
+        tokens = await self.issue_tokens(user, user_agent=user_agent, ip_address=ip_address)
         return user, tokens
 
-    async def login(self, *, email: str, password: str) -> IssuedTokens | MfaChallenge:
+    async def login(
+        self,
+        *,
+        email: str,
+        password: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedTokens | MfaChallenge:
         throttle = LoginAttemptTracker(realm="company")
         # Same InvalidCredentialsError a wrong password produces — a throttled response must not
         # be distinguishable from an ordinary failed login (see login_throttle.py's docstring).
@@ -113,9 +128,16 @@ class AuthService:
             target_type="user",
             target_id=user.id,
         )
-        return await self.issue_tokens(user)
+        return await self.issue_tokens(user, user_agent=user_agent, ip_address=ip_address)
 
-    async def verify_mfa_and_login(self, *, challenge_token: str, code: str) -> IssuedTokens:
+    async def verify_mfa_and_login(
+        self,
+        *,
+        challenge_token: str,
+        code: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedTokens:
         try:
             payload = security.decode_mfa_challenge_token(challenge_token)
         except security.TokenError as exc:
@@ -146,9 +168,15 @@ class AuthService:
             target_type="user",
             target_id=user.id,
         )
-        return await self.issue_tokens(user)
+        return await self.issue_tokens(user, user_agent=user_agent, ip_address=ip_address)
 
-    async def refresh(self, *, refresh_token_plain: str) -> IssuedTokens:
+    async def refresh(
+        self,
+        *,
+        refresh_token_plain: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedTokens:
         token_hash = security.hash_opaque_token(refresh_token_plain)
         stored = await self._tokens.get_refresh_token_by_hash(token_hash)
 
@@ -168,13 +196,51 @@ class AuthService:
             raise InvalidOrExpiredTokenError()
 
         await self._tokens.revoke_refresh_token(stored)
-        return await self.issue_tokens(user)
+        return await self.issue_tokens(user, user_agent=user_agent, ip_address=ip_address)
 
     async def logout(self, *, refresh_token_plain: str) -> None:
         token_hash = security.hash_opaque_token(refresh_token_plain)
         stored = await self._tokens.get_refresh_token_by_hash(token_hash)
         if stored is not None and stored.revoked_at is None:
             await self._tokens.revoke_refresh_token(stored)
+
+    async def list_sessions(self, user: User) -> list[RefreshToken]:
+        return await self._tokens.list_active_sessions_for_user(user.id)
+
+    async def revoke_session(self, *, user: User, session_id: uuid.UUID) -> None:
+        session = await self._tokens.get_active_session_for_user(
+            user_id=user.id, session_id=session_id
+        )
+        if session is None:
+            raise SessionNotFoundError()
+        await self._tokens.revoke_refresh_token(session)
+        await self._audit.record(
+            company_id=user.company_id,
+            actor_user_id=user.id,
+            action="user.session_revoked",
+            target_type="refresh_token",
+            target_id=session_id,
+        )
+
+    async def revoke_other_sessions(
+        self, *, user: User, current_refresh_token_plain: str | None
+    ) -> None:
+        current_session_id = None
+        if current_refresh_token_plain is not None:
+            current = await self._tokens.get_refresh_token_by_hash(
+                security.hash_opaque_token(current_refresh_token_plain)
+            )
+            current_session_id = current.id if current is not None else None
+        await self._tokens.revoke_all_refresh_tokens_for_user(
+            user.id, except_session_id=current_session_id
+        )
+        await self._audit.record(
+            company_id=user.company_id,
+            actor_user_id=user.id,
+            action="user.other_sessions_revoked",
+            target_type="user",
+            target_id=user.id,
+        )
 
     async def request_email_verification(self, *, email: str) -> None:
         user = await self._users.get_by_email(email)
@@ -335,7 +401,13 @@ class AuthService:
         await self._tokens.mark_verification_token_used(token)
         return token
 
-    async def issue_tokens(self, user: User) -> IssuedTokens:
+    async def issue_tokens(
+        self,
+        user: User,
+        *,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedTokens:
         access_token = security.create_access_token(user_id=user.id, company_id=user.company_id)
         refresh_token_plain = security.generate_opaque_token()
         await self._tokens.create_refresh_token(
@@ -343,5 +415,7 @@ class AuthService:
             token_hash=security.hash_opaque_token(refresh_token_plain),
             expires_at=datetime.now(timezone.utc)
             + timedelta(days=self._settings.refresh_token_expire_days),
+            user_agent=user_agent,
+            ip_address=ip_address,
         )
         return IssuedTokens(access_token=access_token, refresh_token=refresh_token_plain)

@@ -24,3 +24,8 @@ class CandidateInvalidOrExpiredTokenError(CandidateAuthError):
 class CandidateInvalidMfaCodeError(CandidateAuthError):
     status_code = 401
     detail = "Invalid MFA code"
+
+
+class CandidateSessionNotFoundError(CandidateAuthError):
+    status_code = 404
+    detail = "Session not found"

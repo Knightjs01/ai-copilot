@@ -36,10 +36,22 @@ class CandidateRefreshTokenRepository:
         self._session = session
 
     async def create(
-        self, *, candidate_user_id: uuid.UUID, token_hash: str, expires_at: datetime
+        self,
+        *,
+        candidate_user_id: uuid.UUID,
+        token_hash: str,
+        expires_at: datetime,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> CandidateRefreshToken:
+        now = datetime.now(timezone.utc)
         token = CandidateRefreshToken(
-            candidate_user_id=candidate_user_id, token_hash=token_hash, expires_at=expires_at
+            candidate_user_id=candidate_user_id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            user_agent=user_agent,
+            ip_address=ip_address,
+            last_used_at=now,
         )
         self._session.add(token)
         await self._session.flush()
@@ -55,16 +67,47 @@ class CandidateRefreshTokenRepository:
         token.revoked_at = datetime.now(timezone.utc)
         await self._session.flush()
 
-    async def revoke_all_for_candidate(self, candidate_user_id: uuid.UUID) -> None:
+    async def revoke_all_for_candidate(
+        self, candidate_user_id: uuid.UUID, *, except_session_id: uuid.UUID | None = None
+    ) -> None:
+        conditions = [
+            CandidateRefreshToken.candidate_user_id == candidate_user_id,
+            CandidateRefreshToken.revoked_at.is_(None),
+        ]
+        if except_session_id is not None:
+            conditions.append(CandidateRefreshToken.id != except_session_id)
         await self._session.execute(
             update(CandidateRefreshToken)
-            .where(
-                CandidateRefreshToken.candidate_user_id == candidate_user_id,
-                CandidateRefreshToken.revoked_at.is_(None),
-            )
+            .where(*conditions)
             .values(revoked_at=datetime.now(timezone.utc))
         )
         await self._session.flush()
+
+    async def list_active_sessions_for_candidate(
+        self, candidate_user_id: uuid.UUID
+    ) -> list[CandidateRefreshToken]:
+        result = await self._session.execute(
+            select(CandidateRefreshToken)
+            .where(
+                CandidateRefreshToken.candidate_user_id == candidate_user_id,
+                CandidateRefreshToken.revoked_at.is_(None),
+                CandidateRefreshToken.expires_at > datetime.now(timezone.utc),
+            )
+            .order_by(CandidateRefreshToken.last_used_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_active_session_for_candidate(
+        self, *, candidate_user_id: uuid.UUID, session_id: uuid.UUID
+    ) -> CandidateRefreshToken | None:
+        result = await self._session.execute(
+            select(CandidateRefreshToken).where(
+                CandidateRefreshToken.id == session_id,
+                CandidateRefreshToken.candidate_user_id == candidate_user_id,
+                CandidateRefreshToken.revoked_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
 
 
 class CandidateMfaBackupCodeRepository:

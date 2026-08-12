@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -113,3 +114,12 @@ class UserRead(BaseModel):
 
 class ChangeRoleRequest(BaseModel):
     role: str
+
+
+class SessionRead(BaseModel):
+    id: uuid.UUID
+    user_agent: str | None
+    ip_address: str | None
+    created_at: datetime
+    last_used_at: datetime | None
+    is_current: bool
