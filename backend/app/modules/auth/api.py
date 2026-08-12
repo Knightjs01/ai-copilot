@@ -30,6 +30,7 @@ from app.modules.auth.schemas import (
     MfaChallengeResponse,
     MfaDisableRequest,
     MfaEnableRequest,
+    MfaEnableResponse,
     MfaSetupResponse,
     MfaVerifyRequest,
     ResendVerificationRequest,
@@ -230,15 +231,18 @@ async def setup_mfa(
     return MfaSetupResponse(secret=secret, provisioning_uri=uri)
 
 
-@router.post("/auth/mfa/enable", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/auth/mfa/enable", response_model=MfaEnableResponse)
 @limiter.limit("10/minute")
 async def enable_mfa(
     request: Request,
     body: MfaEnableRequest,
     user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_tenant_db),
-) -> None:
-    await AuthService(session).enable_mfa(user=user, secret=body.secret, code=body.code)
+) -> MfaEnableResponse:
+    backup_codes = await AuthService(session).enable_mfa(
+        user=user, secret=body.secret, code=body.code
+    )
+    return MfaEnableResponse(backup_codes=backup_codes)
 
 
 @router.post("/auth/mfa/disable", status_code=status.HTTP_204_NO_CONTENT)

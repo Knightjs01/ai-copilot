@@ -29,6 +29,9 @@ from app.modules.auth.service.role_seeding import seed_system_roles
 from app.modules.companies.service import CompanyService
 
 
+_BACKUP_CODE_COUNT = 10
+
+
 class IssuedTokens(NamedTuple):
     access_token: str
     refresh_token: str
@@ -123,13 +126,23 @@ class AuthService:
             raise InvalidOrExpiredTokenError()
 
         secret = security.decrypt_secret(user.mfa_secret_encrypted)
+        used_backup_code = False
         if not security.verify_totp_code(secret=secret, code=code):
-            raise InvalidMfaCodeError()
+            # Not a valid TOTP code — try it as a backup recovery code before giving up. A
+            # backup code is single-use: consuming it here means it can never be used again,
+            # even if the same value is submitted twice.
+            backup_code = await self._tokens.get_unused_backup_code_by_hash(
+                user_id=user.id, code_hash=security.hash_opaque_token(code.strip().upper())
+            )
+            if backup_code is None:
+                raise InvalidMfaCodeError()
+            await self._tokens.consume_backup_code(backup_code)
+            used_backup_code = True
 
         await self._audit.record(
             company_id=user.company_id,
             actor_user_id=user.id,
-            action="user.login_mfa",
+            action="user.login_mfa_backup_code" if used_backup_code else "user.login_mfa",
             target_type="user",
             target_id=user.id,
         )
@@ -219,11 +232,23 @@ class AuthService:
         uri = security.get_totp_provisioning_uri(secret=secret, email=user.email)
         return secret, uri
 
-    async def enable_mfa(self, *, user: User, secret: str, code: str) -> None:
+    async def enable_mfa(self, *, user: User, secret: str, code: str) -> list[str]:
         if not security.verify_totp_code(secret=secret, code=code):
             raise InvalidMfaCodeError()
         user.mfa_secret_encrypted = security.encrypt_secret(secret)
         user.mfa_enabled = True
+
+        # Backup codes are the only recovery path if the authenticator is lost — generated once
+        # here and returned in plaintext exactly this one time; only their hashes are ever stored.
+        # Re-enabling (disable then enable again) replaces any codes from a previous enrollment.
+        await self._tokens.delete_all_backup_codes_for_user(user.id)
+        plain_codes = [security.generate_backup_code() for _ in range(_BACKUP_CODE_COUNT)]
+        await self._tokens.create_backup_codes(
+            user_id=user.id,
+            company_id=user.company_id,
+            code_hashes=[security.hash_opaque_token(c) for c in plain_codes],
+        )
+
         await self._audit.record(
             company_id=user.company_id,
             actor_user_id=user.id,
@@ -231,6 +256,7 @@ class AuthService:
             target_type="user",
             target_id=user.id,
         )
+        return plain_codes
 
     async def disable_mfa(self, *, user: User, password: str) -> None:
         # An authenticated user (get_current_user_model already required is_active=True) always
@@ -242,6 +268,7 @@ class AuthService:
             raise InvalidCredentialsError()
         user.mfa_enabled = False
         user.mfa_secret_encrypted = None
+        await self._tokens.delete_all_backup_codes_for_user(user.id)
         await self._audit.record(
             company_id=user.company_id,
             actor_user_id=user.id,

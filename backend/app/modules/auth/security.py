@@ -127,3 +127,17 @@ def generate_opaque_token() -> str:
 
 def hash_opaque_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+# Excludes visually ambiguous characters (0/O, 1/I/L) — these are meant to be hand-typed from a
+# printed/saved list during account recovery, not copy-pasted.
+_BACKUP_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def generate_backup_code() -> str:
+    """A single MFA recovery code, formatted XXXXX-XXXXX for readability. High-entropy (32^10 ≈
+    2^50 possibilities) — hashed the same way as opaque tokens, never a candidate for slow
+    password hashing since it's random, not user-chosen."""
+
+    chars = [secrets.choice(_BACKUP_CODE_ALPHABET) for _ in range(10)]
+    return "".join(chars[:5]) + "-" + "".join(chars[5:])

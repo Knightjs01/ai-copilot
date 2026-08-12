@@ -95,3 +95,23 @@ class VerificationToken(UUIDPrimaryKeyMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MfaBackupCode(UUIDPrimaryKeyMixin, Base):
+    """One-time MFA recovery codes, issued as a batch when MFA is enabled — the only account
+    recovery path if a user loses their authenticator app. Each row is a single-use code;
+    consuming one sets used_at and it can never be used again. company_id is denormalized from
+    the owning user purely so this table can carry the same RLS policy as every other
+    tenant-owned table in this schema."""
+
+    __tablename__ = "mfa_backup_codes"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), index=True
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id"), index=True
+    )
+    code_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

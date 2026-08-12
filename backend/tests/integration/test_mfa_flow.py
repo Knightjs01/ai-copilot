@@ -16,7 +16,10 @@ async def test_mfa_setup_enable_and_login_challenge(client: AsyncClient) -> None
     enable_response = await client.post(
         "/api/v1/auth/mfa/enable", json={"secret": secret, "code": code}, headers=headers
     )
-    assert enable_response.status_code == 204
+    assert enable_response.status_code == 200
+    backup_codes = enable_response.json()["backup_codes"]
+    assert len(backup_codes) == 10
+    assert len(set(backup_codes)) == 10  # all unique
 
     login_response = await client.post(
         "/api/v1/auth/login",
@@ -38,6 +41,87 @@ async def test_mfa_setup_enable_and_login_challenge(client: AsyncClient) -> None
     )
     assert verify_response.status_code == 200
     assert verify_response.json()["access_token"]
+
+
+async def test_mfa_backup_code_logs_in_once_then_is_rejected(client: AsyncClient) -> None:
+    data = await signup(client, email="mfa-backup@acme.com")
+    headers = auth_headers(data["access_token"])
+
+    setup_response = await client.post("/api/v1/auth/mfa/setup", headers=headers)
+    secret = setup_response.json()["secret"]
+    enable_response = await client.post(
+        "/api/v1/auth/mfa/enable",
+        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        headers=headers,
+    )
+    backup_code = enable_response.json()["backup_codes"][0]
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "mfa-backup@acme.com", "password": "correct horse battery staple"},
+    )
+    challenge_token = login_response.json()["challenge_token"]
+
+    # A backup code works exactly like a TOTP code at the verify endpoint.
+    first_use = await client.post(
+        "/api/v1/auth/mfa/verify",
+        json={"challenge_token": challenge_token, "code": backup_code},
+    )
+    assert first_use.status_code == 200
+    assert first_use.json()["access_token"]
+
+    # Reusing it — even against a fresh challenge — fails: single-use, consumed on first login.
+    second_login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "mfa-backup@acme.com", "password": "correct horse battery staple"},
+    )
+    second_challenge = second_login.json()["challenge_token"]
+    reuse_attempt = await client.post(
+        "/api/v1/auth/mfa/verify",
+        json={"challenge_token": second_challenge, "code": backup_code},
+    )
+    assert reuse_attempt.status_code == 401
+
+
+async def test_mfa_disable_clears_backup_codes(client: AsyncClient) -> None:
+    data = await signup(client, email="mfa-backup-clear@acme.com")
+    headers = auth_headers(data["access_token"])
+
+    setup_response = await client.post("/api/v1/auth/mfa/setup", headers=headers)
+    secret = setup_response.json()["secret"]
+    enable_response = await client.post(
+        "/api/v1/auth/mfa/enable",
+        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        headers=headers,
+    )
+    backup_code = enable_response.json()["backup_codes"][0]
+
+    await client.post(
+        "/api/v1/auth/mfa/disable",
+        json={"password": "correct horse battery staple"},
+        headers=headers,
+    )
+
+    # Disabling MFA means the account no longer challenges at login at all — nothing to verify
+    # a backup code against — but re-enabling should not accept the old, now-orphaned code.
+    setup_again = await client.post("/api/v1/auth/mfa/setup", headers=headers)
+    secret_again = setup_again.json()["secret"]
+    await client.post(
+        "/api/v1/auth/mfa/enable",
+        json={"secret": secret_again, "code": pyotp.TOTP(secret_again).now()},
+        headers=headers,
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "mfa-backup-clear@acme.com", "password": "correct horse battery staple"},
+    )
+    challenge_token = login_response.json()["challenge_token"]
+    stale_code_attempt = await client.post(
+        "/api/v1/auth/mfa/verify",
+        json={"challenge_token": challenge_token, "code": backup_code},
+    )
+    assert stale_code_attempt.status_code == 401
 
 
 async def test_mfa_disable_requires_correct_password(client: AsyncClient) -> None:

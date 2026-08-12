@@ -27,7 +27,9 @@ class MfaChallengeResponse(BaseModel):
 
 class MfaVerifyRequest(BaseModel):
     challenge_token: str
-    code: str = Field(min_length=6, max_length=6)
+    # 6 for a TOTP code, or 11 ("XXXXX-XXXXX") for an MFA backup recovery code — see
+    # AuthService.verify_mfa_and_login, which tries TOTP first and falls back to a backup code.
+    code: str = Field(min_length=6, max_length=11)
 
 
 class MeResponse(BaseModel):
@@ -66,6 +68,10 @@ class MfaSetupResponse(BaseModel):
 class MfaEnableRequest(BaseModel):
     secret: str
     code: str = Field(min_length=6, max_length=6)
+
+
+class MfaEnableResponse(BaseModel):
+    backup_codes: list[str]
 
 
 class MfaDisableRequest(BaseModel):

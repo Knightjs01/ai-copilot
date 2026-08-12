@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.models import RefreshToken, VerificationToken
+from app.modules.auth.models import MfaBackupCode, RefreshToken, VerificationToken
 
 
 class TokenRepository:
@@ -67,4 +67,33 @@ class TokenRepository:
             )
             .values(used_at=datetime.now(timezone.utc))
         )
+        await self._session.flush()
+
+    async def create_backup_codes(
+        self, *, user_id: uuid.UUID, company_id: uuid.UUID, code_hashes: list[str]
+    ) -> None:
+        for code_hash in code_hashes:
+            self._session.add(
+                MfaBackupCode(user_id=user_id, company_id=company_id, code_hash=code_hash)
+            )
+        await self._session.flush()
+
+    async def get_unused_backup_code_by_hash(
+        self, *, user_id: uuid.UUID, code_hash: str
+    ) -> MfaBackupCode | None:
+        result = await self._session.execute(
+            select(MfaBackupCode).where(
+                MfaBackupCode.user_id == user_id,
+                MfaBackupCode.code_hash == code_hash,
+                MfaBackupCode.used_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def consume_backup_code(self, code: MfaBackupCode) -> None:
+        code.used_at = datetime.now(timezone.utc)
+        await self._session.flush()
+
+    async def delete_all_backup_codes_for_user(self, user_id: uuid.UUID) -> None:
+        await self._session.execute(delete(MfaBackupCode).where(MfaBackupCode.user_id == user_id))
         await self._session.flush()
