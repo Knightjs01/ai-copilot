@@ -19,3 +19,8 @@ class CandidateInvalidCredentialsError(CandidateAuthError):
 class CandidateInvalidOrExpiredTokenError(CandidateAuthError):
     status_code = 401
     detail = "Invalid or expired token"
+
+
+class CandidateInvalidMfaCodeError(CandidateAuthError):
+    status_code = 401
+    detail = "Invalid MFA code"

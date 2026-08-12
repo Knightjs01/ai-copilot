@@ -91,6 +91,29 @@ def decode_mfa_challenge_token(token: str) -> dict[str, Any]:
     return payload
 
 
+def create_candidate_mfa_challenge_token(*, candidate_id: uuid.UUID) -> str:
+    # A distinct scope from create_mfa_challenge_token's "mfa_challenge" — without it, a
+    # candidate's challenge token would decode successfully at the company /auth/mfa/verify
+    # endpoint (and vice versa) any time a candidate_id happened to collide with a company
+    # user_id, since both are just UUIDs in the same token format.
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(candidate_id),
+        "scope": "candidate_mfa_challenge",
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.mfa_challenge_expire_minutes),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
+def decode_candidate_mfa_challenge_token(token: str) -> dict[str, Any]:
+    payload = decode_access_token(token)
+    if payload.get("scope") != "candidate_mfa_challenge":
+        raise TokenError("Not a candidate MFA challenge token")
+    return payload
+
+
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 

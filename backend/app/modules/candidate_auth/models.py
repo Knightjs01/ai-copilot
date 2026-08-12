@@ -22,6 +22,24 @@ class CandidateUser(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     full_name: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    mfa_secret_encrypted: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class CandidateMfaBackupCode(UUIDPrimaryKeyMixin, Base):
+    """Same single-use recovery-code pattern as auth.models.MfaBackupCode, scoped to a candidate
+    instead of a company user. No company_id here — candidates have none, see this module's
+    __init__.py — so there is nothing to key an RLS policy on; this table (like every other
+    candidate_auth table) relies purely on application-layer scoping."""
+
+    __tablename__ = "candidate_mfa_backup_codes"
+
+    candidate_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("candidate_users.id"), index=True
+    )
+    code_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class CandidateRefreshToken(UUIDPrimaryKeyMixin, Base):

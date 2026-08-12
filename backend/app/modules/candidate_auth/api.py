@@ -12,10 +12,16 @@ from app.modules.candidate_auth.models import CandidateUser
 from app.modules.candidate_auth.schemas import (
     CandidateLoginRequest,
     CandidateMeResponse,
+    CandidateMfaChallengeResponse,
+    CandidateMfaDisableRequest,
+    CandidateMfaEnableRequest,
+    CandidateMfaEnableResponse,
+    CandidateMfaSetupResponse,
+    CandidateMfaVerifyRequest,
     CandidateSignupRequest,
     CandidateTokenResponse,
 )
-from app.modules.candidate_auth.service import CandidateAuthService
+from app.modules.candidate_auth.service import CandidateAuthService, CandidateMfaChallenge
 
 router = APIRouter(prefix="/candidate-auth", tags=["candidate-auth"])
 
@@ -56,15 +62,33 @@ async def signup(
     return CandidateTokenResponse(access_token=tokens.access_token)
 
 
-@router.post("/login", response_model=CandidateTokenResponse)
+@router.post("/login", response_model=CandidateTokenResponse | CandidateMfaChallengeResponse)
 @limiter.limit("10/minute")
 async def login(
     request: Request,
     body: CandidateLoginRequest,
     response: Response,
     session: AsyncSession = Depends(get_db),
+) -> CandidateTokenResponse | CandidateMfaChallengeResponse:
+    result = await CandidateAuthService(session).login(email=body.email, password=body.password)
+    if isinstance(result, CandidateMfaChallenge):
+        return CandidateMfaChallengeResponse(challenge_token=result.challenge_token)
+
+    _set_refresh_cookie(response, result.refresh_token)
+    return CandidateTokenResponse(access_token=result.access_token)
+
+
+@router.post("/mfa/verify", response_model=CandidateTokenResponse)
+@limiter.limit("10/minute")
+async def verify_mfa(
+    request: Request,
+    body: CandidateMfaVerifyRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
 ) -> CandidateTokenResponse:
-    tokens = await CandidateAuthService(session).login(email=body.email, password=body.password)
+    tokens = await CandidateAuthService(session).verify_mfa_and_login(
+        challenge_token=body.challenge_token, code=body.code
+    )
     _set_refresh_cookie(response, tokens.refresh_token)
     return CandidateTokenResponse(access_token=tokens.access_token)
 
@@ -103,4 +127,41 @@ async def me(candidate: CandidateUser = Depends(get_current_candidate)) -> Candi
         email=candidate.email,
         full_name=candidate.full_name,
         is_email_verified=candidate.is_email_verified,
+        mfa_enabled=candidate.mfa_enabled,
     )
+
+
+@router.post("/mfa/setup", response_model=CandidateMfaSetupResponse)
+@limiter.limit("10/minute")
+async def setup_mfa(
+    request: Request,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> CandidateMfaSetupResponse:
+    secret, uri = await CandidateAuthService(session).setup_mfa(candidate=candidate)
+    return CandidateMfaSetupResponse(secret=secret, provisioning_uri=uri)
+
+
+@router.post("/mfa/enable", response_model=CandidateMfaEnableResponse)
+@limiter.limit("10/minute")
+async def enable_mfa(
+    request: Request,
+    body: CandidateMfaEnableRequest,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> CandidateMfaEnableResponse:
+    backup_codes = await CandidateAuthService(session).enable_mfa(
+        candidate=candidate, secret=body.secret, code=body.code
+    )
+    return CandidateMfaEnableResponse(backup_codes=backup_codes)
+
+
+@router.post("/mfa/disable", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
+async def disable_mfa(
+    request: Request,
+    body: CandidateMfaDisableRequest,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await CandidateAuthService(session).disable_mfa(candidate=candidate, password=body.password)

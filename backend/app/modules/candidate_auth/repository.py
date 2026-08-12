@@ -1,10 +1,14 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.candidate_auth.models import CandidateRefreshToken, CandidateUser
+from app.modules.candidate_auth.models import (
+    CandidateMfaBackupCode,
+    CandidateRefreshToken,
+    CandidateUser,
+)
 
 
 class CandidateUserRepository:
@@ -59,5 +63,43 @@ class CandidateRefreshTokenRepository:
                 CandidateRefreshToken.revoked_at.is_(None),
             )
             .values(revoked_at=datetime.now(timezone.utc))
+        )
+        await self._session.flush()
+
+
+class CandidateMfaBackupCodeRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create_backup_codes(
+        self, *, candidate_user_id: uuid.UUID, code_hashes: list[str]
+    ) -> None:
+        for code_hash in code_hashes:
+            self._session.add(
+                CandidateMfaBackupCode(candidate_user_id=candidate_user_id, code_hash=code_hash)
+            )
+        await self._session.flush()
+
+    async def get_unused_backup_code_by_hash(
+        self, *, candidate_user_id: uuid.UUID, code_hash: str
+    ) -> CandidateMfaBackupCode | None:
+        result = await self._session.execute(
+            select(CandidateMfaBackupCode).where(
+                CandidateMfaBackupCode.candidate_user_id == candidate_user_id,
+                CandidateMfaBackupCode.code_hash == code_hash,
+                CandidateMfaBackupCode.used_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def consume_backup_code(self, code: CandidateMfaBackupCode) -> None:
+        code.used_at = datetime.now(timezone.utc)
+        await self._session.flush()
+
+    async def delete_all_backup_codes_for_candidate(self, candidate_user_id: uuid.UUID) -> None:
+        await self._session.execute(
+            delete(CandidateMfaBackupCode).where(
+                CandidateMfaBackupCode.candidate_user_id == candidate_user_id
+            )
         )
         await self._session.flush()
