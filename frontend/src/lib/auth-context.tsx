@@ -5,10 +5,13 @@ import * as React from "react";
 import { apiClient, refreshAccessToken, setAccessToken } from "@/lib/api-client";
 import type { MeResponse, MfaChallengeResponse, TokenResponse } from "@/lib/types";
 
+export type LoginResult = { mfaRequired: false } | { mfaRequired: true; challengeToken: string };
+
 interface AuthContextValue {
   user: MeResponse | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  verifyMfa: (challengeToken: string, code: string) => Promise<void>;
   signup: (
     companyName: string,
     email: string,
@@ -18,6 +21,7 @@ interface AuthContextValue {
   acceptInvite: (token: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -52,16 +56,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadMe]);
 
   const login = React.useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string): Promise<LoginResult> => {
       const res = await apiClient.post<TokenResponse | MfaChallengeResponse>("/auth/login", {
         email,
         password,
       });
       if (isMfaChallenge(res)) {
-        throw new Error(
-          "This account has multi-factor authentication enabled, which this preview UI doesn't support yet. Disable MFA on the account or use the API directly."
-        );
+        return { mfaRequired: true, challengeToken: res.challenge_token };
       }
+      setAccessToken(res.access_token);
+      await loadMe();
+      return { mfaRequired: false };
+    },
+    [loadMe]
+  );
+
+  const verifyMfa = React.useCallback(
+    async (challengeToken: string, code: string) => {
+      const res = await apiClient.post<TokenResponse>("/auth/mfa/verify", {
+        challenge_token: challengeToken,
+        code,
+      });
       setAccessToken(res.access_token);
       await loadMe();
     },
@@ -110,8 +125,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = React.useMemo(
-    () => ({ user, isLoading, login, signup, acceptInvite, logout, hasPermission }),
-    [user, isLoading, login, signup, acceptInvite, logout, hasPermission]
+    () => ({
+      user,
+      isLoading,
+      login,
+      verifyMfa,
+      signup,
+      acceptInvite,
+      logout,
+      hasPermission,
+      refreshUser: loadMe,
+    }),
+    [user, isLoading, login, verifyMfa, signup, acceptInvite, logout, hasPermission, loadMe]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

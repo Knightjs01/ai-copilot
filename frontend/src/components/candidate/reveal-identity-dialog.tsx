@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Eye, ShieldAlert } from "lucide-react";
 
+import { StepUpDialog } from "@/components/step-up-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,19 +44,28 @@ export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
   const [phase, setPhase] = React.useState<Phase>("closed");
   const [reason, setReason] = React.useState<RevealReason | null>(null);
   const [snapshot, setSnapshot] = React.useState<CandidateIdentitySnapshot | null>(null);
+  const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const openedAtRef = React.useRef(0);
   const reveal = useRevealIdentity(candidateId);
   const closeReveal = useCloseReveal();
 
-  const handleConfirm = () => {
+  const handleRequestConfirm = () => {
     if (!reason) return;
-    reveal.mutate(reason, {
-      onSuccess: (data) => {
-        setSnapshot(data);
-        openedAtRef.current = Date.now();
-        setPhase("snapshot");
-      },
-    });
+    setStepUpOpen(true);
+  };
+
+  const handleVerified = async (stepUpToken: string) => {
+    if (!reason) return;
+    reveal.mutate(
+      { reason, stepUpToken },
+      {
+        onSuccess: (data) => {
+          setSnapshot(data);
+          openedAtRef.current = Date.now();
+          setPhase("snapshot");
+        },
+      }
+    );
   };
 
   const handleCloseSnapshot = () => {
@@ -107,7 +117,7 @@ export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
             <Button
               type="button"
               variant="secondary"
-              onClick={handleConfirm}
+              onClick={handleRequestConfirm}
               disabled={!reason || reveal.isPending}
             >
               {reveal.isPending ? "Revealing…" : "Reveal Identity"}
@@ -115,6 +125,13 @@ export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <StepUpDialog
+        open={stepUpOpen}
+        onOpenChange={setStepUpOpen}
+        title="Confirm it's you"
+        description="Revealing a candidate's identity is a high-risk action — re-enter your password to continue."
+        onVerified={handleVerified}
+      />
 
       <Dialog open={phase === "snapshot"} onOpenChange={(next) => !next && handleCloseSnapshot()}>
         <DialogContent>

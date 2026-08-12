@@ -57,13 +57,15 @@ interface RequestOptions {
   body?: unknown;
   formData?: FormData;
   skipAuthRetry?: boolean;
+  extraHeaders?: Record<string, string>;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, formData, skipAuthRetry = false } = options;
+  const { method = "GET", body, formData, skipAuthRetry = false, extraHeaders } = options;
   const headers: Record<string, string> = {};
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (extraHeaders) Object.assign(headers, extraHeaders);
 
   const res = await fetch(`${API_URL}/api/v1${path}`, {
     method,
@@ -94,12 +96,22 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return (await res.json()) as T;
 }
 
+// Step-up-gated actions (reveal identity, project purge, admin invite) pass the token obtained
+// from POST /auth/step-up here — see src/lib/step-up.ts — since apiClient's normal methods have
+// no way to attach a one-off header.
+function stepUpHeaders(token?: string): Record<string, string> | undefined {
+  return token ? { "X-Step-Up-Token": token } : undefined;
+}
+
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
+  get: <T>(path: string, stepUpToken?: string) =>
+    request<T>(path, { extraHeaders: stepUpHeaders(stepUpToken) }),
+  post: <T>(path: string, body?: unknown, stepUpToken?: string) =>
+    request<T>(path, { method: "POST", body, extraHeaders: stepUpHeaders(stepUpToken) }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  delete: <T>(path: string, stepUpToken?: string) =>
+    request<T>(path, { method: "DELETE", extraHeaders: stepUpHeaders(stepUpToken) }),
   postForm: <T>(path: string, formData: FormData) =>
     request<T>(path, { method: "POST", formData }),
 };

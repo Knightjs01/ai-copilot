@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiClient, ApiError } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
 import type { CandidateRevealRequest, RevealedIdentity, RevealRequest } from "@/lib/types";
@@ -23,22 +23,23 @@ export function useRequestReveal(jobId: string, applicationId: string) {
   });
 }
 
-// Not-yet-approved is a normal state (400 RevealNotApprovedError), not an error to surface —
-// callers render "not revealed yet" for a null result the same way fetchOrNull's 404 case works.
-export function useRevealedIdentity(jobId: string, applicationId: string | undefined) {
-  return useQuery({
-    queryKey: ["shadow-reveal", "identity", jobId, applicationId],
-    queryFn: async () => {
-      try {
-        return await apiClient.get<RevealedIdentity>(
-          `/shadow-reveal/mine/${jobId}/applicants/${applicationId}`
-        );
-      } catch (err) {
-        if (err instanceof ApiError && (err.status === 400 || err.status === 404)) return null;
-        throw err;
-      }
-    },
-    enabled: !!applicationId,
+// Viewing a revealed identity is step-up-gated (see backend security/zero-trust-overhaul), so
+// this can no longer be an auto-fetching useQuery — the user has to re-confirm their password
+// first. Call this from a manual "View identity" action after obtaining a step-up token, not on
+// render.
+export function useFetchRevealedIdentity(jobId: string) {
+  return useMutation({
+    mutationFn: ({
+      applicationId,
+      stepUpToken,
+    }: {
+      applicationId: string;
+      stepUpToken: string;
+    }) =>
+      apiClient.get<RevealedIdentity>(
+        `/shadow-reveal/mine/${jobId}/applicants/${applicationId}`,
+        stepUpToken
+      ),
   });
 }
 

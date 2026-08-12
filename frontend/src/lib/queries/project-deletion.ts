@@ -13,7 +13,8 @@ interface BurnProjectResponse {
 export function useBurnProject(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiClient.post<BurnProjectResponse>(`/projects/${projectId}/burn`),
+    mutationFn: (stepUpToken: string) =>
+      apiClient.post<BurnProjectResponse>(`/projects/${projectId}/burn`, undefined, stepUpToken),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.removeQueries({ queryKey: ["projects", projectId] });

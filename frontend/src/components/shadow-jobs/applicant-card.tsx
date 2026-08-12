@@ -1,20 +1,30 @@
 "use client";
 
+import * as React from "react";
 import { Eye } from "lucide-react";
 
 import { RequestRevealDialog } from "@/components/shadow-jobs/request-reveal-dialog";
+import { StepUpDialog } from "@/components/step-up-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useRevealedIdentity } from "@/lib/queries/shadow-reveal";
+import { useFetchRevealedIdentity } from "@/lib/queries/shadow-reveal";
 import { SHADOW_APPLICATION_STATUS_LABEL, SHADOW_APPLICATION_STATUS_VARIANT } from "@/lib/status-display";
-import type { ShadowProfile } from "@/lib/types";
+import type { RevealedIdentity, ShadowProfile } from "@/lib/types";
 
 export function ApplicantCard({ jobId, profile }: { jobId: string; profile: ShadowProfile }) {
   const isRevealable = profile.status === "revealed";
-  const { data: identity } = useRevealedIdentity(
-    jobId,
-    isRevealable ? profile.application_id : undefined
-  );
+  const [identity, setIdentity] = React.useState<RevealedIdentity | null>(null);
+  const [stepUpOpen, setStepUpOpen] = React.useState(false);
+  const fetchIdentity = useFetchRevealedIdentity(jobId);
+
+  const handleVerified = async (stepUpToken: string) => {
+    const result = await fetchIdentity.mutateAsync({
+      applicationId: profile.application_id,
+      stepUpToken,
+    });
+    setIdentity(result);
+  };
 
   return (
     <Card>
@@ -72,7 +82,18 @@ export function ApplicantCard({ jobId, profile }: { jobId: string; profile: Shad
           </div>
         ) : (
           <div className="flex justify-end">
-            {profile.status === "submitted" || profile.status === "under_review" ? (
+            {isRevealable ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setStepUpOpen(true)}
+                disabled={fetchIdentity.isPending}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {fetchIdentity.isPending ? "Verifying…" : "View revealed identity"}
+              </Button>
+            ) : profile.status === "submitted" || profile.status === "under_review" ? (
               <RequestRevealDialog
                 jobId={jobId}
                 applicationId={profile.application_id}
@@ -90,6 +111,13 @@ export function ApplicantCard({ jobId, profile }: { jobId: string; profile: Shad
           </div>
         )}
       </CardContent>
+      <StepUpDialog
+        open={stepUpOpen}
+        onOpenChange={setStepUpOpen}
+        title="Confirm it's you"
+        description="Viewing a revealed identity is a high-risk action — re-enter your password to continue."
+        onVerified={handleVerified}
+      />
     </Card>
   );
 }

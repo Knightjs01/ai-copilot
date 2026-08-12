@@ -64,6 +64,12 @@ export function TopNav() {
                   Historic Vault
                 </Link>
               )}
+              <Link
+                href="/security"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Security
+              </Link>
             </nav>
           )}
         </div>

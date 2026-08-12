@@ -56,6 +56,28 @@ export interface MfaChallengeResponse {
   challenge_token: string;
 }
 
+export interface MfaSetupResponse {
+  secret: string;
+  provisioning_uri: string;
+}
+
+export interface MfaEnableResponse {
+  backup_codes: string[];
+}
+
+export interface StepUpResponse {
+  step_up_token: string;
+}
+
+export interface SessionRead {
+  id: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  is_current: boolean;
+}
+
 export interface Project {
   id: string;
   company_id: string;

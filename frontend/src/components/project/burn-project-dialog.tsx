@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { BurnOverlay } from "@/components/burn-overlay";
 import { PhantomIcon } from "@/components/phantom-icon";
+import { StepUpDialog } from "@/components/step-up-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,18 +34,23 @@ export function BurnProjectDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
+  const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const [certificate, setCertificate] = React.useState<PurgeCertificate | null>(null);
   const burnProject = useBurnProject(projectId);
 
-  const handleConfirm = async () => {
-    setError(null);
+  const handleRequestConfirm = () => {
     setOpen(false);
+    setStepUpOpen(true);
+  };
+
+  const handleVerified = async (stepUpToken: string) => {
+    setError(null);
     setPhase("burning");
     const minDelay = new Promise((resolve) => setTimeout(resolve, MIN_ANIMATION_MS));
     try {
-      const [result] = await Promise.all([burnProject.mutateAsync(), minDelay]);
+      const [result] = await Promise.all([burnProject.mutateAsync(stepUpToken), minDelay]);
       setCertificate(result.certificate);
       setPhase("success");
     } catch {
@@ -76,13 +82,20 @@ export function BurnProjectDialog({
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" variant="brand" onClick={handleConfirm}>
+            <Button type="button" variant="brand" onClick={handleRequestConfirm}>
               <PhantomIcon className="brightness-0 invert" />
               Purge this project
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <StepUpDialog
+        open={stepUpOpen}
+        onOpenChange={setStepUpOpen}
+        title="Confirm it's you"
+        description="Purging a project is permanent — re-enter your password to continue."
+        onVerified={handleVerified}
+      />
       {phase !== "idle" && (
         <BurnOverlay
           phase={phase}

@@ -7,10 +7,12 @@ import type { CandidateIdentitySnapshot, VaultDashboardStats, VaultListItem } fr
 
 export function useRevealIdentity(candidateId: string) {
   return useMutation({
-    mutationFn: (reason: string) =>
-      apiClient.post<CandidateIdentitySnapshot>(`/identity-vault/candidates/${candidateId}/reveal`, {
-        reason,
-      }),
+    mutationFn: ({ reason, stepUpToken }: { reason: string; stepUpToken: string }) =>
+      apiClient.post<CandidateIdentitySnapshot>(
+        `/identity-vault/candidates/${candidateId}/reveal`,
+        { reason },
+        stepUpToken
+      ),
   });
 }
 

@@ -21,7 +21,8 @@ interface InviteUserInput {
 export function useInviteUser() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: InviteUserInput) => apiClient.post<UserRead>("/users/invite", input),
+    mutationFn: ({ input, stepUpToken }: { input: InviteUserInput; stepUpToken: string }) =>
+      apiClient.post<UserRead>("/users/invite", input, stepUpToken),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["team"] });
     },
