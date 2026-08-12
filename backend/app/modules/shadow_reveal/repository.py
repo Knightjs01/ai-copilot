@@ -42,10 +42,17 @@ class ShadowRevealRequestRepository:
         )
         return result.scalar_one_or_none()
 
-    async def respond(self, request: ShadowRevealRequest, *, approve: bool) -> ShadowRevealRequest:
+    async def respond(
+        self,
+        request: ShadowRevealRequest,
+        *,
+        approve: bool,
+        disclosure_level: str | None = None,
+    ) -> ShadowRevealRequest:
         request.status = (
             RevealRequestStatus.APPROVED.value if approve else RevealRequestStatus.DECLINED.value
         )
+        request.disclosure_level = disclosure_level if approve else None
         request.responded_at = datetime.now(timezone.utc)
         await self._session.flush()
         return request

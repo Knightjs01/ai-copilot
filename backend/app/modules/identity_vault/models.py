@@ -54,5 +54,6 @@ class IdentityRevealEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     reason: Mapped[str] = mapped_column(Text)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    disclosure_level: Mapped[str] = mapped_column(String(20), default="full")
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

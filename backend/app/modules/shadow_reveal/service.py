@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.disclosure import DisclosureLevel
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
 from app.modules.auth.models import User
@@ -137,7 +138,9 @@ class ShadowRevealService:
         if request.status != RevealRequestStatus.PENDING.value:
             raise RevealRequestNotPendingError()
 
-        request = await self._requests.respond(request, approve=body.approve)
+        request = await self._requests.respond(
+            request, approve=body.approve, disclosure_level=body.disclosure_level.value
+        )
         await self._applications.update_status(
             application,
             status=(
@@ -152,7 +155,10 @@ class ShadowRevealService:
             action="shadow_reveal.approved" if body.approve else "shadow_reveal.declined",
             target_type="shadow_application",
             target_id=application.id,
-            extra_data={"reveal_request_id": str(request.id)},
+            extra_data={
+                "reveal_request_id": str(request.id),
+                **({"disclosure_level": body.disclosure_level.value} if body.approve else {}),
+            },
         )
 
         job = await self._jobs.get_by_id(application.shadow_job_id)
@@ -197,29 +203,42 @@ class ShadowRevealService:
         personal_info = await self._personal_info.get_by_passport_id(passport.id)
         if personal_info is None:
             raise PassportNotFoundError("Passport is missing its personal information record")
-        career_entries = await self._career_entries.list_by_passport_id(passport.id)
         candidate_user = await self._candidate_users.get_by_id(application.candidate_user_id)
         if candidate_user is None:
             raise ShadowApplicationNotFoundError()
 
-        return RevealedIdentity(
-            application_id=application.id,
-            callsign=application.callsign,
-            full_name=security.decrypt_secret(personal_info.legal_name_encrypted),
-            email=candidate_user.email,
-            phone=(
-                security.decrypt_secret(personal_info.phone_encrypted)
-                if personal_info.phone_encrypted
-                else None
-            ),
-            career_entries=[
+        # request.disclosure_level is only ever unset for a pre-migration-backfill row that was
+        # approved before this column existed — default to FULL so old approvals keep behaving
+        # exactly as they did before disclosure levels existed, rather than silently narrowing.
+        disclosure_level = DisclosureLevel(request.disclosure_level or DisclosureLevel.FULL.value)
+        include_contact = disclosure_level in (DisclosureLevel.CONTACT, DisclosureLevel.FULL)
+        include_full = disclosure_level == DisclosureLevel.FULL
+
+        career_entries = (
+            [
                 RevealedCareerEntry(
                     title=entry.title,
                     company_name=security.decrypt_secret(entry.company_name_encrypted),
                     is_current=entry.is_current,
                 )
-                for entry in career_entries
-            ],
+                for entry in await self._career_entries.list_by_passport_id(passport.id)
+            ]
+            if include_full
+            else []
+        )
+
+        return RevealedIdentity(
+            application_id=application.id,
+            disclosure_level=disclosure_level,
+            callsign=application.callsign,
+            full_name=security.decrypt_secret(personal_info.legal_name_encrypted),
+            email=candidate_user.email if include_contact else None,
+            phone=(
+                security.decrypt_secret(personal_info.phone_encrypted)
+                if include_contact and personal_info.phone_encrypted
+                else None
+            ),
+            career_entries=career_entries,
             revealed_at=request.responded_at or application.updated_at,
         )
 

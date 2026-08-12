@@ -34,4 +34,7 @@ class ShadowRevealRequest(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=RevealRequestStatus.PENDING.value)
+    # Set only when the candidate approves — the level they chose to disclose at. Null while
+    # pending/declined, since there's nothing to disclose either way.
+    disclosure_level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

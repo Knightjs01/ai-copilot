@@ -76,6 +76,7 @@ class IdentityRevealEventRepository:
         actor_user_id: uuid.UUID | None,
         reason: str,
         ip_address: str | None,
+        disclosure_level: str,
     ) -> IdentityRevealEvent:
         event = IdentityRevealEvent(
             company_id=company_id,
@@ -84,6 +85,7 @@ class IdentityRevealEventRepository:
             actor_user_id=actor_user_id,
             reason=reason,
             ip_address=ip_address,
+            disclosure_level=disclosure_level,
         )
         self._session.add(event)
         await self._session.flush()

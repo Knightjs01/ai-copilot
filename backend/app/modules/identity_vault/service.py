@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.disclosure import DisclosureLevel
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
 from app.modules.auth.models import User
@@ -136,6 +137,7 @@ class IdentityVaultService:
         candidate_id: uuid.UUID,
         reason: str,
         ip_address: str | None,
+        disclosure_level: DisclosureLevel = DisclosureLevel.FULL,
     ) -> IdentitySnapshot:
         vault = await self._get_vault(candidate_id)
         candidate = await self._candidates_repo.get_by_id(candidate_id)
@@ -149,6 +151,7 @@ class IdentityVaultService:
             actor_user_id=actor.id,
             reason=reason,
             ip_address=ip_address,
+            disclosure_level=disclosure_level.value,
         )
         await self._audit.record(
             company_id=actor.company_id,
@@ -156,24 +159,33 @@ class IdentityVaultService:
             action="candidate.identity_revealed",
             target_type="candidate",
             target_id=candidate_id,
-            extra_data={"reveal_event_id": str(event.id), "reason": reason},
+            extra_data={
+                "reveal_event_id": str(event.id),
+                "reason": reason,
+                "disclosure_level": disclosure_level.value,
+            },
         )
 
         def _decrypt(value: str | None) -> str | None:
             return security.decrypt_secret(value) if value else None
 
+        # Each level is a strict superset of the one before — see app/core/disclosure.py.
+        include_contact = disclosure_level in (DisclosureLevel.CONTACT, DisclosureLevel.FULL)
+        include_full = disclosure_level == DisclosureLevel.FULL
+
         return IdentitySnapshot(
             reveal_event_id=event.id,
+            disclosure_level=disclosure_level,
             callsign=candidate.callsign,
             candidate_ref=candidate.candidate_ref,
             full_name=security.decrypt_secret(vault.full_name_encrypted),
-            email=_decrypt(vault.email_encrypted),
-            phone=_decrypt(vault.phone_encrypted),
+            email=_decrypt(vault.email_encrypted) if include_contact else None,
+            phone=_decrypt(vault.phone_encrypted) if include_contact else None,
             location=_decrypt(vault.location_encrypted),
-            current_employer=_decrypt(vault.current_employer_encrypted),
-            current_title=_decrypt(vault.current_title_encrypted),
-            linkedin_url=_decrypt(vault.linkedin_url_encrypted),
-            expected_salary=candidate.expected_salary,
+            current_employer=_decrypt(vault.current_employer_encrypted) if include_full else None,
+            current_title=_decrypt(vault.current_title_encrypted) if include_full else None,
+            linkedin_url=_decrypt(vault.linkedin_url_encrypted) if include_full else None,
+            expected_salary=candidate.expected_salary if include_full else None,
         )
 
     async def close_reveal(self, *, reveal_event_id: uuid.UUID, duration_seconds: int) -> None:
@@ -246,6 +258,7 @@ class IdentityVaultService:
                     actor_emails.get(e.actor_user_id, "Unknown") if e.actor_user_id else "Unknown"
                 ),
                 reason=e.reason,
+                disclosure_level=DisclosureLevel(e.disclosure_level),
                 revealed_at=e.created_at,
                 closed_at=e.closed_at,
                 duration_seconds=e.duration_seconds,

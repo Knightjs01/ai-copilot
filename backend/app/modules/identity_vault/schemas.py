@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.disclosure import DisclosureLevel
 from app.modules.candidates.models import CandidateStatus
 
 
@@ -19,9 +20,12 @@ class VaultFieldsUpdate(BaseModel):
 
 class IdentitySnapshot(BaseModel):
     """The decrypted Reveal Identity response — the only place vault plaintext ever crosses the
-    API boundary. Never cached or logged; the frontend renders it in a dismissable popup only."""
+    API boundary. Never cached or logged; the frontend renders it in a dismissable popup only.
+    Fields beyond what disclosure_level grants are always None, never omitted — the caller
+    always sees the full shape of what it could ask for and what it actually got."""
 
     reveal_event_id: uuid.UUID
+    disclosure_level: DisclosureLevel
     callsign: str
     candidate_ref: str
     full_name: str
@@ -37,6 +41,7 @@ class IdentitySnapshot(BaseModel):
 
 class RevealRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=1000)
+    disclosure_level: DisclosureLevel = DisclosureLevel.FULL
 
 
 class RevealCloseRequest(BaseModel):
@@ -58,6 +63,7 @@ class RevealEventRead(BaseModel):
     candidate_ref: str
     actor_email: str
     reason: str
+    disclosure_level: DisclosureLevel
     revealed_at: datetime
     closed_at: datetime | None
     duration_seconds: int | None
