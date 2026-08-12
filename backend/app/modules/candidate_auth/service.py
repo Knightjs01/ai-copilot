@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.modules.auth import security
+from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.candidate_auth.exceptions import (
     CandidateEmailAlreadyRegisteredError,
     CandidateInvalidCredentialsError,
@@ -43,11 +44,19 @@ class CandidateAuthService:
         return candidate, tokens
 
     async def login(self, *, email: str, password: str) -> IssuedCandidateTokens:
+        throttle = LoginAttemptTracker(realm="candidate")
+        if await throttle.is_locked(email):
+            raise CandidateInvalidCredentialsError()
+
         candidate = await self._candidates.get_by_email(email)
         if candidate is None or not candidate.is_active:
+            await throttle.record_failure(email)
             raise CandidateInvalidCredentialsError()
         if not security.verify_password(password, candidate.hashed_password):
+            await throttle.record_failure(email)
             raise CandidateInvalidCredentialsError()
+
+        await throttle.clear(email)
         return await self.issue_tokens(candidate)
 
     async def refresh(self, *, refresh_token_plain: str) -> IssuedCandidateTokens:

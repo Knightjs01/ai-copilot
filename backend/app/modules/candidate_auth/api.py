@@ -70,7 +70,9 @@ async def login(
 
 
 @router.post("/refresh", response_model=CandidateTokenResponse)
+@limiter.limit("30/minute")
 async def refresh(
+    request: Request,
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias=_REFRESH_COOKIE_NAME),
     session: AsyncSession = Depends(get_db),

@@ -19,6 +19,7 @@ from app.modules.auth.exceptions import (
     InvalidMfaCodeError,
     InvalidOrExpiredTokenError,
 )
+from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.auth.models import TokenPurpose, User, VerificationToken
 from app.modules.auth.permissions import RoleName
 from app.modules.auth.repository.roles import RoleRepository
@@ -78,14 +79,24 @@ class AuthService:
         return user, tokens
 
     async def login(self, *, email: str, password: str) -> IssuedTokens | MfaChallenge:
+        throttle = LoginAttemptTracker(realm="company")
+        # Same InvalidCredentialsError a wrong password produces — a throttled response must not
+        # be distinguishable from an ordinary failed login (see login_throttle.py's docstring).
+        if await throttle.is_locked(email):
+            raise InvalidCredentialsError()
+
         user = await self._users.get_by_email(email)
         # Split from the verify_password check below: an invited-but-not-yet-accepted user has
         # no password at all, which is a distinct case from a wrong password, and narrows
         # hashed_password to str for the type checker on the line after.
         if user is None or not user.is_active or user.hashed_password is None:
+            await throttle.record_failure(email)
             raise InvalidCredentialsError()
         if not security.verify_password(password, user.hashed_password):
+            await throttle.record_failure(email)
             raise InvalidCredentialsError()
+
+        await throttle.clear(email)
 
         if user.mfa_enabled:
             return MfaChallenge(

@@ -132,7 +132,9 @@ async def verify_mfa(
 
 
 @router.post("/auth/refresh", response_model=TokenResponse)
+@limiter.limit("30/minute")
 async def refresh(
+    request: Request,
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
     session: AsyncSession = Depends(get_db),
@@ -176,7 +178,10 @@ async def me(
 
 
 @router.post("/auth/verify-email", status_code=status.HTTP_204_NO_CONTENT)
-async def verify_email(body: VerifyEmailRequest, session: AsyncSession = Depends(get_db)) -> None:
+@limiter.limit("10/minute")
+async def verify_email(
+    request: Request, body: VerifyEmailRequest, session: AsyncSession = Depends(get_db)
+) -> None:
     await AuthService(session).verify_email(token_plain=body.token)
 
 
@@ -205,8 +210,9 @@ async def forgot_password(
 
 
 @router.post("/auth/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
 async def reset_password(
-    body: ResetPasswordRequest, session: AsyncSession = Depends(get_db)
+    request: Request, body: ResetPasswordRequest, session: AsyncSession = Depends(get_db)
 ) -> None:
     await AuthService(session).reset_password(
         token_plain=body.token, new_password=body.new_password
@@ -214,7 +220,9 @@ async def reset_password(
 
 
 @router.post("/auth/mfa/setup", response_model=MfaSetupResponse)
+@limiter.limit("10/minute")
 async def setup_mfa(
+    request: Request,
     user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> MfaSetupResponse:
@@ -223,7 +231,9 @@ async def setup_mfa(
 
 
 @router.post("/auth/mfa/enable", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def enable_mfa(
+    request: Request,
     body: MfaEnableRequest,
     user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_tenant_db),
@@ -232,7 +242,9 @@ async def enable_mfa(
 
 
 @router.post("/auth/mfa/disable", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def disable_mfa(
+    request: Request,
     body: MfaDisableRequest,
     user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_tenant_db),
@@ -255,8 +267,12 @@ async def invite_user(
 
 
 @router.post("/users/accept-invite", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def accept_invite(
-    body: AcceptInviteRequest, response: Response, session: AsyncSession = Depends(get_db)
+    request: Request,
+    body: AcceptInviteRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     tokens = await UserService(session).accept_invite(
         token_plain=body.token, password=body.password, full_name=body.full_name
