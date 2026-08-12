@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
     mfa_challenge_expire_minutes: int = 10
+    # "Mandatory from day one" MFA, but a grace path rather than an instant lockout on
+    # signup — see app/modules/auth/mfa_policy.py. A brand-new account can use the product
+    # normally for this many days before every business-logic route starts requiring MFA
+    # enrollment (auth/me and the mfa/* endpoints themselves are always reachable, so an
+    # account can never be locked out of enrolling).
+    mfa_grace_period_days: int = 7
 
     cookie_secure: bool = False
     frontend_base_url: str = "http://localhost:3000"

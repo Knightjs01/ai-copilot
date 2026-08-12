@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
-    get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
-from app.modules.candidate_auth.dependencies import get_current_candidate
+from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.shadow_reveal.schemas import (
     CandidateRevealRequestRead,
@@ -38,7 +38,7 @@ async def request_reveal(
     job_id: uuid.UUID,
     application_id: uuid.UUID,
     body: RevealRequestCreate,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> RevealRequestRead:
@@ -51,7 +51,7 @@ async def request_reveal(
 async def get_revealed_identity(
     job_id: uuid.UUID,
     application_id: uuid.UUID,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> RevealedIdentity:
@@ -66,7 +66,7 @@ async def get_revealed_identity(
 @router.get("/applications/me/{application_id}", response_model=CandidateRevealRequestRead)
 async def get_my_reveal_request(
     application_id: uuid.UUID,
-    candidate: CandidateUser = Depends(get_current_candidate),
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
     session: AsyncSession = Depends(get_db),
 ) -> CandidateRevealRequestRead:
     return await ShadowRevealService(session).get_my_reveal_request(
@@ -78,7 +78,7 @@ async def get_my_reveal_request(
 async def respond_to_reveal_request(
     application_id: uuid.UUID,
     body: RevealDecision,
-    candidate: CandidateUser = Depends(get_current_candidate),
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
     session: AsyncSession = Depends(get_db),
 ) -> CandidateRevealRequestRead:
     return await ShadowRevealService(session).respond_to_reveal_request(

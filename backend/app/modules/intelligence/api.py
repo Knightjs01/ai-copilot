@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -16,7 +17,9 @@ from app.modules.intelligence.llm_client import LLMClient
 from app.modules.intelligence.schemas import IntelligencePackRead
 from app.modules.intelligence.service import IntelligenceService
 
-router = APIRouter(prefix="/candidates", tags=["intelligence"])
+router = APIRouter(
+    prefix="/candidates", tags=["intelligence"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.post("/{candidate_id}/intelligence-pack", response_model=IntelligencePackRead)

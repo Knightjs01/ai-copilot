@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -21,7 +22,11 @@ from app.modules.identity_vault.schemas import (
 )
 from app.modules.identity_vault.service import IdentityVaultService
 
-router = APIRouter(prefix="/identity-vault", tags=["identity-vault"])
+router = APIRouter(
+    prefix="/identity-vault",
+    tags=["identity-vault"],
+    dependencies=[Depends(require_mfa_enrolled)],
+)
 
 
 @router.post("/candidates/{candidate_id}/reveal", response_model=IdentitySnapshot)

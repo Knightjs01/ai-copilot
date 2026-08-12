@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -16,7 +17,9 @@ from app.modules.candidates.storage import FileStorage
 from app.modules.privacy_gateway.schemas import SanitizedProfileRead
 from app.modules.privacy_gateway.service import PrivacyGatewayService
 
-router = APIRouter(prefix="/candidates", tags=["privacy-gateway"])
+router = APIRouter(
+    prefix="/candidates", tags=["privacy-gateway"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.post("/{candidate_id}/sanitize", response_model=SanitizedProfileRead)

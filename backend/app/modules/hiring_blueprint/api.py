@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -16,7 +17,9 @@ from app.modules.hiring_blueprint.llm_client import HiringBlueprintLLMClient
 from app.modules.hiring_blueprint.schemas import HiringBlueprintRead
 from app.modules.hiring_blueprint.service import HiringBlueprintService
 
-router = APIRouter(prefix="/projects", tags=["hiring-blueprint"])
+router = APIRouter(
+    prefix="/projects", tags=["hiring-blueprint"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.post("/{project_id}/hiring-blueprint", response_model=HiringBlueprintRead)

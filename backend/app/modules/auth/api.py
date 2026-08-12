@@ -13,6 +13,7 @@ from app.modules.auth.dependencies import (
     get_current_user_model,
     get_email_sender,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.email import EmailSender
@@ -259,7 +260,7 @@ async def disable_mfa(
 @router.post("/users/invite", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def invite_user(
     body: InviteUserRequest,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.USERS_INVITE)),
     session: AsyncSession = Depends(get_tenant_db),
     email_sender: EmailSender = Depends(get_email_sender),
@@ -289,6 +290,7 @@ async def accept_invite(
 async def list_users(
     current_user: CurrentUser = Depends(get_current_user),
     _: CurrentUser = Depends(require_permission(Permissions.USERS_VIEW)),
+    __: User = Depends(require_mfa_enrolled),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> list[UserRead]:
     users_with_roles = await UserService(session).list_company_users(
@@ -301,7 +303,7 @@ async def list_users(
 async def change_user_role(
     user_id: uuid.UUID,
     body: ChangeRoleRequest,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.USERS_CHANGE_ROLE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> None:
@@ -313,7 +315,7 @@ async def change_user_role(
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_user(
     user_id: uuid.UUID,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.USERS_REMOVE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> None:

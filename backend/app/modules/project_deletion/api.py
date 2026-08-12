@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -16,7 +17,9 @@ from app.modules.candidates.storage import FileStorage
 from app.modules.project_deletion.schemas import BurnProjectResponse
 from app.modules.project_deletion.service import ProjectDeletionService
 
-router = APIRouter(prefix="/projects", tags=["project-deletion"])
+router = APIRouter(
+    prefix="/projects", tags=["project-deletion"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.post("/{project_id}/burn", response_model=BurnProjectResponse)

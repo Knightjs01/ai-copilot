@@ -2,14 +2,21 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.modules.candidate_auth.dependencies import get_current_candidate
+from app.modules.candidate_auth.dependencies import (
+    get_current_candidate,
+    require_candidate_mfa_enrolled,
+)
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.phantom_passport.dependencies import get_llm_client
 from app.modules.phantom_passport.llm_client import LLMClient
 from app.modules.phantom_passport.schemas import CvParseResult, PassportRead, PassportUpdate
 from app.modules.phantom_passport.service import PhantomPassportService
 
-router = APIRouter(prefix="/phantom-passport", tags=["phantom-passport"])
+router = APIRouter(
+    prefix="/phantom-passport",
+    tags=["phantom-passport"],
+    dependencies=[Depends(require_candidate_mfa_enrolled)],
+)
 
 
 @router.get("/me", response_model=PassportRead)

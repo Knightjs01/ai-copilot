@@ -5,6 +5,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -12,7 +13,9 @@ from app.modules.auth.permissions import Permissions
 from app.modules.historic_vault.schemas import HistoricVaultOverview
 from app.modules.historic_vault.service import HistoricVaultService
 
-router = APIRouter(prefix="/historic-vault", tags=["historic-vault"])
+router = APIRouter(
+    prefix="/historic-vault", tags=["historic-vault"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.get("", response_model=HistoricVaultOverview)

@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
-    get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
-from app.modules.candidate_auth.dependencies import get_current_candidate
+from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.schemas import (
@@ -41,7 +41,7 @@ async def _to_job_read(service: ShadowJobService, job: ShadowJob) -> ShadowJobRe
 @router.post("", response_model=ShadowJobRead, status_code=status.HTTP_201_CREATED)
 async def create_job(
     body: ShadowJobCreate,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_CREATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
@@ -52,7 +52,7 @@ async def create_job(
 
 @router.get("/mine", response_model=list[ShadowJobRead])
 async def list_my_company_jobs(
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -68,7 +68,7 @@ async def list_my_company_jobs(
 @router.get("/mine/{job_id}", response_model=ShadowJobRead)
 async def get_my_company_job(
     job_id: uuid.UUID,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
@@ -81,7 +81,7 @@ async def get_my_company_job(
 async def update_job(
     job_id: uuid.UUID,
     body: ShadowJobUpdate,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
@@ -93,7 +93,7 @@ async def update_job(
 @router.post("/mine/{job_id}/publish", response_model=ShadowJobRead)
 async def publish_job(
     job_id: uuid.UUID,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
@@ -105,7 +105,7 @@ async def publish_job(
 @router.post("/mine/{job_id}/close", response_model=ShadowJobRead)
 async def close_job(
     job_id: uuid.UUID,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
@@ -117,7 +117,7 @@ async def close_job(
 @router.get("/mine/{job_id}/applicants", response_model=list[ShadowProfile])
 async def list_applicants(
     job_id: uuid.UUID,
-    actor: User = Depends(get_current_user_model),
+    actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> list[ShadowProfile]:
@@ -166,7 +166,7 @@ async def get_board_job(
 )
 async def apply_to_job(
     job_id: uuid.UUID,
-    candidate: CandidateUser = Depends(get_current_candidate),
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
     session: AsyncSession = Depends(get_db),
 ) -> ShadowApplicationRead:
     return await ShadowJobService(session).apply(candidate=candidate, job_id=job_id)
@@ -174,7 +174,7 @@ async def apply_to_job(
 
 @router.get("/applications/me", response_model=list[ShadowApplicationRead])
 async def list_my_applications(
-    candidate: CandidateUser = Depends(get_current_candidate),
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
     session: AsyncSession = Depends(get_db),
 ) -> list[ShadowApplicationRead]:
     return await ShadowJobService(session).list_my_applications(candidate=candidate)
@@ -183,7 +183,7 @@ async def list_my_applications(
 @router.get("/applications/me/{application_id}", response_model=ShadowApplicationRead)
 async def get_my_application(
     application_id: uuid.UUID,
-    candidate: CandidateUser = Depends(get_current_candidate),
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
     session: AsyncSession = Depends(get_db),
 ) -> ShadowApplicationRead:
     return await ShadowJobService(session).get_my_application(
@@ -194,7 +194,7 @@ async def get_my_application(
 @router.post("/applications/me/{application_id}/withdraw", response_model=ShadowApplicationRead)
 async def withdraw_application(
     application_id: uuid.UUID,
-    candidate: CandidateUser = Depends(get_current_candidate),
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
     session: AsyncSession = Depends(get_db),
 ) -> ShadowApplicationRead:
     return await ShadowJobService(session).withdraw_application(

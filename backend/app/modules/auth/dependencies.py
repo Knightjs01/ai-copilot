@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.db.base import async_session_factory
 from app.modules.auth import security
 from app.modules.auth.email import BrevoEmailSender, ConsoleEmailSender, EmailSender
+from app.modules.auth.mfa_policy import is_mfa_grace_period_expired
 from app.modules.auth.models import User
 from app.modules.auth.repository.roles import RoleRepository
 from app.modules.auth.repository.users import UserRepository
@@ -123,6 +124,28 @@ async def get_current_user(
     return CurrentUser(
         id=user.id, company_id=user.company_id, email=user.email, permissions=permission_codes
     )
+
+
+async def require_mfa_enrolled(user: User = Depends(get_current_user_model)) -> User:
+    """Router-level gate applied to every business-logic router except auth's own — see
+    app/modules/auth/mfa_policy.py. Deliberately not folded into get_current_user_model or
+    get_current_user themselves: /auth/me and /auth/mfa/setup|enable|disable all resolve the
+    user through those two dependencies directly (bypassing this wrapper), so an account can
+    always still see its own status and enroll even after its grace period has lapsed —
+    the whole point of a grace path is that it must never be able to lock someone out of the
+    one action that clears it."""
+
+    settings = get_settings()
+    if is_mfa_grace_period_expired(
+        created_at=user.created_at,
+        mfa_enabled=user.mfa_enabled,
+        grace_period_days=settings.mfa_grace_period_days,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="MFA enrollment is required to continue. Set up MFA via POST /auth/mfa/setup.",
+        )
+    return user
 
 
 def require_permission(code: str) -> Callable[..., Awaitable[CurrentUser]]:

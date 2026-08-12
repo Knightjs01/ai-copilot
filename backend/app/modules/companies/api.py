@@ -1,11 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.dependencies import CurrentUser, get_current_user, get_tenant_db
+from app.modules.auth.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_tenant_db,
+    require_mfa_enrolled,
+)
 from app.modules.companies.schemas import CompanyRead
 from app.modules.companies.service import CompanyService
 
-router = APIRouter(prefix="/companies", tags=["companies"])
+router = APIRouter(
+    prefix="/companies", tags=["companies"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.get("/me", response_model=CompanyRead)

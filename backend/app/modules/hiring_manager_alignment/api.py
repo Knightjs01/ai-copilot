@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -17,7 +18,11 @@ from app.modules.hiring_manager_alignment.schemas import (
 )
 from app.modules.hiring_manager_alignment.service import HiringManagerAlignmentService
 
-router = APIRouter(prefix="/projects", tags=["hiring-manager-alignment"])
+router = APIRouter(
+    prefix="/projects",
+    tags=["hiring-manager-alignment"],
+    dependencies=[Depends(require_mfa_enrolled)],
+)
 
 
 @router.put("/{project_id}/hiring-manager-alignment", response_model=HiringManagerAlignmentRead)

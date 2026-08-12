@@ -8,6 +8,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -18,7 +19,9 @@ from app.modules.candidates.service import CandidateService
 from app.modules.candidates.storage import FileStorage
 from app.modules.projects.repository import ProjectMemberRepository
 
-router = APIRouter(prefix="/candidates", tags=["candidates"])
+router = APIRouter(
+    prefix="/candidates", tags=["candidates"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.post("", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)

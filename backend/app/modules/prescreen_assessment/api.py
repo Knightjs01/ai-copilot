@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -16,7 +17,11 @@ from app.modules.prescreen_assessment.llm_client import PrescreenAssessmentLLMCl
 from app.modules.prescreen_assessment.schemas import PrescreenAssessmentRead
 from app.modules.prescreen_assessment.service import PrescreenAssessmentService
 
-router = APIRouter(prefix="/candidates", tags=["prescreen-assessment"])
+router = APIRouter(
+    prefix="/candidates",
+    tags=["prescreen-assessment"],
+    dependencies=[Depends(require_mfa_enrolled)],
+)
 
 
 @router.post("/{candidate_id}/prescreen-assessment", response_model=PrescreenAssessmentRead)

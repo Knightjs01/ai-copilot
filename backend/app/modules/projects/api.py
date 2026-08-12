@@ -8,6 +8,7 @@ from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
     get_tenant_db,
+    require_mfa_enrolled,
     require_permission,
 )
 from app.modules.auth.models import User
@@ -23,7 +24,9 @@ from app.modules.projects.schemas import (
 )
 from app.modules.projects.service import ProjectService
 
-router = APIRouter(prefix="/projects", tags=["projects"])
+router = APIRouter(
+    prefix="/projects", tags=["projects"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
