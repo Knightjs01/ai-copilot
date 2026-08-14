@@ -1,8 +1,12 @@
 import uuid
 from datetime import date, datetime
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+# Bounds each item's length, not just the list length — a single 5MB string as one "skill" would
+# otherwise still slip through a bare max_length=N on the list itself.
+_ShortListItem = Annotated[str, Field(max_length=200)]
 
 
 class CareerEntryInput(BaseModel):
@@ -12,8 +16,8 @@ class CareerEntryInput(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     is_current: bool = False
-    responsibilities: str | None = None
-    achievements: list[str] = Field(default_factory=list)
+    responsibilities: str | None = Field(default=None, max_length=5000)
+    achievements: list[_ShortListItem] = Field(default_factory=list, max_length=50)
 
 
 class CareerEntryRead(BaseModel):
@@ -46,17 +50,17 @@ class PassportUpdate(BaseModel):
     headline: str | None = Field(default=None, max_length=255)
     seniority: str | None = Field(default=None, max_length=100)
     years_experience: int | None = Field(default=None, ge=0, le=70)
-    summary: str | None = None
-    skills: list[str] = Field(default_factory=list)
-    industries: list[str] = Field(default_factory=list)
+    summary: str | None = Field(default=None, max_length=5000)
+    skills: list[_ShortListItem] = Field(default_factory=list, max_length=100)
+    industries: list[_ShortListItem] = Field(default_factory=list, max_length=50)
     location: str | None = Field(default=None, max_length=255)
-    remote_preference: str | None = None
+    remote_preference: str | None = Field(default=None, max_length=100)
     salary_min: int | None = Field(default=None, ge=0)
     salary_max: int | None = Field(default=None, ge=0)
-    notice_period: str | None = None
-    career_intent: str | None = None
+    notice_period: str | None = Field(default=None, max_length=100)
+    career_intent: str | None = Field(default=None, max_length=100)
     personal_info: PersonalInfoInput
-    career_entries: list[CareerEntryInput] = Field(default_factory=list)
+    career_entries: list[CareerEntryInput] = Field(default_factory=list, max_length=50)
 
 
 class PassportRead(BaseModel):

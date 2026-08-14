@@ -199,6 +199,12 @@ class AuthService:
         if stored.revoked_at is not None:
             # Reuse of an already-rotated token — treat as theft, kill every session for this user.
             await self._tokens.revoke_all_refresh_tokens_for_user(stored.user_id)
+            # Committed here, not left to get_db's end-of-request commit (app.db.session.get_db)
+            # — that dependency rolls back the WHOLE transaction when this method raises right
+            # below, which would silently undo the very revocation this branch exists to
+            # guarantee. Same reasoning as PhantomPassportService.parse_cv's mid-request commit;
+            # expire_on_commit=False (app.db.base) keeps this safe to do mid-request.
+            await self._session.commit()
             raise InvalidOrExpiredTokenError()
 
         if stored.expires_at < datetime.now(timezone.utc):

@@ -1,7 +1,9 @@
 import re
+import uuid
 
 from httpx import AsyncClient
 
+from app.modules.auth import security
 from tests.conftest import CapturingEmailSender
 
 
@@ -82,3 +84,17 @@ async def create_project(
     response = await client.post("/api/v1/projects", json={"title": title}, headers=headers)
     assert response.status_code == 201, response.text
     return response.json()
+
+
+def forge_access_token(*, user_id: uuid.UUID, company_id: uuid.UUID) -> str:
+    """Mints a real, validly-signed company access token for an arbitrary (user_id, company_id)
+    pair — used by adversarial tests that need a token with attacker-chosen claims rather than
+    whatever the signup/login flow would naturally issue. Same signing path production tokens go
+    through (app.modules.auth.security.create_access_token); "forged" describes the caller's
+    intent (mismatched claims), not the mechanism."""
+
+    return security.create_access_token(user_id=user_id, company_id=company_id)
+
+
+def forge_candidate_access_token(*, candidate_id: uuid.UUID) -> str:
+    return security.create_candidate_access_token(candidate_id=candidate_id)

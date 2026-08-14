@@ -44,6 +44,7 @@ class CandidateMfaChallenge(NamedTuple):
 
 class CandidateAuthService:
     def __init__(self, session: AsyncSession) -> None:
+        self._session = session
         self._settings = get_settings()
         self._candidates = CandidateUserRepository(session)
         self._tokens = CandidateRefreshTokenRepository(session)
@@ -150,6 +151,9 @@ class CandidateAuthService:
         if stored.revoked_at is not None:
             # Reuse of an already-rotated token — treat as theft, kill every session.
             await self._tokens.revoke_all_for_candidate(stored.candidate_user_id)
+            # See AuthService.refresh's identical fix for why this commit can't wait for get_db's
+            # end-of-request commit — raising immediately below would otherwise roll it back.
+            await self._session.commit()
             raise CandidateInvalidOrExpiredTokenError()
         if stored.expires_at < datetime.now(timezone.utc):
             raise CandidateInvalidOrExpiredTokenError()
