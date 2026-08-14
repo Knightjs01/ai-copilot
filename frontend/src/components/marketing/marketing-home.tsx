@@ -20,11 +20,11 @@ export function MarketingHome() {
       <MarketingNav />
       <main className="flex-1">
         <HeroSection />
+        <PassportShowcaseSection />
         <ThreeInOneSection />
         <TriangleSection />
         <AtsShowcaseSection />
         <JobBoardShowcaseSection />
-        <PassportShowcaseSection />
         <ForCandidatesSection />
         <FeatureGridSection />
         <DiscreetIndustriesSection />
