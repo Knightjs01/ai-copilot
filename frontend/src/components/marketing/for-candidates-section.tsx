@@ -1,4 +1,4 @@
-import { BadgeCheck, EyeOff, Flame, Wand2 } from "lucide-react";
+import { EyeOff, Flame, Vault, Wand2 } from "lucide-react";
 import Image from "next/image";
 
 import { CandidatePortalMockup } from "@/components/marketing/mockups/candidate-portal-mockup";
@@ -15,9 +15,9 @@ const PROMISE = [
     body: "Matched to roles based on your actual skills and experience, not keywords, not guesswork.",
   },
   {
-    icon: BadgeCheck,
-    title: "Verified when it matters",
-    body: "Identity and credentials confirmed only at the point a real opportunity is on the table, not before.",
+    icon: Vault,
+    title: "Vaulted, versioned, approved",
+    body: "Your original CV stays encrypted in your Candidate Vault, never shown to recruiters. The version you review and approve becomes your Passport snapshot: exactly what gets sent, nothing live or half-finished.",
   },
   {
     icon: Flame,

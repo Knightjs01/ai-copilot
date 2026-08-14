@@ -7,6 +7,7 @@ import { HowItWorksSection } from "@/components/marketing/how-it-works-section";
 import { JobBoardShowcaseSection } from "@/components/marketing/job-board-showcase-section";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
+import { PassportShowcaseSection } from "@/components/marketing/passport-showcase-section";
 import { PhantomStorySection } from "@/components/marketing/phantom-story-section";
 import { SecurityCtaSection } from "@/components/marketing/security-cta-section";
 import { ThreeInOneSection } from "@/components/marketing/three-in-one-section";
@@ -23,6 +24,7 @@ export function MarketingHome() {
         <TriangleSection />
         <AtsShowcaseSection />
         <JobBoardShowcaseSection />
+        <PassportShowcaseSection />
         <ForCandidatesSection />
         <FeatureGridSection />
         <DiscreetIndustriesSection />

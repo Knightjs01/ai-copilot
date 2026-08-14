@@ -40,7 +40,7 @@ const ATS_BENEFITS = [
   "End-to-end encrypted workflow. Every candidate record moves through your pipeline encrypted at rest, decrypted only for an Owner, only for a stated reason, only for as long as it takes.",
   "Fit ranking your team can trust at a glance. Every candidate is scored Strong, Good, Possible or Weak Fit the moment their CV lands, so screening time goes to the right conversations first.",
   "Nothing left to subpoena. When a search closes, there's no residual database of names, CVs or notes sitting around waiting to become tomorrow's liability.",
-  "Zero-Trust signing, on the roadmap: NDAs, offers and contracts signed only once identity has already been verified, returning a clean pass or fail rather than a paperwork trail.",
+  "Zero-Trust access as standard. Every teammate signs in with MFA, and high-risk moves like revealing an identity, purging a project, or inviting a teammate require a fresh password-and-code check, no exceptions. See, and revoke, every signed-in device from your Security Centre.",
 ];
 
 const CANDIDATE_BENEFITS = [

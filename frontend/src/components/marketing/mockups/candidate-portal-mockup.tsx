@@ -1,11 +1,10 @@
-import { EyeOff } from "lucide-react";
+import { EyeOff, Flame } from "lucide-react";
 
 import { BrowserFrame } from "@/components/marketing/mockups/browser-frame";
 
 const MATCHES = [
   { title: "Senior Backend Engineer", match: 92 },
   { title: "Staff Platform Engineer", match: 87 },
-  { title: "Principal Engineer", match: 81 },
 ];
 
 export function CandidatePortalMockup() {
@@ -23,6 +22,14 @@ export function CandidatePortalMockup() {
               Identity hidden, reveal only when you choose
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-white p-3.5">
+          <Flame className="h-4 w-4 shrink-0 text-brand" />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            <span className="font-medium text-foreground">Zero-Retention. </span>
+            Your data is purged the moment the search closes.
+          </p>
         </div>
 
         <div className="flex flex-col gap-2.5">
