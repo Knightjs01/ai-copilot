@@ -11,6 +11,7 @@ from argon2.exceptions import VerifyMismatchError
 from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import get_settings
+from app.core.key_provider import get_key_provider
 
 _password_hasher = PasswordHasher()
 
@@ -155,8 +156,7 @@ def verify_totp_code(*, secret: str, code: str) -> bool:
 
 
 def _fernet() -> Fernet:
-    settings = get_settings()
-    return Fernet(settings.encryption_key.encode())
+    return Fernet(get_key_provider().get_key())
 
 
 def encrypt_secret(plain_value: str) -> str:
