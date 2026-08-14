@@ -61,7 +61,9 @@ export function Dropzone({
         "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors",
         isDraggingOver
           ? "border-primary bg-secondary"
-          : "border-border bg-slate-50 hover:border-slate-300 hover:bg-secondary",
+          // bg-background + a token-based hover border, not bg-slate-50/border-slate-300 — see
+          // Card's comment in card.tsx for why hardcoded surfaces were replaced with tokens.
+          : "border-border bg-background hover:border-muted-foreground/40 hover:bg-secondary",
         (disabled || isUploading) && "cursor-not-allowed opacity-60",
         className
       )}

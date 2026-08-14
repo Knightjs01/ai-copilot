@@ -36,7 +36,8 @@ export function PillToggleGroup<T extends string>({
               "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
               isActive
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-white text-foreground hover:bg-secondary"
+                // bg-card, not bg-white — see Card's comment in card.tsx for why.
+                : "border-border bg-card text-foreground hover:bg-secondary"
             )}
           >
             {option.label}

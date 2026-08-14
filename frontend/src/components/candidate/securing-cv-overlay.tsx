@@ -32,12 +32,17 @@ export function SecuringCvOverlay({ active }: { active: boolean }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-border bg-white px-10 py-8 shadow-xl shadow-slate-900/10"
+            // bg-card, not bg-white — see Card's comment in card.tsx. Static classes here ride
+            // whatever scope this component renders inside (e.g. passport-theme.module.css).
+            className="flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-border bg-card px-10 py-8 shadow-xl shadow-slate-900/10"
           >
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-              className="drop-shadow-[0_0_30px_rgba(102,81,176,0.55)]"
+              // Gold glow, not brand-purple — this component is currently only rendered from the
+              // Passport page, which is gold/navy themed. If it's ever reused from a light,
+              // purple-brand page, revisit this literal.
+              className="drop-shadow-[0_0_30px_rgba(212,175,106,0.55)]"
             >
               <PhantomIcon className="h-14" />
             </motion.div>
@@ -53,9 +58,14 @@ export function SecuringCvOverlay({ active }: { active: boolean }) {
             <ul className="flex w-full flex-col gap-2.5">
               {STEPS.map((step) => (
                 <li key={step.label} className="flex items-center gap-2.5 text-sm">
+                  {/* framer-motion's animate prop interpolates literal color strings in JS, not
+                      CSS variables — these can't ride the passport-theme.module.css scope the
+                      way ordinary Tailwind classes do, so the navy/gold equivalents are hardcoded
+                      directly. Idle: navy-panel bg, dim warm-gray label. Completed: gold bg,
+                      ivory label — matching passport-theme.module.css's --card/--foreground. */}
                   <motion.span
-                    initial={{ backgroundColor: "rgb(241 245 249)" }}
-                    animate={{ backgroundColor: "rgb(102 81 176)" }}
+                    initial={{ backgroundColor: "rgb(20 29 51)" }}
+                    animate={{ backgroundColor: "rgb(212 175 106)" }}
                     transition={{ delay: step.delay, duration: 0.3 }}
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
                   >
@@ -64,12 +74,12 @@ export function SecuringCvOverlay({ active }: { active: boolean }) {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: step.delay + 0.15, duration: 0.2 }}
                     >
-                      <Check className="h-3 w-3 text-white" strokeWidth={2.5} />
+                      <Check className="h-3 w-3 text-[#0b1220]" strokeWidth={2.5} />
                     </motion.span>
                   </motion.span>
                   <motion.span
-                    initial={{ color: "rgb(100 116 139)" }}
-                    animate={{ color: "rgb(15 23 42)" }}
+                    initial={{ color: "rgb(168 158 138)" }}
+                    animate={{ color: "rgb(244 234 217)" }}
                     transition={{ delay: step.delay, duration: 0.3 }}
                     className={cn("font-medium")}
                   >

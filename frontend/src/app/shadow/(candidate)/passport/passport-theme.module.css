@@ -1,0 +1,42 @@
+/* Gold leaf on navy — the Phantom Passport product's own visual identity, scoped to this one
+   page only. CSS custom properties declared here still cascade to every descendant, so the
+   page's existing token-based classes (text-foreground, border-border, bg-card, PillToggleGroup's
+   active state, Badge variants, etc.) re-theme automatically with no per-element edits. Never add
+   these variables to globals.css's :root — this is a deliberate one-off, not a second supported
+   app theme. */
+.passportTheme {
+  --background: 220 49% 8%; /* #0b1220 */
+  --foreground: 38 55% 90%; /* #f4ead9 */
+  --card: 223 44% 14%; /* #141d33 */
+  --card-foreground: 38 55% 90%;
+  --popover: 223 44% 14%;
+  --popover-foreground: 38 55% 90%;
+  --primary: 39 55% 62%; /* gold, #d4af6a */
+  --primary-foreground: 220 49% 8%;
+  --secondary: 223 40% 18%;
+  --secondary-foreground: 38 55% 90%;
+  --muted: 223 40% 18%;
+  --muted-foreground: 220 20% 65%;
+  --accent: 223 40% 18%;
+  --accent-foreground: 38 55% 90%;
+  --border: 220 30% 22%;
+  --input: 220 30% 22%;
+  --ring: 39 55% 62%;
+
+  --brand: 39 55% 62%; /* gold */
+  --brand-foreground: 220 49% 8%;
+
+  /* Lightened for contrast against navy — kept visually distinct from the gold accent so status
+     colors never get mistaken for the brand/CTA color. */
+  --success: 152 45% 55%;
+  --success-foreground: 220 49% 8%;
+  --warning: 38 85% 65%;
+  --warning-foreground: 220 49% 8%;
+  --danger: 0 70% 70%;
+  --danger-foreground: 220 49% 8%;
+  --info: 217 80% 72%;
+  --info-foreground: 220 49% 8%;
+
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}

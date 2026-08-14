@@ -10,8 +10,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // bg-card, not bg-white — see Card's comment in card.tsx for why.
         secondary:
-          "bg-white text-foreground border border-border shadow-sm hover:bg-secondary",
+          "bg-card text-foreground border border-border shadow-sm hover:bg-secondary",
         ghost: "text-foreground hover:bg-secondary",
         danger: "bg-danger text-danger-foreground hover:bg-danger/90",
         brand: "bg-brand text-brand-foreground hover:bg-brand/90",

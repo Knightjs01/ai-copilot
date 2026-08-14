@@ -7,7 +7,11 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
     <div
       ref={ref}
       className={cn(
-        "rounded-2xl border border-border bg-white shadow-sm shadow-slate-900/[0.03]",
+        // bg-card, not bg-white — verified pure white today (see globals.css), so this is a
+        // no-op everywhere except inside a page that scopes --card to something else (e.g.
+        // passport-theme.module.css's navy palette). Card is used app-wide (26+ files); do not
+        // reintroduce a hardcoded bg-white here.
+        "rounded-2xl border border-border bg-card shadow-sm shadow-slate-900/[0.03]",
         className
       )}
       {...props}
