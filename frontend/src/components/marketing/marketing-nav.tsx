@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const AUDIENCE_LINKS = [
   { href: "/job-seekers", label: "Job Seekers" },
   { href: "/hiring-teams", label: "Hiring Teams" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 const INFO_LINKS = [
