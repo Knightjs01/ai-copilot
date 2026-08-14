@@ -45,6 +45,11 @@ from app.modules.auth.schemas import (
     TokenResponse,
     UserRead,
     VerifyEmailRequest,
+    WebAuthnAuthenticationOptionsRequest,
+    WebAuthnAuthenticationVerifyRequest,
+    WebAuthnCredentialRead,
+    WebAuthnOptionsResponse,
+    WebAuthnRegistrationVerifyRequest,
 )
 from app.modules.auth.service.auth_service import AuthService, IssuedTokens, MfaChallenge
 from app.modules.auth.service.user_service import UserService
@@ -406,3 +411,86 @@ async def revoke_other_sessions(
     await AuthService(session).revoke_other_sessions(
         user=user, current_refresh_token_plain=refresh_token
     )
+
+
+@router.post("/auth/webauthn/register/options", response_model=WebAuthnOptionsResponse)
+@limiter.limit("10/minute")
+async def webauthn_register_options(
+    request: Request,
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> WebAuthnOptionsResponse:
+    options_json = await AuthService(session).begin_webauthn_registration(user=user)
+    return WebAuthnOptionsResponse(options=options_json)
+
+
+@router.post("/auth/webauthn/register/verify", response_model=WebAuthnCredentialRead)
+@limiter.limit("10/minute")
+async def webauthn_register_verify(
+    request: Request,
+    body: WebAuthnRegistrationVerifyRequest,
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> WebAuthnCredentialRead:
+    credential = await AuthService(session).complete_webauthn_registration(
+        user=user, credential_json=body.credential, device_name=body.device_name
+    )
+    return WebAuthnCredentialRead(
+        id=credential.id,
+        device_name=credential.device_name,
+        created_at=credential.created_at,
+        last_used_at=credential.last_used_at,
+    )
+
+
+@router.get("/auth/webauthn/credentials", response_model=list[WebAuthnCredentialRead])
+async def list_webauthn_credentials(
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[WebAuthnCredentialRead]:
+    credentials = await AuthService(session).list_webauthn_credentials(user=user)
+    return [
+        WebAuthnCredentialRead(
+            id=c.id, device_name=c.device_name, created_at=c.created_at, last_used_at=c.last_used_at
+        )
+        for c in credentials
+    ]
+
+
+@router.delete("/auth/webauthn/credentials/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_webauthn_credential(
+    credential_id: uuid.UUID,
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> None:
+    await AuthService(session).delete_webauthn_credential(user=user, credential_pk_id=credential_id)
+
+
+@router.post("/auth/webauthn/authenticate/options", response_model=WebAuthnOptionsResponse)
+@limiter.limit("10/minute")
+async def webauthn_authenticate_options(
+    request: Request,
+    body: WebAuthnAuthenticationOptionsRequest,
+    session: AsyncSession = Depends(get_db),
+) -> WebAuthnOptionsResponse:
+    options_json = await AuthService(session).begin_webauthn_authentication(email=body.email)
+    return WebAuthnOptionsResponse(options=options_json)
+
+
+@router.post("/auth/webauthn/authenticate/verify", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def webauthn_authenticate_verify(
+    request: Request,
+    body: WebAuthnAuthenticationVerifyRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    user_agent, ip_address = _client_context(request)
+    tokens = await AuthService(session).complete_webauthn_authentication(
+        email=body.email,
+        credential_json=body.credential,
+        user_agent=user_agent,
+        ip_address=ip_address,
+    )
+    _set_refresh_cookie(response, tokens.refresh_token)
+    return TokenResponse(access_token=tokens.access_token)

@@ -33,6 +33,16 @@ class Settings(BaseSettings):
     # enrollment (auth/me and the mfa/* endpoints themselves are always reachable, so an
     # account can never be locked out of enrolling).
     mfa_grace_period_days: int = 7
+
+    # WebAuthn/passkey relying party config — see app/core/webauthn.py. rp_id must be the bare
+    # domain (no scheme/port) and must match (or be a registrable suffix of) the origin the
+    # frontend is actually served from, or every ceremony will fail browser-side; "localhost"/
+    # http://localhost:3000 is the only combination that works without HTTPS, which is why local
+    # dev defaults to it even though the values look inconsistent with cookie_secure=false prod.
+    webauthn_rp_id: str = "localhost"
+    webauthn_rp_name: str = "Phantom Hire"
+    webauthn_origin: str = "http://localhost:3000"
+    webauthn_challenge_expire_seconds: int = 300
     # Step-up auth (see app/modules/auth/dependencies.py:require_step_up) — how long a
     # freshly-verified password+MFA assertion stays valid for gating a single high-risk action
     # (identity reveal, project purge, admin invite). Short and single-purpose on purpose: this

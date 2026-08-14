@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import webauthn as webauthn_core
 from app.core.config import get_settings
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
@@ -18,15 +19,25 @@ from app.modules.auth.exceptions import (
     InvalidCredentialsError,
     InvalidMfaCodeError,
     InvalidOrExpiredTokenError,
+    InvalidWebAuthnCredentialError,
     SessionNotFoundError,
+    WebAuthnCredentialNotFoundError,
 )
 from app.modules.auth.login_throttle import LoginAttemptTracker
-from app.modules.auth.models import RefreshToken, TokenPurpose, User, VerificationToken
+from app.modules.auth.models import (
+    RefreshToken,
+    TokenPurpose,
+    User,
+    VerificationToken,
+    WebAuthnCredential,
+)
 from app.modules.auth.permissions import RoleName
 from app.modules.auth.repository.roles import RoleRepository
 from app.modules.auth.repository.tokens import TokenRepository
 from app.modules.auth.repository.users import UserRepository
+from app.modules.auth.repository.webauthn import WebAuthnCredentialRepository
 from app.modules.auth.service.role_seeding import seed_system_roles
+from app.modules.auth.webauthn_challenge_store import WebAuthnChallengeStore
 from app.modules.companies.service import CompanyService
 
 
@@ -51,6 +62,8 @@ class AuthService:
         self._tokens = TokenRepository(session)
         self._companies = CompanyService(session)
         self._audit = AuditService(session)
+        self._webauthn_credentials = WebAuthnCredentialRepository(session)
+        self._webauthn_challenges = WebAuthnChallengeStore(realm="company")
         self._email_sender = email_sender or ConsoleEmailSender()
 
     async def signup(
@@ -370,6 +383,133 @@ class AuthService:
             target_id=user.id,
         )
         return security.create_step_up_token(user_id=user.id)
+
+    async def begin_webauthn_registration(self, *, user: User) -> str:
+        existing = await self._webauthn_credentials.list_for_user(user.id)
+        ceremony = webauthn_core.begin_registration(
+            user_id=user.id,
+            user_name=user.email,
+            user_display_name=user.full_name,
+            exclude_credential_ids=[
+                webauthn_core.decode_credential_id(c.credential_id) for c in existing
+            ],
+        )
+        await self._webauthn_challenges.save(str(user.id), ceremony.challenge)
+        return ceremony.options_json
+
+    async def complete_webauthn_registration(
+        self, *, user: User, credential_json: dict[str, Any], device_name: str | None
+    ) -> WebAuthnCredential:
+        challenge = await self._webauthn_challenges.pop(str(user.id))
+        if challenge is None:
+            raise InvalidOrExpiredTokenError()
+
+        try:
+            verified = webauthn_core.verify_registration(
+                credential_json=credential_json, expected_challenge=challenge
+            )
+        except webauthn_core.WebAuthnVerificationError as exc:
+            raise InvalidWebAuthnCredentialError() from exc
+
+        credential = await self._webauthn_credentials.create(
+            user_id=user.id,
+            company_id=user.company_id,
+            credential_id=webauthn_core.encode_credential_id(verified.credential_id),
+            public_key=webauthn_core.encode_public_key(verified.credential_public_key),
+            sign_count=verified.sign_count,
+            device_name=device_name,
+        )
+        await self._audit.record(
+            company_id=user.company_id,
+            actor_user_id=user.id,
+            action="user.webauthn_credential_registered",
+            target_type="user",
+            target_id=user.id,
+            extra_data={"credential_pk_id": str(credential.id), "device_name": device_name},
+        )
+        return credential
+
+    async def list_webauthn_credentials(self, *, user: User) -> list[WebAuthnCredential]:
+        return await self._webauthn_credentials.list_for_user(user.id)
+
+    async def delete_webauthn_credential(self, *, user: User, credential_pk_id: uuid.UUID) -> None:
+        credential = await self._webauthn_credentials.get_for_user(
+            user_id=user.id, credential_pk_id=credential_pk_id
+        )
+        if credential is None:
+            raise WebAuthnCredentialNotFoundError()
+        await self._webauthn_credentials.delete(credential)
+        await self._audit.record(
+            company_id=user.company_id,
+            actor_user_id=user.id,
+            action="user.webauthn_credential_deleted",
+            target_type="user",
+            target_id=user.id,
+            extra_data={"credential_pk_id": str(credential_pk_id)},
+        )
+
+    async def begin_webauthn_authentication(self, *, email: str) -> str:
+        # Anti-enumeration: always build a ceremony and save a challenge, whether or not the
+        # email belongs to a real (or passkey-enrolled) account — mirrors login_throttle.py's
+        # principle that the response shape must not reveal account existence.
+        user = await self._users.get_by_email(email)
+        allow_ids: list[bytes] = []
+        if user is not None and user.is_active:
+            creds = await self._webauthn_credentials.list_for_user(user.id)
+            allow_ids = [webauthn_core.decode_credential_id(c.credential_id) for c in creds]
+
+        ceremony = webauthn_core.begin_authentication(allow_credential_ids=allow_ids)
+        await self._webauthn_challenges.save(
+            security.hash_opaque_token(email.strip().lower()), ceremony.challenge
+        )
+        return ceremony.options_json
+
+    async def complete_webauthn_authentication(
+        self,
+        *,
+        email: str,
+        credential_json: dict[str, Any],
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedTokens:
+        challenge = await self._webauthn_challenges.pop(
+            security.hash_opaque_token(email.strip().lower())
+        )
+        if challenge is None:
+            raise InvalidCredentialsError()
+
+        user = await self._users.get_by_email(email)
+        if user is None or not user.is_active:
+            raise InvalidCredentialsError()
+
+        credential_id = credential_json.get("id") or credential_json.get("rawId")
+        if not isinstance(credential_id, str):
+            raise InvalidCredentialsError()
+        stored = await self._webauthn_credentials.get_by_credential_id(credential_id)
+        if stored is None or stored.user_id != user.id:
+            raise InvalidCredentialsError()
+
+        try:
+            verified = webauthn_core.verify_authentication(
+                credential_json=credential_json,
+                expected_challenge=challenge,
+                public_key=webauthn_core.decode_public_key(stored.public_key),
+                sign_count=stored.sign_count,
+            )
+        except webauthn_core.WebAuthnVerificationError as exc:
+            raise InvalidCredentialsError() from exc
+
+        await self._webauthn_credentials.update_after_use(
+            stored, sign_count=verified.new_sign_count
+        )
+        await self._audit.record(
+            company_id=user.company_id,
+            actor_user_id=user.id,
+            action="user.login_webauthn",
+            target_type="user",
+            target_id=user.id,
+        )
+        return await self.issue_tokens(user, user_agent=user_agent, ip_address=ip_address)
 
     async def _send_verification_email(self, user: User) -> None:
         await self._tokens.invalidate_pending_tokens(

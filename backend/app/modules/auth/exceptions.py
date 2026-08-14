@@ -49,3 +49,13 @@ class InvalidRoleError(AuthError):
 class SessionNotFoundError(AuthError):
     status_code = 404
     detail = "Session not found"
+
+
+class InvalidWebAuthnCredentialError(AuthError):
+    status_code = 401
+    detail = "Invalid passkey credential"
+
+
+class WebAuthnCredentialNotFoundError(AuthError):
+    status_code = 404
+    detail = "Passkey not found"

@@ -1,24 +1,33 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import webauthn as webauthn_core
 from app.core.config import get_settings
 from app.modules.auth import security
 from app.modules.auth.login_throttle import LoginAttemptTracker
+from app.modules.auth.webauthn_challenge_store import WebAuthnChallengeStore
 from app.modules.candidate_auth.exceptions import (
     CandidateEmailAlreadyRegisteredError,
     CandidateInvalidCredentialsError,
     CandidateInvalidMfaCodeError,
     CandidateInvalidOrExpiredTokenError,
+    CandidateInvalidWebAuthnCredentialError,
     CandidateSessionNotFoundError,
+    CandidateWebAuthnCredentialNotFoundError,
 )
-from app.modules.candidate_auth.models import CandidateRefreshToken, CandidateUser
+from app.modules.candidate_auth.models import (
+    CandidateRefreshToken,
+    CandidateUser,
+    CandidateWebAuthnCredential,
+)
 from app.modules.candidate_auth.repository import (
     CandidateMfaBackupCodeRepository,
     CandidateRefreshTokenRepository,
     CandidateUserRepository,
+    CandidateWebAuthnCredentialRepository,
 )
 
 _BACKUP_CODE_COUNT = 10
@@ -39,6 +48,8 @@ class CandidateAuthService:
         self._candidates = CandidateUserRepository(session)
         self._tokens = CandidateRefreshTokenRepository(session)
         self._mfa_backup_codes = CandidateMfaBackupCodeRepository(session)
+        self._webauthn_credentials = CandidateWebAuthnCredentialRepository(session)
+        self._webauthn_challenges = WebAuthnChallengeStore(realm="candidate")
 
     async def signup(
         self,
@@ -208,6 +219,109 @@ class CandidateAuthService:
         candidate.mfa_enabled = False
         candidate.mfa_secret_encrypted = None
         await self._mfa_backup_codes.delete_all_backup_codes_for_candidate(candidate.id)
+
+    async def begin_webauthn_registration(self, *, candidate: CandidateUser) -> str:
+        existing = await self._webauthn_credentials.list_for_candidate(candidate.id)
+        ceremony = webauthn_core.begin_registration(
+            user_id=candidate.id,
+            user_name=candidate.email,
+            user_display_name=candidate.full_name,
+            exclude_credential_ids=[
+                webauthn_core.decode_credential_id(c.credential_id) for c in existing
+            ],
+        )
+        await self._webauthn_challenges.save(str(candidate.id), ceremony.challenge)
+        return ceremony.options_json
+
+    async def complete_webauthn_registration(
+        self, *, candidate: CandidateUser, credential_json: dict[str, Any], device_name: str | None
+    ) -> CandidateWebAuthnCredential:
+        challenge = await self._webauthn_challenges.pop(str(candidate.id))
+        if challenge is None:
+            raise CandidateInvalidOrExpiredTokenError()
+
+        try:
+            verified = webauthn_core.verify_registration(
+                credential_json=credential_json, expected_challenge=challenge
+            )
+        except webauthn_core.WebAuthnVerificationError as exc:
+            raise CandidateInvalidWebAuthnCredentialError() from exc
+
+        return await self._webauthn_credentials.create(
+            candidate_user_id=candidate.id,
+            credential_id=webauthn_core.encode_credential_id(verified.credential_id),
+            public_key=webauthn_core.encode_public_key(verified.credential_public_key),
+            sign_count=verified.sign_count,
+            device_name=device_name,
+        )
+
+    async def list_webauthn_credentials(
+        self, *, candidate: CandidateUser
+    ) -> list[CandidateWebAuthnCredential]:
+        return await self._webauthn_credentials.list_for_candidate(candidate.id)
+
+    async def delete_webauthn_credential(
+        self, *, candidate: CandidateUser, credential_pk_id: uuid.UUID
+    ) -> None:
+        credential = await self._webauthn_credentials.get_for_candidate(
+            candidate_user_id=candidate.id, credential_pk_id=credential_pk_id
+        )
+        if credential is None:
+            raise CandidateWebAuthnCredentialNotFoundError()
+        await self._webauthn_credentials.delete(credential)
+
+    async def begin_webauthn_authentication(self, *, email: str) -> str:
+        candidate = await self._candidates.get_by_email(email)
+        allow_ids: list[bytes] = []
+        if candidate is not None and candidate.is_active:
+            creds = await self._webauthn_credentials.list_for_candidate(candidate.id)
+            allow_ids = [webauthn_core.decode_credential_id(c.credential_id) for c in creds]
+
+        ceremony = webauthn_core.begin_authentication(allow_credential_ids=allow_ids)
+        await self._webauthn_challenges.save(
+            security.hash_opaque_token(email.strip().lower()), ceremony.challenge
+        )
+        return ceremony.options_json
+
+    async def complete_webauthn_authentication(
+        self,
+        *,
+        email: str,
+        credential_json: dict[str, Any],
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> IssuedCandidateTokens:
+        challenge = await self._webauthn_challenges.pop(
+            security.hash_opaque_token(email.strip().lower())
+        )
+        if challenge is None:
+            raise CandidateInvalidCredentialsError()
+
+        candidate = await self._candidates.get_by_email(email)
+        if candidate is None or not candidate.is_active:
+            raise CandidateInvalidCredentialsError()
+
+        credential_id = credential_json.get("id") or credential_json.get("rawId")
+        if not isinstance(credential_id, str):
+            raise CandidateInvalidCredentialsError()
+        stored = await self._webauthn_credentials.get_by_credential_id(credential_id)
+        if stored is None or stored.candidate_user_id != candidate.id:
+            raise CandidateInvalidCredentialsError()
+
+        try:
+            verified = webauthn_core.verify_authentication(
+                credential_json=credential_json,
+                expected_challenge=challenge,
+                public_key=webauthn_core.decode_public_key(stored.public_key),
+                sign_count=stored.sign_count,
+            )
+        except webauthn_core.WebAuthnVerificationError as exc:
+            raise CandidateInvalidCredentialsError() from exc
+
+        await self._webauthn_credentials.update_after_use(
+            stored, sign_count=verified.new_sign_count
+        )
+        return await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
 
     async def issue_tokens(
         self,

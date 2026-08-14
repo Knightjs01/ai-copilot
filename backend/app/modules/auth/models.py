@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -122,4 +122,27 @@ class MfaBackupCode(UUIDPrimaryKeyMixin, Base):
     )
     code_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WebAuthnCredential(UUIDPrimaryKeyMixin, Base):
+    """A registered passkey — see app/core/webauthn.py. credential_id and public_key are stored
+    base64url/base64-encoded text rather than raw bytes, matching how every other opaque blob
+    in this schema (encrypted PII, hashed tokens) is stored. company_id is denormalized from the
+    owning user for the same reason mfa_backup_codes carries it: so this table can have the same
+    tenant_isolation RLS policy as everything else."""
+
+    __tablename__ = "webauthn_credentials"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), index=True
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id"), index=True
+    )
+    credential_id: Mapped[str] = mapped_column(String(512), unique=True, index=True)
+    public_key: Mapped[str] = mapped_column(Text)
+    sign_count: Mapped[int] = mapped_column(Integer, default=0)
+    device_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

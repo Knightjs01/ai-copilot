@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -123,3 +124,30 @@ class SessionRead(BaseModel):
     created_at: datetime
     last_used_at: datetime | None
     is_current: bool
+
+
+class WebAuthnOptionsResponse(BaseModel):
+    # Raw JSON string from py_webauthn's options_to_json — passed through untouched so the
+    # frontend hands it directly to the browser's navigator.credentials.create()/get() calls.
+    options: str
+
+
+class WebAuthnRegistrationVerifyRequest(BaseModel):
+    credential: dict[str, Any]
+    device_name: str | None = Field(default=None, max_length=255)
+
+
+class WebAuthnAuthenticationOptionsRequest(BaseModel):
+    email: EmailStr
+
+
+class WebAuthnAuthenticationVerifyRequest(BaseModel):
+    email: EmailStr
+    credential: dict[str, Any]
+
+
+class WebAuthnCredentialRead(BaseModel):
+    id: uuid.UUID
+    device_name: str | None
+    created_at: datetime
+    last_used_at: datetime | None

@@ -8,6 +8,7 @@ from app.modules.candidate_auth.models import (
     CandidateMfaBackupCode,
     CandidateRefreshToken,
     CandidateUser,
+    CandidateWebAuthnCredential,
 )
 
 
@@ -146,3 +147,71 @@ class CandidateMfaBackupCodeRepository:
             )
         )
         await self._session.flush()
+
+
+class CandidateWebAuthnCredentialRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(
+        self,
+        *,
+        candidate_user_id: uuid.UUID,
+        credential_id: str,
+        public_key: str,
+        sign_count: int,
+        device_name: str | None,
+    ) -> CandidateWebAuthnCredential:
+        credential = CandidateWebAuthnCredential(
+            candidate_user_id=candidate_user_id,
+            credential_id=credential_id,
+            public_key=public_key,
+            sign_count=sign_count,
+            device_name=device_name,
+        )
+        self._session.add(credential)
+        await self._session.flush()
+        return credential
+
+    async def get_by_credential_id(self, credential_id: str) -> CandidateWebAuthnCredential | None:
+        result = await self._session.execute(
+            select(CandidateWebAuthnCredential).where(
+                CandidateWebAuthnCredential.credential_id == credential_id
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def list_for_candidate(
+        self, candidate_user_id: uuid.UUID
+    ) -> list[CandidateWebAuthnCredential]:
+        result = await self._session.execute(
+            select(CandidateWebAuthnCredential)
+            .where(CandidateWebAuthnCredential.candidate_user_id == candidate_user_id)
+            .order_by(CandidateWebAuthnCredential.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_for_candidate(
+        self, *, candidate_user_id: uuid.UUID, credential_pk_id: uuid.UUID
+    ) -> CandidateWebAuthnCredential | None:
+        result = await self._session.execute(
+            select(CandidateWebAuthnCredential).where(
+                CandidateWebAuthnCredential.id == credential_pk_id,
+                CandidateWebAuthnCredential.candidate_user_id == candidate_user_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def delete(self, credential: CandidateWebAuthnCredential) -> None:
+        await self._session.delete(credential)
+        await self._session.flush()
+
+    async def update_after_use(
+        self, credential: CandidateWebAuthnCredential, *, sign_count: int
+    ) -> None:
+        credential.sign_count = sign_count
+        credential.last_used_at = datetime.now(timezone.utc)
+        await self._session.flush()
+
+    async def count_for_candidate(self, candidate_user_id: uuid.UUID) -> int:
+        return len(await self.list_for_candidate(candidate_user_id))

@@ -15,6 +15,7 @@ from app.modules.auth.mfa_policy import is_mfa_grace_period_expired
 from app.modules.auth.models import User
 from app.modules.auth.repository.roles import RoleRepository
 from app.modules.auth.repository.users import UserRepository
+from app.modules.auth.repository.webauthn import WebAuthnCredentialRepository
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 _default_email_sender: EmailSender | None = None
@@ -126,7 +127,10 @@ async def get_current_user(
     )
 
 
-async def require_mfa_enrolled(user: User = Depends(get_current_user_model)) -> User:
+async def require_mfa_enrolled(
+    user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> User:
     """Router-level gate applied to every business-logic router except auth's own — see
     app/modules/auth/mfa_policy.py. Deliberately not folded into get_current_user_model or
     get_current_user themselves: /auth/me and /auth/mfa/setup|enable|disable all resolve the
@@ -136,10 +140,14 @@ async def require_mfa_enrolled(user: User = Depends(get_current_user_model)) -> 
     one action that clears it."""
 
     settings = get_settings()
+    has_webauthn_credential = (
+        await WebAuthnCredentialRepository(session).count_for_user(user.id) > 0
+    )
     if is_mfa_grace_period_expired(
         created_at=user.created_at,
         mfa_enabled=user.mfa_enabled,
         grace_period_days=settings.mfa_grace_period_days,
+        has_webauthn_credential=has_webauthn_credential,
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

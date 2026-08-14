@@ -23,6 +23,11 @@ from app.modules.candidate_auth.schemas import (
     CandidateSessionRead,
     CandidateSignupRequest,
     CandidateTokenResponse,
+    CandidateWebAuthnAuthenticationOptionsRequest,
+    CandidateWebAuthnAuthenticationVerifyRequest,
+    CandidateWebAuthnCredentialRead,
+    CandidateWebAuthnOptionsResponse,
+    CandidateWebAuthnRegistrationVerifyRequest,
 )
 from app.modules.candidate_auth.service import CandidateAuthService, CandidateMfaChallenge
 
@@ -230,3 +235,92 @@ async def revoke_other_sessions(
     await CandidateAuthService(session).revoke_other_sessions(
         candidate=candidate, current_refresh_token_plain=refresh_token
     )
+
+
+@router.post("/webauthn/register/options", response_model=CandidateWebAuthnOptionsResponse)
+@limiter.limit("10/minute")
+async def webauthn_register_options(
+    request: Request,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> CandidateWebAuthnOptionsResponse:
+    options_json = await CandidateAuthService(session).begin_webauthn_registration(
+        candidate=candidate
+    )
+    return CandidateWebAuthnOptionsResponse(options=options_json)
+
+
+@router.post("/webauthn/register/verify", response_model=CandidateWebAuthnCredentialRead)
+@limiter.limit("10/minute")
+async def webauthn_register_verify(
+    request: Request,
+    body: CandidateWebAuthnRegistrationVerifyRequest,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> CandidateWebAuthnCredentialRead:
+    credential = await CandidateAuthService(session).complete_webauthn_registration(
+        candidate=candidate, credential_json=body.credential, device_name=body.device_name
+    )
+    return CandidateWebAuthnCredentialRead(
+        id=credential.id,
+        device_name=credential.device_name,
+        created_at=credential.created_at,
+        last_used_at=credential.last_used_at,
+    )
+
+
+@router.get("/webauthn/credentials", response_model=list[CandidateWebAuthnCredentialRead])
+async def list_webauthn_credentials(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> list[CandidateWebAuthnCredentialRead]:
+    credentials = await CandidateAuthService(session).list_webauthn_credentials(candidate=candidate)
+    return [
+        CandidateWebAuthnCredentialRead(
+            id=c.id, device_name=c.device_name, created_at=c.created_at, last_used_at=c.last_used_at
+        )
+        for c in credentials
+    ]
+
+
+@router.delete("/webauthn/credentials/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_webauthn_credential(
+    credential_id: uuid.UUID,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await CandidateAuthService(session).delete_webauthn_credential(
+        candidate=candidate, credential_pk_id=credential_id
+    )
+
+
+@router.post("/webauthn/authenticate/options", response_model=CandidateWebAuthnOptionsResponse)
+@limiter.limit("10/minute")
+async def webauthn_authenticate_options(
+    request: Request,
+    body: CandidateWebAuthnAuthenticationOptionsRequest,
+    session: AsyncSession = Depends(get_db),
+) -> CandidateWebAuthnOptionsResponse:
+    options_json = await CandidateAuthService(session).begin_webauthn_authentication(
+        email=body.email
+    )
+    return CandidateWebAuthnOptionsResponse(options=options_json)
+
+
+@router.post("/webauthn/authenticate/verify", response_model=CandidateTokenResponse)
+@limiter.limit("10/minute")
+async def webauthn_authenticate_verify(
+    request: Request,
+    body: CandidateWebAuthnAuthenticationVerifyRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+) -> CandidateTokenResponse:
+    user_agent, ip_address = _client_context(request)
+    tokens = await CandidateAuthService(session).complete_webauthn_authentication(
+        email=body.email,
+        credential_json=body.credential,
+        user_agent=user_agent,
+        ip_address=ip_address,
+    )
+    _set_refresh_cookie(response, tokens.refresh_token)
+    return CandidateTokenResponse(access_token=tokens.access_token)

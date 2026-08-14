@@ -29,3 +29,13 @@ class CandidateInvalidMfaCodeError(CandidateAuthError):
 class CandidateSessionNotFoundError(CandidateAuthError):
     status_code = 404
     detail = "Session not found"
+
+
+class CandidateInvalidWebAuthnCredentialError(CandidateAuthError):
+    status_code = 401
+    detail = "Invalid passkey credential"
+
+
+class CandidateWebAuthnCredentialNotFoundError(CandidateAuthError):
+    status_code = 404
+    detail = "Passkey not found"

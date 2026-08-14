@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -65,3 +66,28 @@ class CandidateSessionRead(BaseModel):
     created_at: datetime
     last_used_at: datetime | None
     is_current: bool
+
+
+class CandidateWebAuthnOptionsResponse(BaseModel):
+    options: str
+
+
+class CandidateWebAuthnRegistrationVerifyRequest(BaseModel):
+    credential: dict[str, Any]
+    device_name: str | None = Field(default=None, max_length=255)
+
+
+class CandidateWebAuthnAuthenticationOptionsRequest(BaseModel):
+    email: EmailStr
+
+
+class CandidateWebAuthnAuthenticationVerifyRequest(BaseModel):
+    email: EmailStr
+    credential: dict[str, Any]
+
+
+class CandidateWebAuthnCredentialRead(BaseModel):
+    id: uuid.UUID
+    device_name: str | None
+    created_at: datetime
+    last_used_at: datetime | None
