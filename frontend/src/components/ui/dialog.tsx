@@ -12,14 +12,23 @@ const DialogTrigger = DialogPrimitive.Trigger;
 function DialogContent({
   className,
   children,
+  container,
   ...props
-}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+  // Optional portal target — defaults to document.body (Radix's own fallback) when omitted, so
+  // this is additive and doesn't change any existing caller. Needed so a dialog rendered from a
+  // page with a scoped CSS-variable theme (e.g. shadow-theme.module.css) still inherits those
+  // variables — a Portal escapes the DOM subtree of any wrapper div, breaking CSS custom
+  // property inheritance, even though it stays a React-tree descendant.
+  container?: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Portal>["container"];
+}) {
   return (
-    <DialogPrimitive.Portal>
+    <DialogPrimitive.Portal container={container}>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-6 shadow-xl shadow-slate-900/10 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          // bg-card, not bg-white — see Card's comment in card.tsx for why.
+          "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-xl shadow-slate-900/10 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className
         )}
         {...props}

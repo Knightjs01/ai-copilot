@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useShadowBoard } from "@/lib/queries/shadow-jobs";
 import { EMPLOYMENT_TYPE_LABEL, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
+import styles from "./shadow-theme.module.css";
 
 function formatSalary(min: number | null, max: number | null): string | null {
   if (!min && !max) return null;
@@ -21,9 +22,11 @@ export default function ShadowBoardPage() {
   const { data: jobs, isLoading } = useShadowBoard();
 
   return (
+    // ShadowTopNav + this outer bg-slate-50 gutter stay light — see shadow-theme.module.css's
+    // comment. Only <main> (the actual board content) goes obsidian/blue.
     <div className="min-h-screen bg-slate-50">
       <ShadowTopNav />
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <main className={`${styles.shadowTheme} mx-auto max-w-4xl rounded-2xl px-6 py-10`}>
         <div className="mb-8 flex flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             The Shadow job board
@@ -53,7 +56,7 @@ export default function ShadowBoardPage() {
             const salary = formatSalary(job.salary_min, job.salary_max);
             return (
               <Link key={job.id} href={`/shadow/jobs/${job.id}`}>
-                <Card className="transition-colors hover:border-slate-300">
+                <Card className="transition-colors hover:border-muted-foreground/40">
                   <CardContent className="flex flex-col gap-2 py-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex flex-col gap-0.5">

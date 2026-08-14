@@ -14,6 +14,7 @@ import { ApiError } from "@/lib/api-client";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 import { useApplyToShadowJob, useShadowBoardJob } from "@/lib/queries/shadow-jobs";
 import { EMPLOYMENT_TYPE_LABEL, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
+import styles from "../../shadow-theme.module.css";
 
 function formatSalary(min: number | null, max: number | null): string | null {
   if (!min && !max) return null;
@@ -31,6 +32,9 @@ export default function ShadowJobDetailPage() {
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(false);
   const [disclosureOpen, setDisclosureOpen] = React.useState(false);
+  // Portal target for ApplyDisclosureDialog so it renders inside the themed <main> instead of
+  // document.body — see DialogContent's comment in dialog.tsx.
+  const mainRef = React.useRef<HTMLElement>(null);
 
   const handleApplyClick = () => {
     setApplyError(null);
@@ -61,9 +65,11 @@ export default function ShadowJobDetailPage() {
   };
 
   return (
+    // ShadowTopNav + this outer bg-slate-50 gutter stay light — see shadow-theme.module.css's
+    // comment. Only <main> (the actual job detail content) goes obsidian/blue.
     <div className="min-h-screen bg-slate-50">
       <ShadowTopNav />
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <main ref={mainRef} className={`${styles.shadowTheme} mx-auto max-w-3xl rounded-2xl px-6 py-10`}>
         {(isLoading || authLoading) && (
           <div className="flex justify-center py-16">
             <Spinner className="h-6 w-6 text-muted-foreground" />
@@ -157,6 +163,7 @@ export default function ShadowJobDetailPage() {
         onOpenChange={setDisclosureOpen}
         onConfirm={handleConfirmApply}
         isSubmitting={applyMutation.isPending}
+        container={mainRef.current}
       />
     </div>
   );

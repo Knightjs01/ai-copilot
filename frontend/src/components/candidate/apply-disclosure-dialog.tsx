@@ -29,15 +29,20 @@ export function ApplyDisclosureDialog({
   onOpenChange,
   onConfirm,
   isSubmitting,
+  container,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   isSubmitting: boolean;
+  // See DialogContent's comment in dialog.tsx — lets the caller (the Shadow job detail page)
+  // portal this into its own themed <main> instead of document.body, so the dark obsidian scope
+  // reaches the dialog too.
+  container?: HTMLElement | null;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent container={container}>
         <DialogHeader>
           <DialogTitle>You&apos;re about to share</DialogTitle>
           <DialogDescription>

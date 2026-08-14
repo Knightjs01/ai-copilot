@@ -1,0 +1,42 @@
+/* Wireframe ghost on obsidian, cold blue glow — the Shadow job board's own visual identity,
+   scoped to each page's content area only. CSS custom properties declared here still cascade to
+   every descendant, so existing token-based classes (text-foreground, border-border, bg-card,
+   Badge variants, etc.) re-theme automatically with no per-element edits. Never add these
+   variables to globals.css's :root — this is a deliberate one-off, not a second supported app
+   theme. Shared between src/app/shadow/page.tsx and src/app/shadow/jobs/[jobId]/page.tsx. */
+.shadowTheme {
+  --background: 220 18% 6%; /* #0d0e12 */
+  --foreground: 200 30% 92%; /* #e4edf1 */
+  --card: 222 20% 10%; /* #14171f */
+  --card-foreground: 200 30% 92%;
+  --popover: 222 20% 10%;
+  --popover-foreground: 200 30% 92%;
+  --primary: 206 100% 72%; /* cold blue glow, #70c1ff */
+  --primary-foreground: 220 30% 8%; /* #0e121b */
+  --secondary: 222 18% 14%; /* #1d212a */
+  --secondary-foreground: 200 30% 92%;
+  --muted: 222 18% 14%;
+  --muted-foreground: 215 15% 60%; /* #8a96a8 */
+  --accent: 222 18% 14%;
+  --accent-foreground: 200 30% 92%;
+  --border: 220 15% 20%; /* #2b303b */
+  --input: 220 15% 20%;
+  --ring: 206 100% 72%;
+
+  --brand: 206 100% 72%; /* cold blue glow */
+  --brand-foreground: 220 30% 8%;
+
+  /* Lightened for contrast against obsidian — info deliberately shifted toward indigo (230°)
+     rather than reusing the 206° brand hue, so status chips never get mistaken for the glow. */
+  --success: 152 50% 58%;
+  --success-foreground: 220 30% 8%;
+  --warning: 40 90% 64%;
+  --warning-foreground: 220 30% 8%;
+  --danger: 0 75% 68%;
+  --danger-foreground: 220 30% 8%;
+  --info: 230 75% 72%;
+  --info-foreground: 220 30% 8%;
+
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
