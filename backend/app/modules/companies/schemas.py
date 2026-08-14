@@ -9,3 +9,5 @@ class CompanyRead(BaseModel):
     id: uuid.UUID
     name: str
     slug: str
+    email_domain: str
+    is_verified_domain: bool

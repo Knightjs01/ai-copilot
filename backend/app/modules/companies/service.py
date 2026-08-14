@@ -3,6 +3,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.companies.domain_verification import extract_email_domain, is_verified_domain
 from app.modules.companies.models import Company
 from app.modules.companies.repository import CompanyRepository
 
@@ -19,7 +20,7 @@ class CompanyService:
         self._session = session
         self._repository = CompanyRepository(session)
 
-    async def create_company(self, name: str) -> Company:
+    async def create_company(self, *, name: str, owner_email: str) -> Company:
         base_slug = slugify(name)
         slug = base_slug
         suffix = 1
@@ -27,7 +28,13 @@ class CompanyService:
             suffix += 1
             slug = f"{base_slug}-{suffix}"
 
-        return await self._repository.create(name=name, slug=slug)
+        email_domain = extract_email_domain(owner_email)
+        return await self._repository.create(
+            name=name,
+            slug=slug,
+            email_domain=email_domain,
+            is_verified_domain=is_verified_domain(email_domain),
+        )
 
     async def get_company(self, company_id: uuid.UUID) -> Company | None:
         return await self._repository.get_by_id(company_id)

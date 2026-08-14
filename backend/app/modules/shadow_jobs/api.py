@@ -14,6 +14,7 @@ from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.companies.dependencies import require_verified_domain
 from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.schemas import (
     ShadowApplicationRead,
@@ -93,7 +94,7 @@ async def update_job(
 @router.post("/mine/{job_id}/publish", response_model=ShadowJobRead)
 async def publish_job(
     job_id: uuid.UUID,
-    actor: User = Depends(require_mfa_enrolled),
+    actor: User = Depends(require_verified_domain),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:

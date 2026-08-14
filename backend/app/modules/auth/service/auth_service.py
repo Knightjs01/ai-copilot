@@ -66,7 +66,7 @@ class AuthService:
         if await self._users.get_by_email(email) is not None:
             raise EmailAlreadyRegisteredError()
 
-        company = await self._companies.create_company(company_name)
+        company = await self._companies.create_company(name=company_name, owner_email=email)
         roles = await seed_system_roles(self._roles, company.id)
 
         user = await self._users.create(

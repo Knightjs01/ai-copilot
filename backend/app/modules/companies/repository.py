@@ -10,8 +10,15 @@ class CompanyRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self, *, name: str, slug: str) -> Company:
-        company = Company(name=name, slug=slug)
+    async def create(
+        self, *, name: str, slug: str, email_domain: str, is_verified_domain: bool
+    ) -> Company:
+        company = Company(
+            name=name,
+            slug=slug,
+            email_domain=email_domain,
+            is_verified_domain=is_verified_domain,
+        )
         self._session.add(company)
         await self._session.flush()
         return company

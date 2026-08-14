@@ -48,6 +48,7 @@ from app.modules.auth.schemas import (
 )
 from app.modules.auth.service.auth_service import AuthService, IssuedTokens, MfaChallenge
 from app.modules.auth.service.user_service import UserService
+from app.modules.companies.dependencies import require_verified_domain
 
 router = APIRouter(tags=["auth"])
 
@@ -300,6 +301,7 @@ async def invite_user(
     body: InviteUserRequest,
     actor: User = Depends(require_step_up),
     _: CurrentUser = Depends(require_permission(Permissions.USERS_INVITE)),
+    __: User = Depends(require_verified_domain),
     session: AsyncSession = Depends(get_tenant_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> UserRead:
