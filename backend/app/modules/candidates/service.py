@@ -19,7 +19,7 @@ from app.modules.candidates.models import (
     PrescreenOutcome,
 )
 from app.modules.candidates.repository import CandidateRepository
-from app.modules.candidates.storage import FileStorage, LocalFileStorage
+from app.modules.candidates.storage import EncryptingFileStorage, FileStorage, LocalFileStorage
 from app.modules.identity_vault.service import IdentityVaultService
 from app.modules.projects.service import ProjectService
 
@@ -40,7 +40,7 @@ class CandidateService:
         self._projects = ProjectService(session)
         self._audit = AuditService(session)
         self._vault = IdentityVaultService(session)
-        self._storage = storage or LocalFileStorage()
+        self._storage = storage or EncryptingFileStorage(LocalFileStorage())
 
     async def create_candidate(
         self,

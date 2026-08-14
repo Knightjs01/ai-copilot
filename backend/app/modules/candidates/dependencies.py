@@ -7,10 +7,10 @@ from app.modules.auth.authorization import actor_has_org_wide_access
 from app.modules.auth.dependencies import get_current_user_model, get_tenant_db
 from app.modules.auth.models import User
 from app.modules.candidates.repository import CandidateRepository
-from app.modules.candidates.storage import FileStorage, LocalFileStorage
+from app.modules.candidates.storage import EncryptingFileStorage, FileStorage, LocalFileStorage
 from app.modules.projects.repository import ProjectMemberRepository
 
-_default_storage = LocalFileStorage()
+_default_storage = EncryptingFileStorage(LocalFileStorage())
 
 
 def get_file_storage() -> FileStorage:

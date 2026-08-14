@@ -170,6 +170,17 @@ def decrypt_secret(encrypted_value: str) -> str:
         raise TokenError("Could not decrypt secret") from exc
 
 
+def encrypt_bytes(plain_value: bytes) -> bytes:
+    """Same Fernet key/provider as encrypt_secret, but for raw binary content (file bytes)
+    that isn't valid UTF-8 text — no encode/decode round-trip. See
+    app.modules.candidates.storage.EncryptingFileStorage."""
+    return _fernet().encrypt(plain_value)
+
+
+def decrypt_bytes(encrypted_value: bytes) -> bytes:
+    return _fernet().decrypt(encrypted_value)
+
+
 def generate_opaque_token() -> str:
     return secrets.token_urlsafe(48)
 

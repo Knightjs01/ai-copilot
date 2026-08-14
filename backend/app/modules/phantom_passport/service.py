@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.modules.auth import security
 from app.modules.candidate_auth.models import CandidateUser
-from app.modules.candidates.storage import FileStorage, LocalFileStorage
+from app.modules.candidates.storage import EncryptingFileStorage, FileStorage, LocalFileStorage
 from app.modules.phantom_passport.exceptions import (
     CvParsingFailedError,
     InvalidCvFileError,
@@ -56,13 +56,14 @@ class PhantomPassportService:
         storage: FileStorage | None = None,
     ) -> None:
         self._settings = get_settings()
+        self._session = session
         self._passports = PhantomPassportRepository(session)
         self._personal_info = PassportPersonalInfoRepository(session)
         self._career_entries = PassportCareerEntryRepository(session)
         self._cv_documents = CandidateCvDocumentRepository(session)
         self._versions = PassportVersionRepository(session)
         self._llm_client = llm_client
-        self._storage = storage or LocalFileStorage()
+        self._storage = storage or EncryptingFileStorage(LocalFileStorage())
 
     async def get_passport(self, *, candidate: CandidateUser) -> PassportRead:
         passport = await self._passports.get_by_candidate_user_id(candidate.id)
@@ -158,6 +159,15 @@ class PhantomPassportService:
             content_type=content_type,
             file_size=len(content),
         )
+        # Committed here, not left to the request-scoped session's end-of-request commit (see
+        # app.db.session.get_db) — that dependency rolls back the WHOLE transaction if anything
+        # later in this same request raises, and extraction/redaction/the LLM call below can
+        # fail independently of whether the Vault write should survive. Without this, a CV that
+        # fails to parse would silently orphan the just-written encrypted file on disk with no
+        # DB row pointing to it — the opposite of "the original always stays in your Vault."
+        # expire_on_commit=False (see app.db.base) means ORM objects fetched below, in this same
+        # request, stay perfectly usable after this commit.
+        await self._session.commit()
         if old_storage_key is not None:
             await self._storage.delete(key=old_storage_key)
 

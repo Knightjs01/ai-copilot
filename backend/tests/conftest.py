@@ -36,7 +36,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
-from app.modules.candidates.storage import LocalFileStorage  # noqa: E402
+from app.modules.candidates.storage import EncryptingFileStorage, LocalFileStorage  # noqa: E402
 from app.modules.hiring_blueprint.llm_client import HiringBlueprintExtraction  # noqa: E402
 from app.modules.intelligence.llm_client import (  # noqa: E402
     CandidateProfileExtraction,
@@ -242,12 +242,17 @@ def fake_passport_llm_client() -> FakePassportLLMClient:
 
 
 @pytest.fixture
-def test_storage(tmp_path: Path) -> LocalFileStorage:
+def test_storage(tmp_path: Path) -> EncryptingFileStorage:
     # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
     # leaves orphaned resume files under backend/storage/ on the host indefinitely. Exposed as
     # its own fixture (not just built inline in `client`) so tests can inspect the filesystem
     # directly — e.g. project_deletion's tests asserting a resume file was actually removed.
-    return LocalFileStorage(root=str(tmp_path / "storage"))
+    # Wrapped in EncryptingFileStorage so tests exercise the real production storage path
+    # (encrypted at rest) rather than silently bypassing it — see
+    # app.modules.candidates.storage.EncryptingFileStorage. A test wanting the raw ciphertext on
+    # disk reads directly from `tmp_path / "storage"` (same convention used here) rather than
+    # going through this fixture, which always transparently decrypts on read.
+    return EncryptingFileStorage(LocalFileStorage(root=str(tmp_path / "storage")))
 
 
 @pytest_asyncio.fixture
@@ -257,7 +262,7 @@ async def client(
     fake_hiring_blueprint_llm_client: FakeHiringBlueprintLLMClient,
     fake_prescreen_assessment_llm_client: FakePrescreenAssessmentLLMClient,
     fake_passport_llm_client: FakePassportLLMClient,
-    test_storage: LocalFileStorage,
+    test_storage: EncryptingFileStorage,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
     from app.modules.auth.dependencies import get_email_sender

@@ -4,7 +4,7 @@ from fpdf import FPDF
 from httpx import AsyncClient
 from sqlalchemy import text
 
-from app.modules.candidates.storage import LocalFileStorage
+from app.modules.candidates.storage import EncryptingFileStorage
 from tests.conftest import CapturingEmailSender
 from tests.integration.helpers import (
     auth_headers,
@@ -85,7 +85,7 @@ async def _table_row_count(table: str, column: str, value: str, *, company_id: s
 
 
 async def test_burn_project_purges_everything(
-    client: AsyncClient, test_storage: LocalFileStorage
+    client: AsyncClient, test_storage: EncryptingFileStorage
 ) -> None:
     owner = await signup(client, email="owner@burn.com", company_name="Burn Co")
     headers = auth_headers(owner["access_token"])

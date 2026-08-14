@@ -1,8 +1,10 @@
+from pathlib import Path
+
 from fpdf import FPDF
 from httpx import AsyncClient
 from sqlalchemy import text
 
-from app.modules.candidates.storage import LocalFileStorage
+from app.modules.candidates.storage import EncryptingFileStorage
 from tests.conftest import FakePassportLLMClient
 from tests.integration.helpers import auth_headers, candidate_signup, signup
 
@@ -95,10 +97,78 @@ async def test_parse_cv_persists_and_can_be_downloaded(
     assert download_response.content == uploaded_bytes
 
 
+async def test_original_cv_is_encrypted_at_rest(
+    client: AsyncClient, fake_passport_llm_client: FakePassportLLMClient, tmp_path: Path
+) -> None:
+    from app.db.base import engine
+
+    tokens = await candidate_signup(client, email="encrypted-vault@example.com")
+    headers = auth_headers(tokens["access_token"])
+    _result, uploaded_bytes = await _parse_cv(
+        client,
+        headers=headers,
+        filename="secret.pdf",
+        text_body="Marker text nobody should see in plaintext",
+    )
+
+    async with engine.connect() as conn:
+        result = await conn.execute(text("SELECT storage_key FROM candidate_cv_documents"))
+        storage_key = result.scalar_one()
+
+    # Read the raw bytes directly off disk, bypassing EncryptingFileStorage's transparent
+    # decryption on purpose — same tmp_path/"storage" root the test_storage fixture uses
+    # internally (see conftest.py). A valid PDF always starts with the "%PDF-" magic bytes; if
+    # this were still plaintext, that header (and the marker text) would be right there.
+    raw_bytes = (tmp_path / "storage" / storage_key).read_bytes()
+    assert raw_bytes != uploaded_bytes
+    assert not raw_bytes.startswith(b"%PDF-")
+    assert b"Marker text nobody should see in plaintext" not in raw_bytes
+
+    # The API path still transparently decrypts back to the exact original bytes.
+    download_response = await client.get(
+        "/api/v1/phantom-passport/original-cv/download", headers=headers
+    )
+    assert download_response.content == uploaded_bytes
+
+
+async def test_cv_vault_write_survives_a_parse_failure(
+    client: AsyncClient, fake_passport_llm_client: FakePassportLLMClient
+) -> None:
+    # Bytes that pass the content-type/size checks but aren't a real, parseable PDF — extraction
+    # fails *after* the file has already been written to the Vault. The original must still end
+    # up durably in the Vault even though the parse-cv request itself reports a failure — see
+    # PhantomPassportService.parse_cv's explicit mid-request commit.
+    tokens = await candidate_signup(client, email="unparseable-cv@example.com")
+    headers = auth_headers(tokens["access_token"])
+
+    response = await client.post(
+        "/api/v1/phantom-passport/parse-cv",
+        files={
+            "file": (
+                "not-a-real-pdf.pdf",
+                b"%PDF-1.4\nnot actually a valid PDF\n",
+                "application/pdf",
+            )
+        },
+        headers=headers,
+    )
+    assert response.status_code == 422, response.text
+
+    status_response = await client.get("/api/v1/phantom-passport/original-cv", headers=headers)
+    assert status_response.status_code == 200, status_response.text
+    assert status_response.json()["original_filename"] == "not-a-real-pdf.pdf"
+
+    download_response = await client.get(
+        "/api/v1/phantom-passport/original-cv/download", headers=headers
+    )
+    assert download_response.status_code == 200, download_response.text
+    assert download_response.content == b"%PDF-1.4\nnot actually a valid PDF\n"
+
+
 async def test_replacing_cv_deletes_old_storage_file(
     client: AsyncClient,
     fake_passport_llm_client: FakePassportLLMClient,
-    test_storage: LocalFileStorage,
+    test_storage: EncryptingFileStorage,
 ) -> None:
     from app.db.base import engine
 

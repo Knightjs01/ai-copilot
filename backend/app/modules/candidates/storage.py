@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Protocol
 
 from app.core.config import get_settings
+from app.modules.auth import security
 
 
 class FileStorage(Protocol):
@@ -41,3 +42,32 @@ class LocalFileStorage:
     async def delete(self, *, key: str) -> None:
         path = self._resolve(key)
         path.unlink(missing_ok=True)
+
+
+class EncryptingFileStorage:
+    """Wraps another FileStorage and transparently encrypts content at rest — save() encrypts
+    before delegating, read() decrypts after delegating, delete() passes through unchanged
+    (nothing to encrypt). Uses the same Fernet key-provider seam as every other encrypted field
+    in this app (app.modules.auth.security.encrypt_bytes/decrypt_bytes, backed by
+    app.core.key_provider) rather than a per-instance key override — tests that need a
+    different key use the existing global set_key_provider() hook, same as everywhere else
+    encrypted fields are tested.
+
+    Composition, not inheritance: this lets any FileStorage implementation (LocalFileStorage
+    today, an eventual S3-backed one) gain encryption-at-rest for free without touching that
+    implementation itself."""
+
+    def __init__(self, inner: FileStorage) -> None:
+        self._inner = inner
+
+    async def save(self, *, key: str, content: bytes, content_type: str) -> None:
+        await self._inner.save(
+            key=key, content=security.encrypt_bytes(content), content_type=content_type
+        )
+
+    async def read(self, *, key: str) -> bytes:
+        encrypted = await self._inner.read(key=key)
+        return security.decrypt_bytes(encrypted)
+
+    async def delete(self, *, key: str) -> None:
+        await self._inner.delete(key=key)
