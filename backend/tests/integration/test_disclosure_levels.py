@@ -151,6 +151,10 @@ async def test_shadow_reveal_candidate_can_approve_with_basic_disclosure_only(
         },
         headers=candidate_headers,
     )
+    approve_response = await client.post(
+        "/api/v1/phantom-passport/me/approve", headers=candidate_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
     apply_response = await client.post(
         f"/api/v1/shadow-jobs/board/{job['id']}/apply", headers=candidate_headers
     )

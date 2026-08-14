@@ -52,6 +52,12 @@ async def _save_passport(client: AsyncClient, *, headers: dict) -> None:
     response = await client.put("/api/v1/phantom-passport/me", json=payload, headers=headers)
     assert response.status_code == 200, response.text
 
+    # Applying now requires an approved Passport — see phantom_passport's Candidate Vault /
+    # approval gate work. Approve it here so every existing apply-flow test keeps exercising the
+    # same "apply with whatever the Passport holds" behavior as before.
+    approve_response = await client.post("/api/v1/phantom-passport/me/approve", headers=headers)
+    assert approve_response.status_code == 200, approve_response.text
+
 
 async def test_owner_can_create_job(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@shadowjobs-perm.com")

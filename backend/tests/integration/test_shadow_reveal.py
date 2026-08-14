@@ -44,6 +44,11 @@ async def _apply_with_new_candidate(
     )
     assert save_response.status_code == 200, save_response.text
 
+    approve_response = await client.post(
+        "/api/v1/phantom-passport/me/approve", headers=candidate_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
+
     apply_response = await client.post(
         f"/api/v1/shadow-jobs/board/{job_id}/apply", headers=candidate_headers
     )

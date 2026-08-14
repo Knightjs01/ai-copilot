@@ -1,9 +1,19 @@
 import enum
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,6 +73,12 @@ class PhantomPassport(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base
     verification_status: Mapped[str] = mapped_column(
         String(20), default=VerificationStatus.UNVERIFIED.value
     )
+    # Null until the candidate has explicitly approved a snapshot — see PassportVersion. This is
+    # the only "is it approved" signal; a separate boolean would just be a second field that can
+    # drift out of sync with this one.
+    current_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("passport_versions.id"), nullable=True
+    )
 
 
 class PassportPersonalInfo(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -103,3 +119,59 @@ class PassportCareerEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     responsibilities: Mapped[str | None] = mapped_column(Text, nullable=True)
     achievements: Mapped[list[Any]] = mapped_column(JSONB, default=list)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class CandidateCvDocument(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """The original CV file the candidate uploaded — private to the candidate, never joined into
+    any Shadow Profile or recruiter-facing query. One active document per candidate; a "Replace
+    CV" upload deletes the old storage key and overwrites this row in place, matching
+    app.modules.candidates.service.CandidateService.upload_resume's replace pattern. Reverses
+    this module's original zero-file-retention design — see PassportVersion below for why."""
+
+    __tablename__ = "candidate_cv_documents"
+
+    candidate_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("candidate_users.id"), unique=True, index=True
+    )
+    storage_key: Mapped[str] = mapped_column(String(512))
+    original_filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(100))
+    file_size: Mapped[int] = mapped_column(Integer)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class PassportVersion(UUIDPrimaryKeyMixin, Base):
+    """An immutable snapshot, created only on an explicit candidate approval — never mutated
+    after creation. `snapshot` deliberately holds only the same fields a ShadowProfile projects
+    (see shadow_jobs/schemas.py) — safe-to-recruiter data, never PII, never a real employer name
+    — so an already-submitted ShadowApplication can freeze to exactly what a recruiter saw at
+    apply time, instead of shadow_jobs's live read silently rewriting history on every Passport
+    edit. `schema_version` lives inside the JSONB blob itself so old snapshots stay renderable
+    if ShadowProfile's shape ever changes. No TimestampMixin — approved_at is the only timestamp
+    that matters for a row that's never updated."""
+
+    __tablename__ = "passport_versions"
+    __table_args__ = (UniqueConstraint("passport_id", "version_number"),)
+
+    passport_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("phantom_passports.id"), index=True
+    )
+    version_number: Mapped[int] = mapped_column(Integer)
+    snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    # A live join through this FK would be wrong the moment the CV is replaced — CandidateCvDocument
+    # is mutated in place on replace (same row id, new content), so a joined "source filename"
+    # would silently drift to whatever's most recently uploaded. source_cv_filename below is
+    # captured by value at approval time instead; this FK is kept only so a still-existing
+    # original file can be looked up for "view the CV this version was built from" — it goes
+    # null on delete/replace without corrupting the historical record.
+    source_cv_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("candidate_cv_documents.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source_cv_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

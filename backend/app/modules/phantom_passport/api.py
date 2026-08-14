@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -7,9 +7,17 @@ from app.modules.candidate_auth.dependencies import (
     require_candidate_mfa_enrolled,
 )
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.candidates.dependencies import get_file_storage
+from app.modules.candidates.storage import FileStorage
 from app.modules.phantom_passport.dependencies import get_llm_client
 from app.modules.phantom_passport.llm_client import LLMClient
-from app.modules.phantom_passport.schemas import CvParseResult, PassportRead, PassportUpdate
+from app.modules.phantom_passport.schemas import (
+    CvDocumentRead,
+    CvParseResult,
+    PassportRead,
+    PassportUpdate,
+    PassportVersionRead,
+)
 from app.modules.phantom_passport.service import PhantomPassportService
 
 router = APIRouter(
@@ -42,10 +50,61 @@ async def parse_cv(
     candidate: CandidateUser = Depends(get_current_candidate),
     session: AsyncSession = Depends(get_db),
     llm_client: LLMClient = Depends(get_llm_client),
+    storage: FileStorage = Depends(get_file_storage),
 ) -> CvParseResult:
     content = await file.read()
-    return await PhantomPassportService(session, llm_client=llm_client).parse_cv(
+    return await PhantomPassportService(session, llm_client=llm_client, storage=storage).parse_cv(
         candidate=candidate,
         content=content,
         content_type=file.content_type or "application/octet-stream",
+        original_filename=file.filename or "cv",
     )
+
+
+@router.get("/original-cv", response_model=CvDocumentRead)
+async def get_original_cv_status(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> CvDocumentRead:
+    return await PhantomPassportService(session).get_original_cv_status(candidate=candidate)
+
+
+@router.get("/original-cv/download")
+async def download_original_cv(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+    storage: FileStorage = Depends(get_file_storage),
+) -> Response:
+    content, content_type, filename = await PhantomPassportService(
+        session, storage=storage
+    ).download_original_cv(candidate=candidate)
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.delete("/original-cv", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_original_cv(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+    storage: FileStorage = Depends(get_file_storage),
+) -> None:
+    await PhantomPassportService(session, storage=storage).delete_original_cv(candidate=candidate)
+
+
+@router.post("/me/approve", response_model=PassportVersionRead)
+async def approve_my_passport(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> PassportVersionRead:
+    return await PhantomPassportService(session).approve_passport(candidate=candidate)
+
+
+@router.get("/versions", response_model=list[PassportVersionRead])
+async def list_my_passport_versions(
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> list[PassportVersionRead]:
+    return await PhantomPassportService(session).list_versions(candidate=candidate)

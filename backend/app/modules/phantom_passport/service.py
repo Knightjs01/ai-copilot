@@ -1,22 +1,36 @@
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.modules.auth import security
 from app.modules.candidate_auth.models import CandidateUser
-from app.modules.phantom_passport.exceptions import CvParsingFailedError, PassportNotFoundError
+from app.modules.candidates.storage import FileStorage, LocalFileStorage
+from app.modules.phantom_passport.exceptions import (
+    CvParsingFailedError,
+    InvalidCvFileError,
+    OriginalCvNotFoundError,
+    PassportNotFoundError,
+)
 from app.modules.phantom_passport.llm_client import LLMClient, LLMRequestError
 from app.modules.phantom_passport.models import PassportCareerEntry, PhantomPassport
 from app.modules.phantom_passport.repository import (
+    CandidateCvDocumentRepository,
     PassportCareerEntryRepository,
     PassportPersonalInfoRepository,
+    PassportVersionRepository,
     PhantomPassportRepository,
 )
 from app.modules.phantom_passport.schemas import (
     CareerEntryRead,
+    CvDocumentRead,
     CvParseCareerEntry,
     CvParseResult,
     PassportRead,
     PassportUpdate,
+    PassportVersionRead,
     PersonalInfoRead,
+    ShadowProfileSnapshot,
 )
 from app.modules.privacy_gateway.extraction import extract_text
 from app.modules.privacy_gateway.redaction import PHONE_PATTERN, redact_text
@@ -25,13 +39,30 @@ from app.modules.privacy_gateway.redaction import PHONE_PATTERN, redact_text
 # missing N things") beats a weighted formula nobody can predict.
 _COMPLETION_FIELD_COUNT = 10
 
+# Same set as app.modules.candidates.service — a CV is a CV — but kept as a local module-level
+# constant rather than imported, since that one is private to the candidates module.
+_ALLOWED_CV_CONTENT_TYPES = {
+    "application/pdf": ".pdf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+}
+
 
 class PhantomPassportService:
-    def __init__(self, session: AsyncSession, llm_client: LLMClient | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        llm_client: LLMClient | None = None,
+        storage: FileStorage | None = None,
+    ) -> None:
+        self._settings = get_settings()
         self._passports = PhantomPassportRepository(session)
         self._personal_info = PassportPersonalInfoRepository(session)
         self._career_entries = PassportCareerEntryRepository(session)
+        self._cv_documents = CandidateCvDocumentRepository(session)
+        self._versions = PassportVersionRepository(session)
         self._llm_client = llm_client
+        self._storage = storage or LocalFileStorage()
 
     async def get_passport(self, *, candidate: CandidateUser) -> PassportRead:
         passport = await self._passports.get_by_candidate_user_id(candidate.id)
@@ -93,17 +124,47 @@ class PhantomPassportService:
         return await self._to_read_model(passport)
 
     async def parse_cv(
-        self, *, candidate: CandidateUser, content: bytes, content_type: str
+        self,
+        *,
+        candidate: CandidateUser,
+        content: bytes,
+        content_type: str,
+        original_filename: str,
     ) -> CvParseResult:
         if self._llm_client is None:
             raise ValueError("parse_cv requires an llm_client")
 
-        # The raw CV is never persisted anywhere — extracted in memory, redacted, sent to the
-        # LLM, then discarded. Same zero-retention principle as
-        # privacy_gateway.service.sanitize_candidate, applied one step earlier: there's no file
-        # upload/storage step here at all, just text extraction from the request body. Reuses
-        # the exact same extraction/redaction primitives the company-side candidate flow uses —
-        # one redaction implementation for the whole platform, not two.
+        extension = _ALLOWED_CV_CONTENT_TYPES.get(content_type)
+        if extension is None:
+            raise InvalidCvFileError("CV must be a PDF, DOC, or DOCX file — got: " + content_type)
+        max_bytes = self._settings.max_resume_size_mb * 1024 * 1024
+        if len(content) > max_bytes:
+            raise InvalidCvFileError(f"CV exceeds the {self._settings.max_resume_size_mb}MB limit")
+
+        # The original file is now stored in the candidate's private Vault — reverses this
+        # module's original zero-file-retention design (extracted, redacted, discarded) per the
+        # Candidate Vault requirement: upload no longer means "gone forever after parsing," it
+        # means "kept private and never recruiter-visible." Persisted before extraction so a
+        # parse failure below still leaves the candidate's original safely stored. Replaces any
+        # prior document (delete old key), matching candidates/service.py::upload_resume.
+        existing_document = await self._cv_documents.get_by_candidate_user_id(candidate.id)
+        old_storage_key = existing_document.storage_key if existing_document else None
+        storage_key = f"candidate-cv/{candidate.id}/{uuid.uuid4()}{extension}"
+        await self._storage.save(key=storage_key, content=content, content_type=content_type)
+        await self._cv_documents.upsert(
+            candidate_user_id=candidate.id,
+            storage_key=storage_key,
+            original_filename=original_filename,
+            content_type=content_type,
+            file_size=len(content),
+        )
+        if old_storage_key is not None:
+            await self._storage.delete(key=old_storage_key)
+
+        # Extraction/redaction/LLM proceed exactly as before — the LLM only ever sees redacted
+        # text, never the stored original file. Reuses the exact same extraction/redaction
+        # primitives the company-side candidate flow uses — one redaction implementation for the
+        # whole platform, not two.
         text = extract_text(content=content, content_type=content_type)
 
         # Email isn't extracted here — the candidate's email is already known from
@@ -146,6 +207,107 @@ class PhantomPassportService:
             detected_address=None,
         )
 
+    # --- Candidate Vault (original CV custody) ------------------------------------------------
+
+    async def get_original_cv_status(self, *, candidate: CandidateUser) -> CvDocumentRead:
+        document = await self._cv_documents.get_by_candidate_user_id(candidate.id)
+        if document is None:
+            raise OriginalCvNotFoundError()
+        return CvDocumentRead(
+            original_filename=document.original_filename,
+            content_type=document.content_type,
+            file_size=document.file_size,
+            uploaded_at=document.uploaded_at,
+        )
+
+    async def download_original_cv(self, *, candidate: CandidateUser) -> tuple[bytes, str, str]:
+        document = await self._cv_documents.get_by_candidate_user_id(candidate.id)
+        if document is None:
+            raise OriginalCvNotFoundError()
+        content = await self._storage.read(key=document.storage_key)
+        return content, document.content_type, document.original_filename
+
+    async def delete_original_cv(self, *, candidate: CandidateUser) -> None:
+        document = await self._cv_documents.get_by_candidate_user_id(candidate.id)
+        if document is None:
+            raise OriginalCvNotFoundError()
+        await self._storage.delete(key=document.storage_key)
+        await self._cv_documents.delete(document)
+
+    # --- Approval gate & versioned snapshots --------------------------------------------------
+
+    async def approve_passport(self, *, candidate: CandidateUser) -> PassportVersionRead:
+        passport = await self._passports.get_by_candidate_user_id(candidate.id)
+        if passport is None:
+            raise PassportNotFoundError()
+        personal_info = await self._personal_info.get_by_passport_id(passport.id)
+        if personal_info is None:
+            raise PassportNotFoundError("Passport is missing its personal information record")
+
+        # Built from a fresh read of live data, inside this same call — career entry rows get
+        # hard-deleted-and-reinserted on every PUT /me (see PassportCareerEntryRepository
+        # .replace_all), so their primary keys are never stable across saves. The snapshot has to
+        # copy field values by value, not reference rows that may not exist by the time anyone
+        # reads it back.
+        career_entries = await self._career_entries.list_by_passport_id(passport.id)
+        snapshot = ShadowProfileSnapshot(
+            headline=passport.headline,
+            seniority=passport.seniority,
+            years_experience=passport.years_experience,
+            summary=passport.summary,
+            skills=list(passport.skills),
+            industries=list(passport.industries),
+            location=passport.location,
+            remote_preference=passport.remote_preference,
+            salary_min=passport.salary_min,
+            salary_max=passport.salary_max,
+            notice_period=passport.notice_period,
+            career_intent=passport.career_intent,
+            career_entries=[
+                {
+                    "title": entry.title,
+                    "company_name_anonymized": entry.company_name_anonymized,
+                    "is_current": entry.is_current,
+                }
+                for entry in career_entries
+            ],
+        )
+
+        cv_document = await self._cv_documents.get_by_candidate_user_id(candidate.id)
+        next_version_number = await self._versions.get_latest_version_number(passport.id) + 1
+        version = await self._versions.create(
+            passport_id=passport.id,
+            version_number=next_version_number,
+            snapshot=snapshot.model_dump(mode="json"),
+            source_cv_document_id=cv_document.id if cv_document else None,
+            source_cv_filename=cv_document.original_filename if cv_document else None,
+        )
+        await self._passports.set_current_version(passport, version_id=version.id)
+
+        return PassportVersionRead(
+            id=version.id,
+            version_number=version.version_number,
+            approved_at=version.approved_at,
+            source_cv_filename=version.source_cv_filename,
+        )
+
+    async def list_versions(self, *, candidate: CandidateUser) -> list[PassportVersionRead]:
+        # A list endpoint — "no Passport yet" is just zero versions, not an error, matching
+        # every other list-of-a-candidate's-own-things endpoint in this app.
+        passport = await self._passports.get_by_candidate_user_id(candidate.id)
+        if passport is None:
+            return []
+        versions = await self._versions.list_by_passport_id(passport.id)
+        return [
+            PassportVersionRead(
+                id=v.id,
+                version_number=v.version_number,
+                approved_at=v.approved_at,
+                source_cv_filename=v.source_cv_filename,
+            )
+            for v in versions
+        ]
+
     async def _to_read_model(self, passport: PhantomPassport) -> PassportRead:
         personal_info = await self._personal_info.get_by_passport_id(passport.id)
         if personal_info is None:
@@ -157,6 +319,11 @@ class PhantomPassportService:
         career_entries: list[PassportCareerEntry] = await self._career_entries.list_by_passport_id(
             passport.id
         )
+
+        current_version_number = None
+        if passport.current_version_id is not None:
+            current_version = await self._versions.get_by_id(passport.current_version_id)
+            current_version_number = current_version.version_number if current_version else None
 
         return PassportRead(
             id=passport.id,
@@ -174,6 +341,7 @@ class PhantomPassportService:
             career_intent=passport.career_intent,
             verification_status=passport.verification_status,
             completion_percentage=_completion_percentage(passport, career_entries),
+            current_version_number=current_version_number,
             personal_info=PersonalInfoRead(
                 legal_name=security.decrypt_secret(personal_info.legal_name_encrypted),
                 phone=(

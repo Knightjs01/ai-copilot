@@ -114,6 +114,7 @@ class ShadowApplicationRepository:
         shadow_job_id: uuid.UUID,
         candidate_user_id: uuid.UUID,
         phantom_passport_id: uuid.UUID,
+        passport_version_id: uuid.UUID | None,
         callsign: str,
     ) -> ShadowApplication:
         application = ShadowApplication(
@@ -121,6 +122,7 @@ class ShadowApplicationRepository:
             shadow_job_id=shadow_job_id,
             candidate_user_id=candidate_user_id,
             phantom_passport_id=phantom_passport_id,
+            passport_version_id=passport_version_id,
             callsign=callsign,
         )
         self._session.add(application)

@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Download, Plus, Sparkles, Trash2, UploadCloud } from "lucide-react";
 
+import { SecuringCvOverlay } from "@/components/candidate/securing-cv-overlay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,16 @@ import { Input } from "@/components/ui/input";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { useMyPassport, useParseCv, useSavePassport } from "@/lib/queries/phantom-passport";
+import {
+  useApprovePassport,
+  useDeleteOriginalCv,
+  useDownloadOriginalCv,
+  useMyPassport,
+  useOriginalCvStatus,
+  useParseCv,
+  usePassportVersions,
+  useSavePassport,
+} from "@/lib/queries/phantom-passport";
 import { CAREER_INTENT_LABEL, NOTICE_PERIOD_LABEL, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
 import type { CareerEntryInput, CareerIntent, NoticePeriod, RemotePreference } from "@/lib/types";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
@@ -29,6 +39,10 @@ const NOTICE_PERIOD_OPTIONS = (Object.keys(NOTICE_PERIOD_LABEL) as NoticePeriod[
   label: NOTICE_PERIOD_LABEL[value],
 }));
 
+// Same floor as burn-project-dialog.tsx's purge animation — a fast parse-cv response shouldn't
+// cut the "Securing your CV" sequence short.
+const MIN_SECURING_MS = 2600;
+
 function emptyCareerEntry(): CareerEntryInput {
   return {
     title: "",
@@ -42,11 +56,26 @@ function emptyCareerEntry(): CareerEntryInput {
   };
 }
 
+function AiFieldBadge({ field, aiSuggestedFields }: { field: string; aiSuggestedFields: string[] | null }) {
+  if (aiSuggestedFields === null) return null;
+  const suggested = aiSuggestedFields.includes(field);
+  return (
+    <Badge variant={suggested ? "info" : "success"} className="ml-2 align-middle">
+      {suggested ? "✦ Suggested by Phantom AI" : "✓ Extracted from your CV"}
+    </Badge>
+  );
+}
+
 export default function PassportPage() {
   const { candidate } = useCandidateAuth();
   const { data: passport, isLoading } = useMyPassport();
   const savePassport = useSavePassport();
   const parseCv = useParseCv();
+  const approvePassport = useApprovePassport();
+  const { data: originalCv, isLoading: isLoadingOriginalCv } = useOriginalCvStatus();
+  const downloadOriginalCv = useDownloadOriginalCv();
+  const deleteOriginalCv = useDeleteOriginalCv();
+  const { data: versions } = usePassportVersions();
 
   const [headline, setHeadline] = React.useState("");
   const [seniority, setSeniority] = React.useState("");
@@ -67,6 +96,12 @@ export default function PassportPage() {
   const [loadedOnce, setLoadedOnce] = React.useState(false);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
   const [cvError, setCvError] = React.useState<string | null>(null);
+  const [securing, setSecuring] = React.useState(false);
+  const [aiSuggestedFields, setAiSuggestedFields] = React.useState<string[] | null>(null);
+  const [reviewed, setReviewed] = React.useState(false);
+  const [approveError, setApproveError] = React.useState<string | null>(null);
+  const [showVaultUploader, setShowVaultUploader] = React.useState(false);
+  const [vaultError, setVaultError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (loadedOnce) return;
@@ -118,8 +153,11 @@ export default function PassportPage() {
 
   const handleParseCv = async (file: File) => {
     setCvError(null);
+    setSecuring(true);
+    setReviewed(false);
+    const minDelay = new Promise((resolve) => setTimeout(resolve, MIN_SECURING_MS));
     try {
-      const result = await parseCv.mutateAsync(file);
+      const [result] = await Promise.all([parseCv.mutateAsync(file), minDelay]);
       setHeadline((prev) => result.headline ?? prev);
       setSeniority((prev) => result.seniority ?? prev);
       setYearsExperience((prev) =>
@@ -143,12 +181,15 @@ export default function PassportPage() {
           }))
         );
       }
+      setAiSuggestedFields(result.ai_suggested_fields);
     } catch {
       setCvError("Couldn't parse that file. You can still fill in your Passport by hand.");
+    } finally {
+      setSecuring(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<boolean> => {
     setSaveMessage(null);
     try {
       await savePassport.mutateAsync({
@@ -174,9 +215,27 @@ export default function PassportPage() {
           company_name_anonymized: entry.company_name_anonymized || entry.company_name,
         })),
       });
-      setSaveMessage("Passport saved.");
+      return true;
     } catch {
       setSaveMessage("Couldn't save. Check the required fields and try again.");
+      return false;
+    }
+  };
+
+  const handleSaveClick = async () => {
+    const ok = await handleSave();
+    if (ok) setSaveMessage("Passport saved.");
+  };
+
+  const handleApprove = async () => {
+    setApproveError(null);
+    const saved = await handleSave();
+    if (!saved) return;
+    try {
+      await approvePassport.mutateAsync();
+      setReviewed(false);
+    } catch {
+      setApproveError("Couldn't approve your Passport. Try again.");
     }
   };
 
@@ -190,6 +249,7 @@ export default function PassportPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SecuringCvOverlay active={securing} />
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -200,7 +260,12 @@ export default function PassportPage() {
             what&apos;s below the line, never your name.
           </p>
         </div>
-        {passport && <Badge variant="info">{passport.completion_percentage}% complete</Badge>}
+        <div className="flex items-center gap-2">
+          {passport?.current_version_number != null && (
+            <Badge variant="success">Approved · Version {passport.current_version_number}</Badge>
+          )}
+          {passport && <Badge variant="info">{passport.completion_percentage}% complete</Badge>}
+        </div>
       </div>
 
       <Card>
@@ -210,8 +275,8 @@ export default function PassportPage() {
         <CardContent className="flex flex-col gap-3">
           <Dropzone
             label="Drop your CV here"
-            hint="PDF or Word. We'll pre-fill the fields below. Nothing is saved until you review and save."
-            isUploading={parseCv.isPending}
+            hint="PDF or Word. Your original is stored privately in your Candidate Vault, and never shown to recruiters."
+            isUploading={securing}
             onFileSelected={handleParseCv}
           />
           {cvError && <p className="text-sm font-medium text-danger">{cvError}</p>}
@@ -253,7 +318,15 @@ export default function PassportPage() {
           <Field label="Summary" htmlFor="summary">
             <Textarea id="summary" value={summary} onChange={(e) => setSummary(e.target.value)} />
           </Field>
-          <Field label="Skills" htmlFor="skills">
+          <Field
+            label={
+              <>
+                Skills
+                <AiFieldBadge field="skills" aiSuggestedFields={aiSuggestedFields} />
+              </>
+            }
+            htmlFor="skills"
+          >
             <Input
               id="skills"
               placeholder="Comma-separated, e.g. Product Strategy, Team Leadership"
@@ -261,7 +334,15 @@ export default function PassportPage() {
               onChange={(e) => setSkillsText(e.target.value)}
             />
           </Field>
-          <Field label="Industries" htmlFor="industries">
+          <Field
+            label={
+              <>
+                Industries
+                <AiFieldBadge field="industries" aiSuggestedFields={aiSuggestedFields} />
+              </>
+            }
+            htmlFor="industries"
+          >
             <Input
               id="industries"
               placeholder="Comma-separated, e.g. FinTech, B2B SaaS"
@@ -347,7 +428,15 @@ export default function PassportPage() {
                 </button>
               </div>
               <Field
-                label="Anonymized employer"
+                label={
+                  <>
+                    Anonymized employer
+                    <AiFieldBadge
+                      field="company_name_anonymized"
+                      aiSuggestedFields={aiSuggestedFields}
+                    />
+                  </>
+                }
                 htmlFor={`anon-${index}`}
                 error={undefined}
               >
@@ -419,15 +508,134 @@ export default function PassportPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Candidate Vault</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground">
+            Your original CV is stored privately here. Recruiters cannot access it — they only
+            ever see the approved Passport data above.
+          </p>
+          {isLoadingOriginalCv ? (
+            <Spinner className="h-4 w-4 text-muted-foreground" />
+          ) : originalCv && !showVaultUploader ? (
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-foreground">
+                  {originalCv.original_filename}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  🔒 Secure · Uploaded {new Date(originalCv.uploaded_at).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => downloadOriginalCv.mutate()}
+                  disabled={downloadOriginalCv.isPending}
+                >
+                  <Download className="h-3.5 w-3.5" /> View
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setShowVaultUploader(true)}>
+                  <UploadCloud className="h-3.5 w-3.5" /> Replace
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Delete your original CV? You'll need to re-upload it to reprocess your Passport later. Your approved Passport data is not affected."
+                      )
+                    ) {
+                      setVaultError(null);
+                      deleteOriginalCv.mutate(undefined, {
+                        onError: () => setVaultError("Couldn't delete your CV. Try again."),
+                      });
+                    }
+                  }}
+                  disabled={deleteOriginalCv.isPending}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Dropzone
+                label="Drop your CV here"
+                hint="PDF or Word"
+                isUploading={securing}
+                onFileSelected={async (file) => {
+                  await handleParseCv(file);
+                  setShowVaultUploader(false);
+                }}
+              />
+              {originalCv && (
+                <Button size="sm" variant="secondary" className="self-start" onClick={() => setShowVaultUploader(false)}>
+                  Cancel
+                </Button>
+              )}
+            </div>
+          )}
+          {vaultError && <p className="text-sm font-medium text-danger">{vaultError}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Review before publishing</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            We&apos;ve built this version of your Passport from your CV and any edits above.
+            Phantom has automatically parsed your CV, but AI can occasionally make mistakes.
+            Please review everything carefully — you have complete control over what&apos;s added
+            to your Passport, and nothing becomes part of your discoverable Passport until you
+            approve it.
+          </p>
+          {versions && versions.length > 0 && versions[0] && (
+            <p className="text-xs text-muted-foreground">
+              {passport?.current_version_number != null
+                ? `Currently approved: Version ${passport.current_version_number} (${new Date(versions[0].approved_at).toLocaleDateString()})`
+                : "Not yet approved."}
+            </p>
+          )}
+          <label className="flex items-start gap-2.5 text-sm text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={reviewed}
+              onChange={(e) => setReviewed(e.target.checked)}
+            />
+            I have reviewed my Passport and approve the information above.
+          </label>
+          {approveError && <p className="text-sm font-medium text-danger">{approveError}</p>}
+          <div className="flex justify-end">
+            <Button
+              variant="brand"
+              size="lg"
+              onClick={handleApprove}
+              disabled={!reviewed || !legalName || approvePassport.isPending || savePassport.isPending}
+            >
+              <Sparkles className="h-4 w-4" />
+              {approvePassport.isPending ? "Approving…" : "Approve & Build My Passport"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-end gap-3">
         {saveMessage && <p className="text-sm text-muted-foreground">{saveMessage}</p>}
         <Button
-          variant="brand"
+          variant="secondary"
           size="lg"
-          onClick={handleSave}
+          onClick={handleSaveClick}
           disabled={savePassport.isPending || !legalName}
         >
-          {savePassport.isPending ? "Saving…" : "Save Passport"}
+          {savePassport.isPending ? "Saving…" : "Save draft"}
         </Button>
       </div>
     </div>

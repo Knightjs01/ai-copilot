@@ -378,6 +378,9 @@ export interface PhantomPassport {
   career_intent: CareerIntent;
   verification_status: VerificationStatus;
   completion_percentage: number;
+  // Non-null iff the candidate has approved a Passport Version — see PassportVersionSummary.
+  // Nothing is discoverable/usable for applying until this is set.
+  current_version_number: number | null;
   personal_info: PersonalInfo;
   career_entries: CareerEntry[];
 }
@@ -422,6 +425,24 @@ export interface CvParseResult {
   career_entries: CvParseCareerEntry[];
   detected_phone: string | null;
   detected_address: string | null;
+  // Field names that are Phantom AI's own normalization rather than text lifted directly from
+  // the CV (e.g. "industries", "company_name_anonymized") — everything else with a value is a
+  // direct extraction. Drives the "Extracted from your CV" / "Suggested by Phantom AI" badges.
+  ai_suggested_fields: string[];
+}
+
+export interface CvDocumentStatus {
+  original_filename: string;
+  content_type: string;
+  file_size: number;
+  uploaded_at: string;
+}
+
+export interface PassportVersionSummary {
+  id: string;
+  version_number: number;
+  approved_at: string;
+  source_cv_filename: string | null;
 }
 
 export type EmploymentType = "full_time" | "part_time" | "contract" | "fractional";

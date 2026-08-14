@@ -4,6 +4,7 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Briefcase, MapPin } from "lucide-react";
 
+import { ApplyDisclosureDialog } from "@/components/candidate/apply-disclosure-dialog";
 import { ShadowTopNav } from "@/components/shadow/shadow-top-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,19 +30,28 @@ export default function ShadowJobDetailPage() {
   const applyMutation = useApplyToShadowJob(params.jobId);
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(false);
+  const [disclosureOpen, setDisclosureOpen] = React.useState(false);
 
-  const handleApply = async () => {
+  const handleApplyClick = () => {
     setApplyError(null);
     if (!candidate) {
       router.push("/shadow/signup");
       return;
     }
+    setDisclosureOpen(true);
+  };
+
+  const handleConfirmApply = async () => {
     try {
       await applyMutation.mutateAsync();
+      setDisclosureOpen(false);
       setApplied(true);
     } catch (err) {
+      setDisclosureOpen(false);
       if (err instanceof ApiError && err.status === 400) {
-        setApplyError("Build your Phantom Passport before applying.");
+        // Covers both "no Passport yet" and "Passport not approved" — the backend's own detail
+        // message already says which, no need to guess client-side.
+        setApplyError(err.detail);
       } else if (err instanceof ApiError && err.status === 409) {
         setApplyError("You've already applied to this role.");
       } else {
@@ -126,7 +136,7 @@ export default function ShadowJobDetailPage() {
                     <Button
                       variant="brand"
                       size="lg"
-                      onClick={handleApply}
+                      onClick={handleApplyClick}
                       disabled={applyMutation.isPending}
                     >
                       {applyMutation.isPending
@@ -142,6 +152,12 @@ export default function ShadowJobDetailPage() {
           </div>
         )}
       </main>
+      <ApplyDisclosureDialog
+        open={disclosureOpen}
+        onOpenChange={setDisclosureOpen}
+        onConfirm={handleConfirmApply}
+        isSubmitting={applyMutation.isPending}
+      />
     </div>
   );
 }

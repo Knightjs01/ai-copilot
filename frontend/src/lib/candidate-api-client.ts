@@ -87,6 +87,26 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return (await res.json()) as T;
 }
 
+async function requestBlob(
+  path: string,
+  skipAuthRetry = false
+): Promise<{ blob: Blob; filename: string | null }> {
+  const headers: Record<string, string> = {};
+  if (candidateAccessToken) headers.Authorization = `Bearer ${candidateAccessToken}`;
+
+  const res = await fetch(`${API_URL}/api/v1${path}`, { headers, credentials: "include" });
+
+  if (res.status === 401 && !skipAuthRetry) {
+    const newToken = await refreshCandidateAccessToken();
+    if (newToken) return requestBlob(path, true);
+  }
+  if (!res.ok) throw new ApiError(res.status, res.statusText);
+
+  const disposition = res.headers.get("Content-Disposition");
+  const match = disposition ? /filename="([^"]+)"/.exec(disposition) : null;
+  return { blob: await res.blob(), filename: match?.[1] ?? null };
+}
+
 export const candidateApiClient = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
@@ -95,4 +115,5 @@ export const candidateApiClient = {
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   postForm: <T>(path: string, formData: FormData) =>
     request<T>(path, { method: "POST", formData }),
+  getBlob: (path: string) => requestBlob(path),
 };

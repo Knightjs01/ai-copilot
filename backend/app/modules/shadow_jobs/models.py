@@ -87,5 +87,12 @@ class ShadowApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     phantom_passport_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("phantom_passports.id")
     )
+    # Null only for applications submitted before this column existed (pre-launch dev rows) —
+    # every application going forward gets one, enforced in the service layer since the approval
+    # gate it depends on didn't exist yet for those old rows. See phantom_passport/models.py's
+    # PassportVersion for why this is what freezes a recruiter's view to apply-time content.
+    passport_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("passport_versions.id"), nullable=True
+    )
     callsign: Mapped[str] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(20), default=ShadowApplicationStatus.SUBMITTED.value)

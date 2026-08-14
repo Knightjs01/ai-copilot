@@ -1,5 +1,6 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -74,6 +75,11 @@ class PassportRead(BaseModel):
     career_intent: str
     verification_status: str
     completion_percentage: int
+    # Non-null iff the candidate has explicitly approved a snapshot — see PassportVersion. A
+    # Shadow application can't be submitted until this is set. Draft edits after approval don't
+    # clear this — the last-approved version keeps being what new applications use until the
+    # candidate explicitly re-approves.
+    current_version_number: int | None
     personal_info: PersonalInfoRead
     career_entries: list[CareerEntryRead]
 
@@ -91,7 +97,13 @@ class CvParseCareerEntry(BaseModel):
 
 class CvParseResult(BaseModel):
     """A preview only — nothing from this response is persisted until the candidate submits it
-    (possibly edited) via PUT /phantom-passport/me. See phantom_passport/__init__.py."""
+    (possibly edited) via PUT /phantom-passport/me. See phantom_passport/__init__.py.
+
+    ai_suggested_fields names the top-level/career-entry fields that are Phantom AI's own
+    normalization rather than text lifted directly from the CV (e.g. `industries` is an inferred
+    categorization, `company_name_anonymized` is an AI-generated descriptor) — everything else
+    with a value is a direct extraction. A coarse, field-name-level distinction, not per-token
+    provenance: the LLM extraction has no token-level confidence data to draw a finer line."""
 
     headline: str | None
     seniority: str | None
@@ -102,3 +114,43 @@ class CvParseResult(BaseModel):
     career_entries: list[CvParseCareerEntry]
     detected_phone: str | None
     detected_address: str | None
+    ai_suggested_fields: list[str] = Field(
+        default_factory=lambda: ["industries", "company_name_anonymized"]
+    )
+
+
+class CvDocumentRead(BaseModel):
+    original_filename: str
+    content_type: str
+    file_size: int
+    uploaded_at: datetime
+
+
+class PassportVersionRead(BaseModel):
+    id: uuid.UUID
+    version_number: int
+    approved_at: datetime
+    source_cv_filename: str | None
+
+
+class ShadowProfileSnapshot(BaseModel):
+    """The exact shape persisted into PassportVersion.snapshot — see
+    shadow_jobs/schemas.py::ShadowProfile, which this deliberately mirrors field-for-field (minus
+    the per-application fields like application_id/callsign/status that don't belong in a
+    Passport-level snapshot). schema_version lets old snapshots stay renderable if this shape
+    ever changes."""
+
+    schema_version: int = 1
+    headline: str | None
+    seniority: str | None
+    years_experience: int | None
+    summary: str | None
+    skills: list[str]
+    industries: list[str]
+    location: str | None
+    remote_preference: str | None
+    salary_min: int | None
+    salary_max: int | None
+    notice_period: str | None
+    career_intent: str
+    career_entries: list[dict[str, Any]]

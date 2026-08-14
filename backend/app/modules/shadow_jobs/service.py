@@ -8,11 +8,13 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.models import Company
-from app.modules.phantom_passport.exceptions import PassportNotFoundError
+from app.modules.phantom_passport.exceptions import PassportNotApprovedError, PassportNotFoundError
 from app.modules.phantom_passport.repository import (
     PassportCareerEntryRepository,
+    PassportVersionRepository,
     PhantomPassportRepository,
 )
+from app.modules.phantom_passport.schemas import ShadowProfileSnapshot
 from app.modules.shadow_jobs.exceptions import (
     ApplicationAlreadyWithdrawnError,
     CallsignGenerationExhaustedError,
@@ -57,6 +59,7 @@ class ShadowJobService:
         self._applications = ShadowApplicationRepository(session)
         self._passports = PhantomPassportRepository(session)
         self._career_entries = PassportCareerEntryRepository(session)
+        self._versions = PassportVersionRepository(session)
         self._audit = AuditService(session)
 
     # --- Company-side job management --------------------------------------------------------
@@ -152,6 +155,37 @@ class ShadowJobService:
         return [await self._to_shadow_profile(a) for a in applications]
 
     async def _to_shadow_profile(self, application: ShadowApplication) -> ShadowProfile:
+        # An application with a recorded passport_version_id is frozen to exactly what the
+        # candidate had approved at apply time — a later Passport edit/re-approval must not
+        # retroactively change what a recruiter sees here. Only applications submitted before
+        # this column existed (passport_version_id is null, pre-launch dev rows) fall back to a
+        # live read, matching this method's original behavior.
+        if application.passport_version_id is not None:
+            version = await self._versions.get_by_id(application.passport_version_id)
+            if version is not None:
+                snapshot = ShadowProfileSnapshot.model_validate(version.snapshot)
+                return ShadowProfile(
+                    application_id=application.id,
+                    callsign=application.callsign,
+                    status=ShadowApplicationStatus(application.status),
+                    applied_at=application.created_at,
+                    headline=snapshot.headline,
+                    seniority=snapshot.seniority,
+                    years_experience=snapshot.years_experience,
+                    summary=snapshot.summary,
+                    skills=snapshot.skills,
+                    industries=snapshot.industries,
+                    location=snapshot.location,
+                    remote_preference=snapshot.remote_preference,
+                    salary_min=snapshot.salary_min,
+                    salary_max=snapshot.salary_max,
+                    notice_period=snapshot.notice_period,
+                    career_intent=snapshot.career_intent,
+                    career_entries=[
+                        ShadowCareerEntrySummary(**entry) for entry in snapshot.career_entries
+                    ],
+                )
+
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
         # columns by hand — and never touches PassportPersonalInfoRepository at all, so there is
         # no code path here that could even attempt to read a candidate's name, email, or phone.
@@ -250,6 +284,8 @@ class ShadowJobService:
         passport = await self._passports.get_by_candidate_user_id(candidate.id)
         if passport is None:
             raise PassportRequiredError()
+        if passport.current_version_id is None:
+            raise PassportNotApprovedError()
 
         existing = await self._applications.get_by_job_and_candidate(
             shadow_job_id=job.id, candidate_user_id=candidate.id
@@ -263,6 +299,7 @@ class ShadowJobService:
             shadow_job_id=job.id,
             candidate_user_id=candidate.id,
             phantom_passport_id=passport.id,
+            passport_version_id=passport.current_version_id,
             callsign=callsign,
         )
         # actor_user_id is None — the acting principal is a CandidateUser, not a company User,

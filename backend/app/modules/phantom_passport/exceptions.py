@@ -14,3 +14,18 @@ class PassportNotFoundError(PhantomPassportError):
 class CvParsingFailedError(PhantomPassportError):
     status_code = 422
     detail = "Could not parse this CV"
+
+
+class InvalidCvFileError(PhantomPassportError):
+    status_code = 422
+    detail = "Invalid CV file"
+
+
+class OriginalCvNotFoundError(PhantomPassportError):
+    status_code = 404
+    detail = "No CV is currently stored in your Candidate Vault"
+
+
+class PassportNotApprovedError(PhantomPassportError):
+    status_code = 400
+    detail = "Approve your Phantom Passport before applying — nothing is shared until you do"

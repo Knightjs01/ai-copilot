@@ -5,8 +5,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.phantom_passport.models import (
+    CandidateCvDocument,
     PassportCareerEntry,
     PassportPersonalInfo,
+    PassportVersion,
     PhantomPassport,
 )
 
@@ -79,6 +81,13 @@ class PhantomPassportRepository:
         await self._session.flush()
         return passport
 
+    async def set_current_version(
+        self, passport: PhantomPassport, *, version_id: uuid.UUID
+    ) -> PhantomPassport:
+        passport.current_version_id = version_id
+        await self._session.flush()
+        return passport
+
 
 class PassportPersonalInfoRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -146,3 +155,96 @@ class PassportCareerEntryRepository:
             created.append(row)
         await self._session.flush()
         return created
+
+
+class CandidateCvDocumentRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_by_candidate_user_id(
+        self, candidate_user_id: uuid.UUID
+    ) -> CandidateCvDocument | None:
+        result = await self._session.execute(
+            select(CandidateCvDocument).where(
+                CandidateCvDocument.candidate_user_id == candidate_user_id
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def upsert(
+        self,
+        *,
+        candidate_user_id: uuid.UUID,
+        storage_key: str,
+        original_filename: str,
+        content_type: str,
+        file_size: int,
+    ) -> CandidateCvDocument:
+        existing = await self.get_by_candidate_user_id(candidate_user_id)
+        if existing is not None:
+            existing.storage_key = storage_key
+            existing.original_filename = original_filename
+            existing.content_type = content_type
+            existing.file_size = file_size
+            await self._session.flush()
+            return existing
+
+        document = CandidateCvDocument(
+            candidate_user_id=candidate_user_id,
+            storage_key=storage_key,
+            original_filename=original_filename,
+            content_type=content_type,
+            file_size=file_size,
+        )
+        self._session.add(document)
+        await self._session.flush()
+        return document
+
+    async def delete(self, document: CandidateCvDocument) -> None:
+        await self._session.delete(document)
+        await self._session.flush()
+
+
+class PassportVersionRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_by_id(self, version_id: uuid.UUID) -> PassportVersion | None:
+        return await self._session.get(PassportVersion, version_id)
+
+    async def get_latest_version_number(self, passport_id: uuid.UUID) -> int:
+        result = await self._session.execute(
+            select(PassportVersion.version_number)
+            .where(PassportVersion.passport_id == passport_id)
+            .order_by(PassportVersion.version_number.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none() or 0
+
+    async def create(
+        self,
+        *,
+        passport_id: uuid.UUID,
+        version_number: int,
+        snapshot: dict[str, Any],
+        source_cv_document_id: uuid.UUID | None,
+        source_cv_filename: str | None,
+    ) -> PassportVersion:
+        version = PassportVersion(
+            passport_id=passport_id,
+            version_number=version_number,
+            snapshot=snapshot,
+            source_cv_document_id=source_cv_document_id,
+            source_cv_filename=source_cv_filename,
+        )
+        self._session.add(version)
+        await self._session.flush()
+        return version
+
+    async def list_by_passport_id(self, passport_id: uuid.UUID) -> list[PassportVersion]:
+        result = await self._session.execute(
+            select(PassportVersion)
+            .where(PassportVersion.passport_id == passport_id)
+            .order_by(PassportVersion.version_number.desc())
+        )
+        return list(result.scalars().all())
