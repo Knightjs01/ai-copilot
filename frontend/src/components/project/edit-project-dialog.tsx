@@ -90,7 +90,7 @@ export function EditProjectDialog({ project }: { project: Project }) {
               id="hiringManager"
               value={hiringManagerId}
               onChange={(e) => setHiringManagerId(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-border bg-white px-3.5 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="flex h-10 w-full rounded-xl border border-border bg-card px-3.5 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
               <option value="">Unassigned</option>
               {team?.map((member) => (

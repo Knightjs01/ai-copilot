@@ -10,8 +10,9 @@ import {
   CANDIDATE_STATUS_COLUMNS,
   CANDIDATE_STATUS_LABEL,
   NOTICE_PERIOD_LABEL,
+  PRESCREEN_OUTCOME_LABEL,
 } from "@/lib/status-display";
-import type { CandidateSource, CandidateStatus, NoticePeriod } from "@/lib/types";
+import type { CandidateSource, CandidateStatus, NoticePeriod, PrescreenOutcome } from "@/lib/types";
 
 const BRAND_PURPLE = "#6651B0";
 
@@ -25,7 +26,7 @@ function formatCurrency(value: number): string {
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-border bg-white px-4 py-3">
+    <div className="flex flex-col gap-1 rounded-xl border border-border bg-card px-4 py-3">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <span className="text-xl font-semibold tracking-tight text-foreground">{value}</span>
       {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
@@ -90,6 +91,13 @@ export function ProjectAnalyticsCard({ projectId }: { projectId: string }) {
     count,
   }));
 
+  const prescreenOutcomeData = Object.entries(data.prescreen_outcome_breakdown).map(
+    ([outcome, count]) => ({
+      label: PRESCREEN_OUTCOME_LABEL[outcome as PrescreenOutcome] ?? outcome,
+      count,
+    })
+  );
+
   const sourceData = Object.entries(data.source_breakdown).map(([source, count]) => ({
     label: CANDIDATE_SOURCE_LABEL[source as CandidateSource] ?? source,
     count,
@@ -146,6 +154,10 @@ export function ProjectAnalyticsCard({ projectId }: { projectId: string }) {
           <div className="flex flex-col gap-2">
             <h3 className="text-sm font-medium text-foreground">Pipeline stage</h3>
             <BreakdownChart data={statusData} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium text-foreground">Pre-screen outcome</h3>
+            <BreakdownChart data={prescreenOutcomeData} />
           </div>
           <div className="flex flex-col gap-2">
             <h3 className="text-sm font-medium text-foreground">AI fit rating</h3>

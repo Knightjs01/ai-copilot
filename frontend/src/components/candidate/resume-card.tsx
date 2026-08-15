@@ -49,7 +49,7 @@ export function ResumeCard({ candidate }: { candidate: Candidate }) {
         )}
 
         {hasResumeOnFile && !displayUploader && (
-          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl bg-secondary/40 px-4 py-3">
             <div className="flex items-center gap-2 text-sm text-foreground">
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
               Not yet redacted
@@ -75,7 +75,7 @@ export function ResumeCard({ candidate }: { candidate: Candidate }) {
               <FileText className="h-3.5 w-3.5" />
               Anonymised CV
             </h4>
-            <div className="max-h-96 overflow-y-auto rounded-xl border border-border bg-white px-4 py-3">
+            <div className="max-h-96 overflow-y-auto rounded-xl border border-border bg-card px-4 py-3">
               <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
                 {sanitizedProfile.redacted_text}
               </pre>

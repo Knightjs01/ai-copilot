@@ -2,6 +2,7 @@
 
 import { Sparkles, Target } from "lucide-react";
 
+import { AiProvenance } from "@/components/ai-provenance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,7 +83,9 @@ export function IntelligencePackCard({
               <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Experience
               </h4>
-              <p className="text-sm text-foreground">{pack.experience_summary}</p>
+              <p className="rounded-xl border-l-2 border-border bg-secondary/40 p-3 text-sm text-foreground">
+                {pack.experience_summary}
+              </p>
             </div>
             {pack.education.length > 0 && (
               <div>
@@ -102,8 +105,11 @@ export function IntelligencePackCard({
               <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Summary
               </h4>
-              <p className="text-sm text-foreground">{pack.narrative_summary}</p>
+              <p className="rounded-xl border-l-2 border-border bg-secondary/40 p-3 text-sm text-foreground">
+                {pack.narrative_summary}
+              </p>
             </div>
+            <AiProvenance modelUsed={pack.model_used} generatedAt={pack.generated_at} />
           </div>
         )}
         {generate.isError && (

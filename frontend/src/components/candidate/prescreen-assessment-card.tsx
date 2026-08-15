@@ -1,7 +1,8 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
 
+import { AiProvenance } from "@/components/ai-provenance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,21 +17,68 @@ import {
 import { FIT_RATING_VARIANT } from "@/lib/status-display";
 import type { Candidate } from "@/lib/types";
 
-function ListSection({ title, items }: { title: string; items: string[] }) {
+// Strengths and gaps sat side-by-side with identical neutral styling before this — visually
+// indistinguishable except for the heading, which undercut the point of an at-a-glance fit
+// assessment. Amber, not danger-red, for gaps: these are things to probe, not failures.
+function ToneList({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: string[];
+  tone: "positive" | "caution";
+}) {
   if (items.length === 0) return null;
+  const Icon = tone === "positive" ? CheckCircle2 : AlertTriangle;
   return (
     <div>
       <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </h4>
-      <ul className="flex flex-col gap-1">
+      <ul
+        className={
+          tone === "positive"
+            ? "flex flex-col gap-1.5 rounded-xl border border-success/20 bg-success/5 p-3"
+            : "flex flex-col gap-1.5 rounded-xl border border-warning/20 bg-warning/5 p-3"
+        }
+      >
         {items.map((item, i) => (
-          <li key={i} className="flex gap-2 text-sm text-foreground">
-            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400" />
+          <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+            <Icon
+              className={
+                tone === "positive"
+                  ? "mt-0.5 h-3.5 w-3.5 shrink-0 text-success"
+                  : "mt-0.5 h-3.5 w-3.5 shrink-0 text-warning"
+              }
+            />
             {item}
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// Signals "ask these in order/individually" more clearly than an undifferentiated bullet list.
+function QuestionList({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Suggested questions
+      </h4>
+      <div className="flex flex-col gap-2">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-3"
+          >
+            <span className="shrink-0 text-xs font-semibold text-brand">Q{i + 1}</span>
+            <p className="text-sm text-foreground">{item}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -82,11 +130,25 @@ export function PrescreenAssessmentCard({ candidate }: { candidate: Candidate })
             </div>
             <p className="text-sm text-foreground">{assessment.fit_summary}</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ListSection title="Strengths" items={assessment.strengths} />
-              <ListSection title="Gaps" items={assessment.gaps} />
+              <ToneList title="Strengths" items={assessment.strengths} tone="positive" />
+              <ToneList title="Gaps" items={assessment.gaps} tone="caution" />
             </div>
-            <ListSection title="Suggested questions" items={assessment.suggested_questions} />
-            <ListSection title="Areas to probe" items={assessment.areas_to_probe} />
+            <QuestionList items={assessment.suggested_questions} />
+            {assessment.areas_to_probe.length > 0 && (
+              <div>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Areas to probe
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {assessment.areas_to_probe.map((area) => (
+                    <Badge key={area} variant="outline">
+                      {area}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <AiProvenance modelUsed={assessment.model_used} generatedAt={assessment.generated_at} />
           </div>
         )}
         {generate.isError && (

@@ -53,6 +53,46 @@
   }
 }
 
+/* ATS-only dark theme. Applied via a `dark` class on (app)/layout.tsx's own wrapper div, never
+   on <html> — this is a deliberate scoping choice, not an oversight. Marketing, Passport
+   (gold/navy) and Shadow (obsidian/blue) pages hardcode light literals or their own page-scoped
+   CSS Module palettes and would render broken under a global toggle. Brand and status colors are
+   lightened relative to their light-mode values (not a straight invert) to hold WCAG AA against
+   the darker background — see theme-context.tsx's own comment for the leak-avoidance rationale. */
+@layer base {
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
+    --card: 222 40% 10%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 40% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 210 40% 96%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 30% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 222 30% 16%;
+    --muted-foreground: 215 16% 65%;
+    --accent: 222 30% 16%;
+    --accent-foreground: 210 40% 96%;
+    --border: 222 24% 22%;
+    --input: 222 24% 22%;
+    --ring: 253 55% 68%;
+
+    --brand: 253 55% 68%;
+    --brand-foreground: 222 47% 11%;
+
+    --success: 152 45% 52%;
+    --success-foreground: 222 47% 9%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 222 47% 9%;
+    --danger: 0 70% 63%;
+    --danger-foreground: 222 47% 9%;
+    --info: 217 85% 68%;
+    --info-foreground: 222 47% 9%;
+  }
+}
+
 /* Gentle bob for the marketing hero's Phantom icon — an idle motion suggesting presence, not a
    loading/attention cue, so it's deliberately slow and low-amplitude. */
 @keyframes float {
