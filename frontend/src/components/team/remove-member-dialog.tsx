@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRemoveUser } from "@/lib/queries/team";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
+import { useToast } from "@/lib/toast-context";
 
 export function RemoveMemberDialog({
   userId,
@@ -26,10 +27,12 @@ export function RemoveMemberDialog({
   const [open, setOpen] = React.useState(false);
   const removeUser = useRemoveUser(userId);
   const container = useThemeScopeContainer();
+  const toast = useToast();
 
   const handleConfirm = async () => {
     await removeUser.mutateAsync();
     setOpen(false);
+    toast({ title: `${fullName} removed`, variant: "success" });
   };
 
   return (

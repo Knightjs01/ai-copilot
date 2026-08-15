@@ -4,17 +4,21 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { CommandPaletteProvider } from "@/components/command-palette/command-palette-provider";
+import { Toaster } from "@/components/toaster";
 import { TopNav } from "@/components/top-nav";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
 import { ThemeScopeProvider } from "@/lib/theme-scope-context";
+import { ToastQueueProvider } from "@/lib/toast-context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
-      <AppLayoutInner>{children}</AppLayoutInner>
+      <ToastQueueProvider>
+        <AppLayoutInner>{children}</AppLayoutInner>
+      </ToastQueueProvider>
     </ThemeProvider>
   );
 }
@@ -53,6 +57,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
         </ThemeScopeProvider>
       </CommandPaletteProvider>
+      <Toaster />
     </div>
   );
 }

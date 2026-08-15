@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { apiClient } from "@/lib/api-client";
 import { useCreateCandidate } from "@/lib/queries/candidates";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
+import { useToast } from "@/lib/toast-context";
 import type { Candidate } from "@/lib/types";
 
 const schema = z.object({
@@ -40,6 +41,7 @@ export function AddCandidateDialog({ projectId }: { projectId: string }) {
   const createCandidate = useCreateCandidate(projectId);
   const queryClient = useQueryClient();
   const themeScopeContainer = useThemeScopeContainer();
+  const toast = useToast();
 
   const {
     register,

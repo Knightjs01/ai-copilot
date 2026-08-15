@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { useUpdateCandidate } from "@/lib/queries/candidates";
 import { CANDIDATE_SOURCE_LABEL, NOTICE_PERIOD_LABEL } from "@/lib/status-display";
+import { useToast } from "@/lib/toast-context";
 import type { Candidate, CandidateSource, NoticePeriod } from "@/lib/types";
 
 const SOURCE_OPTIONS = (Object.keys(CANDIDATE_SOURCE_LABEL) as CandidateSource[]).map((value) => ({
@@ -22,6 +23,7 @@ const NOTICE_PERIOD_OPTIONS = (Object.keys(NOTICE_PERIOD_LABEL) as NoticePeriod[
 
 export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
   const updateCandidate = useUpdateCandidate(candidate.id, candidate.project_id);
+  const toast = useToast();
 
   const [expectedSalary, setExpectedSalary] = React.useState(
     candidate.expected_salary != null ? String(candidate.expected_salary) : ""
@@ -49,7 +51,12 @@ export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
         source: source ?? undefined,
         agency_name: source === "agency" ? agencyName || undefined : undefined,
       },
-      { onSuccess: () => setIsDirty(false) }
+      {
+        onSuccess: () => {
+          setIsDirty(false);
+          toast({ title: "Candidate info saved", variant: "success" });
+        },
+      }
     );
   };
 
@@ -112,6 +119,10 @@ export function CandidateInfoCard({ candidate }: { candidate: Candidate }) {
               }}
             />
           </Field>
+        )}
+
+        {updateCandidate.isError && (
+          <p className="text-sm font-medium text-danger">Couldn&apos;t save. Try again.</p>
         )}
 
         <div className="flex justify-end">

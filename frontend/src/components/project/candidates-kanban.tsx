@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { KanbanCard, KanbanColumn } from "@/components/ui/kanban";
 import { apiClient } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/lib/toast-context";
 import type { Candidate, CandidateStatus } from "@/lib/types";
 import {
   CANDIDATE_SOURCE_LABEL,
@@ -27,6 +28,7 @@ export function CandidatesKanban({
   candidates: Candidate[];
 }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -44,6 +46,12 @@ export function CandidatesKanban({
     );
     try {
       await apiClient.patch<Candidate>(`/candidates/${candidateId}`, { status: newStatus });
+    } catch {
+      toast({
+        title: "Couldn't move candidate",
+        description: "The status change didn't save. Try again.",
+        variant: "danger",
+      });
     } finally {
       void queryClient.invalidateQueries({ queryKey: ["candidates", { projectId }] });
     }

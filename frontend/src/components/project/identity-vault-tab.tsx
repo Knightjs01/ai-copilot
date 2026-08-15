@@ -1,7 +1,16 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
 
 import { RevealIdentityDialog } from "@/components/candidate/reveal-identity-dialog";
 import { RelativeTime } from "@/components/relative-time";
@@ -9,13 +18,74 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTile } from "@/components/ui/stat-tile";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useProjectVault, useVaultDashboard } from "@/lib/queries/identity-vault";
-import { CANDIDATE_STATUS_LABEL } from "@/lib/status-display";
+import { CANDIDATE_STATUS_LABEL, CANDIDATE_STATUS_VARIANT } from "@/lib/status-display";
+import type { VaultListItem } from "@/lib/types";
+
+const columnHelper = createColumnHelper<VaultListItem>();
 
 export function IdentityVaultTab({ projectId }: { projectId: string }) {
   const { data: stats, isLoading: statsLoading } = useVaultDashboard(projectId);
   const { data: vaultItems, isLoading: itemsLoading } = useProjectVault(projectId);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+
+  const columns = React.useMemo(
+    () => [
+      columnHelper.accessor("callsign", {
+        header: "Callsign",
+        cell: (info) => (
+          <Link
+            href={`/projects/${projectId}/candidates/${info.row.original.candidate_id}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            {info.getValue()}
+          </Link>
+        ),
+      }),
+      columnHelper.accessor("candidate_ref", {
+        header: "Candidate ID",
+        cell: (info) => <span className="text-muted-foreground">{info.getValue()}</span>,
+      }),
+      columnHelper.accessor("status", {
+        header: "Status",
+        cell: (info) => (
+          <Badge variant={CANDIDATE_STATUS_VARIANT[info.getValue()]}>
+            {CANDIDATE_STATUS_LABEL[info.getValue()]}
+          </Badge>
+        ),
+      }),
+      columnHelper.accessor("vault_populated", {
+        header: "Vault",
+        cell: (info) =>
+          info.getValue() ? (
+            <Badge variant="success">Filled</Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">Not yet filled</span>
+          ),
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: "",
+        cell: (info) => (
+          <div className="flex justify-end">
+            <RevealIdentityDialog candidateId={info.row.original.candidate_id} />
+          </div>
+        ),
+      }),
+    ],
+    [projectId]
+  );
+
+  const table = useReactTable({
+    data: vaultItems ?? [],
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   if (statsLoading || itemsLoading || !stats || !vaultItems) {
     return (
@@ -53,33 +123,39 @@ export function IdentityVaultTab({ projectId }: { projectId: string }) {
         <CardHeader>
           <CardTitle>Candidate identity vault</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={vaultItems.length === 0 ? undefined : "p-0"}>
           {vaultItems.length === 0 ? (
             <p className="text-sm text-muted-foreground">No candidates in this project yet.</p>
           ) : (
-            <div className="flex flex-col divide-y divide-border">
-              {vaultItems.map((item) => (
-                <div
-                  key={item.candidate_id}
-                  className="flex items-center justify-between gap-3 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href={`/projects/${projectId}/candidates/${item.candidate_id}`}
-                      className="text-sm font-medium text-foreground hover:underline"
-                    >
-                      {item.callsign}
-                    </Link>
-                    <span className="text-xs text-muted-foreground">{item.candidate_ref}</span>
-                    <Badge variant="neutral">{CANDIDATE_STATUS_LABEL[item.status]}</Badge>
-                    {!item.vault_populated && (
-                      <span className="text-xs text-muted-foreground">Vault not yet filled</span>
-                    )}
-                  </div>
-                  <RevealIdentityDialog candidateId={item.candidate_id} />
-                </div>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        sortable={header.column.getCanSort()}
+                        sortDirection={header.column.getIsSorted()}
+                        onSort={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

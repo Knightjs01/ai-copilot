@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { useInviteUser } from "@/lib/queries/team";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
+import { useToast } from "@/lib/toast-context";
 import type { RoleName } from "@/lib/types";
 
 const ROLE_OPTIONS: { value: RoleName; label: string }[] = [
@@ -43,6 +44,7 @@ export function InviteTeammateDialog() {
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const inviteUser = useInviteUser();
   const container = useThemeScopeContainer();
+  const toast = useToast();
 
   const {
     register,
@@ -66,6 +68,11 @@ export function InviteTeammateDialog() {
     setRole("Member");
     setPendingValues(null);
     setOpen(false);
+    toast({
+      title: "Invite sent",
+      description: `${pendingValues.email} will get an email shortly.`,
+      variant: "success",
+    });
   };
 
   return (

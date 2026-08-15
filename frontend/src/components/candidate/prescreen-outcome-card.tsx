@@ -10,6 +10,7 @@ import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { Textarea } from "@/components/ui/textarea";
 import { useUpdateCandidate } from "@/lib/queries/candidates";
 import { PRESCREEN_OUTCOME_LABEL } from "@/lib/status-display";
+import { useToast } from "@/lib/toast-context";
 import type { Candidate, PrescreenOutcome } from "@/lib/types";
 
 const OUTCOME_OPTIONS = (Object.keys(PRESCREEN_OUTCOME_LABEL) as PrescreenOutcome[]).map(
@@ -27,6 +28,7 @@ function toDatetimeLocal(iso: string | null): string {
 
 export function PrescreenOutcomeCard({ candidate }: { candidate: Candidate }) {
   const updateCandidate = useUpdateCandidate(candidate.id, candidate.project_id);
+  const toast = useToast();
 
   const [interviewAt, setInterviewAt] = React.useState(
     toDatetimeLocal(candidate.interview_scheduled_at)
@@ -51,7 +53,12 @@ export function PrescreenOutcomeCard({ candidate }: { candidate: Candidate }) {
         prescreen_outcome: outcome ?? undefined,
         prescreen_notes: notes || undefined,
       },
-      { onSuccess: () => setIsDirty(false) }
+      {
+        onSuccess: () => {
+          setIsDirty(false);
+          toast({ title: "Pre-screen outcome saved", variant: "success" });
+        },
+      }
     );
   };
 
@@ -94,6 +101,10 @@ export function PrescreenOutcomeCard({ candidate }: { candidate: Candidate }) {
             }}
           />
         </Field>
+        {updateCandidate.isError && (
+          <p className="text-sm font-medium text-danger">Couldn&apos;t save. Try again.</p>
+        )}
+
         <div className="flex justify-end">
           <Button
             size="sm"
