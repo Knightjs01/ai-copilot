@@ -28,8 +28,8 @@ export function AtsComparisonSection() {
           </p>
         </div>
 
-        <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-white shadow-sm shadow-slate-900/[0.03]">
-          <div className="grid grid-cols-3 border-b border-border bg-slate-50 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-slate-900/[0.03]">
+          <div className="grid grid-cols-3 border-b border-border bg-secondary/20 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <div className="px-4 py-3">Capability</div>
             <div className="px-4 py-3 text-center">Traditional ATS</div>
             <div className="px-4 py-3 text-center text-brand">Phantom Hire</div>

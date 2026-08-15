@@ -7,7 +7,7 @@ export function Spectre482Mockup() {
   return (
     <BrowserFrame url="app.phantomhire.com/talent-memory" badge="Live now">
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-border bg-white p-3.5">
+        <div className="rounded-xl border border-border bg-card p-3.5">
           <p className="text-xs text-muted-foreground">VP Engineering — Fintech</p>
           <p className="mt-1 text-sm font-semibold text-foreground">
             We already know 14 people.
@@ -15,7 +15,7 @@ export function Spectre482Mockup() {
           <p className="text-xs text-muted-foreground">8 from Talent Memory · 6 from Shadow</p>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-white p-3.5">
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3.5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
               S-482

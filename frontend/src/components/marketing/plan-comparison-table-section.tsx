@@ -63,10 +63,10 @@ export function PlanComparisonTableSection() {
         </div>
 
         <div className="mt-10 overflow-x-auto rounded-2xl border border-border shadow-sm shadow-slate-900/[0.03]">
-          <table className="w-full min-w-[640px] border-collapse bg-white text-sm">
+          <table className="w-full min-w-[640px] border-collapse bg-card text-sm">
             <thead>
-              <tr className="border-b border-border bg-slate-50">
-                <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <tr className="border-b border-border bg-secondary/20">
+                <th className="sticky left-0 z-10 bg-secondary/20 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Feature
                 </th>
                 {COMPANY_PLANS.map((plan) => (
@@ -93,7 +93,7 @@ export function PlanComparisonTableSection() {
                   {FEATURE_COMPARISON_ROWS.filter((row) => row.category === category).map(
                     (row) => (
                       <tr key={row.label} className="border-b border-border last:border-b-0">
-                        <td className="sticky left-0 z-10 bg-white px-4 py-3 text-xs text-foreground">
+                        <td className="sticky left-0 z-10 bg-card px-4 py-3 text-xs text-foreground">
                           {row.label}
                         </td>
                         {COMPANY_PLANS.map((plan) => (

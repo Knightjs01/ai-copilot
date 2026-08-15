@@ -4,7 +4,7 @@ import * as React from "react";
 import { Download, Plus, Sparkles, Trash2, UploadCloud } from "lucide-react";
 
 import { SecuringCvOverlay } from "@/components/candidate/securing-cv-overlay";
-import styles from "./passport-theme.module.css";
+import styles from "@/styles/phantom-dark-theme.module.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -250,10 +250,11 @@ export default function PassportPage() {
 
   return (
     // Light ShadowTopNav + light bg-slate-50 gutter (layout.tsx) stay untouched — this panel is
-    // the "floating document," not a full-bleed re-skin of the whole route. See
-    // passport-theme.module.css for the scoped token overrides this class applies.
+    // the "floating document," not a full-bleed re-skin of the whole route. Uses the shared
+    // Phantom Dark palette (styles/phantom-dark-theme.module.css) — the Passport page's own
+    // gold/navy theme was retired in favor of one unified brand system across the product.
     <div
-      className={`${styles.passportTheme} flex flex-col gap-6 rounded-2xl p-6 shadow-xl shadow-slate-900/20 sm:p-10`}
+      className={`${styles.phantomDark} flex flex-col gap-6 rounded-2xl p-6 shadow-xl shadow-slate-900/20 sm:p-10`}
     >
       <SecuringCvOverlay active={securing} />
       <div className="flex items-center justify-between">

@@ -26,7 +26,7 @@ export function JobBoardMockup() {
   return (
     <BrowserFrame url="jobs.phantomhire.com" badge="Live now">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2.5">
+        <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5">
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">Search roles by skill, not by title…</span>
         </div>
@@ -35,7 +35,7 @@ export function JobBoardMockup() {
           {FILTERS.map((filter) => (
             <span
               key={filter}
-              className="rounded-full border border-border bg-white px-3 py-1 text-[11px] text-foreground"
+              className="rounded-full border border-border bg-card px-3 py-1 text-[11px] text-foreground"
             >
               {filter}
             </span>
@@ -46,7 +46,7 @@ export function JobBoardMockup() {
           {LISTINGS.map((job) => (
             <div
               key={job.title}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white p-3.5"
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3.5"
             >
               <div>
                 <p className="text-sm font-medium text-foreground">{job.title}</p>

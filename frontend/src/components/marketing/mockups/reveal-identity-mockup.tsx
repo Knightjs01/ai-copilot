@@ -12,7 +12,7 @@ export function RevealIdentityMockup() {
           <p className="text-sm font-semibold text-foreground">Reveal Identity: Pulse-78</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-white p-3.5">
+        <div className="rounded-xl border border-border bg-card p-3.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Reason
           </p>
@@ -30,7 +30,7 @@ export function RevealIdentityMockup() {
           </Button>
         </div>
 
-        <div className="rounded-xl border border-border bg-white p-3.5">
+        <div className="rounded-xl border border-border bg-card p-3.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Decrypted snapshot
           </p>

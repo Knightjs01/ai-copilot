@@ -52,7 +52,7 @@ export function ZeroRetentionSection() {
           {PILLARS.map((pillar) => (
             <div
               key={pillar.title}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
+              className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
                 <pillar.icon className="h-5 w-5" />

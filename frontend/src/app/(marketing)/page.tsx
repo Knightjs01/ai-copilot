@@ -18,9 +18,9 @@ export default function HomePage() {
 
   if (isLoading || user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center">
         <Spinner className="h-6 w-6 text-muted-foreground" />
-      </main>
+      </div>
     );
   }
 

@@ -30,7 +30,7 @@ export function DiscreetIndustriesSection() {
           {USE_CASES.map((useCase) => (
             <span
               key={useCase}
-              className="rounded-full border border-border bg-white px-4 py-1.5 text-sm text-foreground"
+              className="rounded-full border border-border bg-card px-4 py-1.5 text-sm text-foreground"
             >
               {useCase}
             </span>

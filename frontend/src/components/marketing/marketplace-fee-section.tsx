@@ -16,7 +16,7 @@ export function MarketplaceFeeSection() {
           the full ATS.
         </p>
 
-        <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-4 rounded-2xl border border-border bg-white p-8 shadow-sm shadow-slate-900/[0.03]">
+        <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 shadow-sm shadow-slate-900/[0.03]">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
             Phantom Marketplace
           </p>

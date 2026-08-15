@@ -7,7 +7,7 @@ export function PricingFinalCtaSection() {
   return (
     <section className="border-t border-border">
       <div className="mx-auto max-w-3xl px-6 py-16 text-center lg:py-20">
-        <div className="flex flex-col items-center gap-5 rounded-3xl border border-border bg-white px-8 py-14 shadow-sm shadow-slate-900/[0.03]">
+        <div className="flex flex-col items-center gap-5 rounded-3xl border border-border bg-card px-8 py-14 shadow-sm shadow-slate-900/[0.03]">
           <Sparkles className="h-8 w-8 text-brand" />
           <h2 className="max-w-xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Ready to hire differently?

@@ -11,7 +11,7 @@ export function CandidatePortalMockup() {
   return (
     <BrowserFrame url="app.phantomhire.com/passport" badge="Live now">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-white p-3.5">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
             P-78
           </div>
@@ -24,7 +24,7 @@ export function CandidatePortalMockup() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-white p-3.5">
+        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3.5">
           <Flame className="h-4 w-4 shrink-0 text-brand" />
           <p className="text-xs leading-relaxed text-muted-foreground">
             <span className="font-medium text-foreground">Zero-Retention. </span>
@@ -39,7 +39,7 @@ export function CandidatePortalMockup() {
           {MATCHES.map((role) => (
             <div
               key={role.title}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white p-3.5"
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3.5"
             >
               <p className="text-sm font-medium text-foreground">{role.title}</p>
               <span className="shrink-0 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">

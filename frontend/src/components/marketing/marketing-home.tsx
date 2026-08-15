@@ -1,39 +1,30 @@
 import { AtsShowcaseSection } from "@/components/marketing/ats-showcase-section";
-import { DiscreetIndustriesSection } from "@/components/marketing/discreet-industries-section";
-import { FeatureGridSection } from "@/components/marketing/feature-grid-section";
-import { ForCandidatesSection } from "@/components/marketing/for-candidates-section";
 import { HeroSection } from "@/components/marketing/hero-section";
-import { HowItWorksSection } from "@/components/marketing/how-it-works-section";
+import { HomeFinalCtaSection } from "@/components/marketing/home-final-cta-section";
 import { JobBoardShowcaseSection } from "@/components/marketing/job-board-showcase-section";
-import { MarketingFooter } from "@/components/marketing/marketing-footer";
-import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { PassportShowcaseSection } from "@/components/marketing/passport-showcase-section";
-import { PhantomStorySection } from "@/components/marketing/phantom-story-section";
-import { SecurityCtaSection } from "@/components/marketing/security-cta-section";
-import { ThreeInOneSection } from "@/components/marketing/three-in-one-section";
-import { TriangleSection } from "@/components/marketing/triangle-section";
-import { ZeroRetentionSection } from "@/components/marketing/zero-retention-section";
+import { PhantomAiBeatSection } from "@/components/marketing/phantom-ai-beat-section";
+import { SecurityBeatSection } from "@/components/marketing/security-beat-section";
+import { TalentMemoryBeatSection } from "@/components/marketing/talent-memory-beat-section";
 
+// Nav/footer/theme now come from (marketing)/layout.tsx — this renders section content only.
+//
+// An 8-beat narrative (Opening -> Shadow -> Passport -> ATS -> AI -> Talent Memory -> Security
+// -> Final CTA), each with its own visual treatment, rather than a flat list of generic sections.
+// Real product demonstrations (Shadow's job board, Passport's Candidate Vault, the ATS pipeline,
+// a real prescreen-assessment output) are used where the feature actually exists; Talent Memory
+// is explicitly framed as a preview, not live product.
 export function MarketingHome() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <MarketingNav />
-      <main className="flex-1">
-        <HeroSection />
-        <PassportShowcaseSection />
-        <ThreeInOneSection />
-        <TriangleSection />
-        <AtsShowcaseSection />
-        <JobBoardShowcaseSection />
-        <ForCandidatesSection />
-        <FeatureGridSection />
-        <DiscreetIndustriesSection />
-        <PhantomStorySection />
-        <ZeroRetentionSection />
-        <HowItWorksSection />
-        <SecurityCtaSection />
-      </main>
-      <MarketingFooter />
-    </div>
+    <>
+      <HeroSection />
+      <JobBoardShowcaseSection />
+      <PassportShowcaseSection />
+      <AtsShowcaseSection />
+      <PhantomAiBeatSection />
+      <TalentMemoryBeatSection />
+      <SecurityBeatSection />
+      <HomeFinalCtaSection />
+    </>
   );
 }

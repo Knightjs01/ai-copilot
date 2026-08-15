@@ -44,6 +44,10 @@ const config: Config = {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        electric: {
+          DEFAULT: "hsl(var(--electric))",
+          foreground: "hsl(var(--electric-foreground))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

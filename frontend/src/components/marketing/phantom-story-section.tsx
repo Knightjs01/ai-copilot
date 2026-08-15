@@ -21,7 +21,7 @@ const STORY_BEATS = [
 
 export function PhantomStorySection() {
   return (
-    <section id="phantom" className="border-t border-border bg-slate-50">
+    <section id="phantom" className="border-t border-border bg-secondary/20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <Image

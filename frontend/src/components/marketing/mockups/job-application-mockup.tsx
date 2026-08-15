@@ -12,7 +12,7 @@ export function JobApplicationMockup() {
           <p className="text-xs text-muted-foreground">Confidential · Series C Fintech · Remote</p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-white p-3.5">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
             E-14
           </div>
@@ -25,7 +25,7 @@ export function JobApplicationMockup() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border bg-white p-3.5">
+        <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border bg-card p-3.5">
           <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
           <p className="text-xs text-muted-foreground">resume.pdf, auto-redacted before it&apos;s shared</p>
         </div>

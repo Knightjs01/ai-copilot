@@ -52,10 +52,10 @@ const CANDIDATE_BENEFITS = [
 
 export function SecurityCtaSection() {
   return (
-    <section id="security" className="border-t border-border bg-slate-50">
+    <section id="security" className="border-t border-border bg-secondary/20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5">
             <Award className="h-3.5 w-3.5 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">
               Built by security professionals and TA specialists, not theorists
@@ -76,7 +76,7 @@ export function SecurityCtaSection() {
           {SECURITY_POINTS.map((point) => (
             <div
               key={point.title}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
+              className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
                 <point.icon className="h-5 w-5" />
@@ -101,7 +101,7 @@ export function SecurityCtaSection() {
           </div>
 
           <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-7 shadow-sm shadow-slate-900/[0.03]">
+            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-7 shadow-sm shadow-slate-900/[0.03]">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
                   <Briefcase className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function SecurityCtaSection() {
               </ul>
             </div>
 
-            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-7 shadow-sm shadow-slate-900/[0.03]">
+            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-7 shadow-sm shadow-slate-900/[0.03]">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
                   <EyeOff className="h-4 w-4" />
@@ -141,7 +141,7 @@ export function SecurityCtaSection() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col items-center gap-5 rounded-3xl border border-border bg-white px-8 py-14 text-center shadow-sm shadow-slate-900/[0.03]">
+        <div className="mt-16 flex flex-col items-center gap-5 rounded-3xl border border-border bg-card px-8 py-14 text-center shadow-sm shadow-slate-900/[0.03]">
           <ShieldCheck className="h-8 w-8 text-brand" />
           <h2 className="max-w-xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Ready to hire without the paper trail?

@@ -35,7 +35,7 @@ const TRUST_POINTS = [
 
 export function PricingTrustSection() {
   return (
-    <section className="border-t border-border bg-slate-50">
+    <section className="border-t border-border bg-secondary/20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -47,7 +47,7 @@ export function PricingTrustSection() {
           {TRUST_POINTS.map((point) => (
             <div
               key={point.title}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
+              className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
                 <point.icon className="h-5 w-5" />

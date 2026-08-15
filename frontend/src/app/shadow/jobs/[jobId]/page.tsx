@@ -65,8 +65,9 @@ export default function ShadowJobDetailPage() {
   };
 
   return (
-    // ShadowTopNav + this outer bg-slate-50 gutter stay light — see shadow-theme.module.css's
-    // comment. Only <main> (the actual job detail content) goes obsidian/blue.
+    // ShadowTopNav + this outer bg-slate-50 gutter stay light. Only <main> (the actual job
+    // detail content) goes obsidian/blue — Shadow keeps its own distinct dark theme, separate
+    // from Passport's, per the user's explicit call to not merge the two.
     <div className="min-h-screen bg-slate-50">
       <ShadowTopNav />
       <main ref={mainRef} className={`${styles.shadowTheme} mx-auto max-w-3xl rounded-2xl px-6 py-10`}>

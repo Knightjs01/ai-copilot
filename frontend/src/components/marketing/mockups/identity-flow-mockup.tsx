@@ -9,7 +9,7 @@ const STEPS = [
 
 export function IdentityFlowMockup() {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]">
+    <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]">
       {STEPS.map((step, i) => (
         <div key={step.title} className="flex w-full flex-col items-center gap-1">
           <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-3">

@@ -4,10 +4,10 @@ import { AI_CREDIT_PACKS, COMPANY_PLANS } from "@/lib/pricing-config";
 
 export function AiCreditsSection() {
   return (
-    <section className="border-t border-border bg-slate-50">
+    <section className="border-t border-border bg-secondary/20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5">
             <Sparkles className="h-3.5 w-3.5 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">
               AI that scales with your hiring
@@ -24,7 +24,7 @@ export function AiCreditsSection() {
           {COMPANY_PLANS.map((plan) => (
             <div
               key={plan.id}
-              className="flex flex-col gap-2 rounded-2xl border border-border bg-white p-5 shadow-sm shadow-slate-900/[0.03]"
+              className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-5 shadow-sm shadow-slate-900/[0.03]"
             >
               <p className="text-sm font-semibold text-foreground">{plan.name}</p>
               <p className="text-xs leading-relaxed text-muted-foreground">
@@ -40,7 +40,7 @@ export function AiCreditsSection() {
             {AI_CREDIT_PACKS.map((pack) => (
               <div
                 key={pack.id}
-                className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-white px-8 py-6 text-center shadow-sm shadow-slate-900/[0.03]"
+                className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-card px-8 py-6 text-center shadow-sm shadow-slate-900/[0.03]"
               >
                 <span className="text-2xl font-semibold tracking-tight text-foreground">
                   £{pack.price}

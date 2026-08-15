@@ -5,10 +5,10 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const PROMISE_ITEMS = [
-  "Anonymous by default",
-  "AI-matched",
-  "Verified when it matters",
-  "Zero-retention when the project is done",
+  "Discover people who aren't publicly looking",
+  "Assess talent with AI",
+  "Protect candidate identity",
+  "Keep control of the data you create",
 ];
 
 const SPECIALIST_SECTORS = [
@@ -31,23 +31,22 @@ export function HeroSection() {
             </span>
           </div>
 
-          <h1 className="text-3xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Zero-Retention
+          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+            Hiring, without
             <br />
-            Anonymous Hiring
+            the exposure.
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Phantom Hire is the private talent marketplace where exceptional people can explore
-            their next opportunity without revealing their identity, and companies can
-            discover them with total anonymity.
+            Discover exceptional people who aren&apos;t publicly looking. Assess talent with AI.
+            Protect candidate identity. And keep control of the data you create.
           </p>
 
           <ul className="flex flex-wrap gap-2">
             {PROMISE_ITEMS.map((item) => (
               <li
                 key={item}
-                className="rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-medium text-foreground"
+                className="rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-foreground"
               >
                 {item}
               </li>
@@ -56,10 +55,10 @@ export function HeroSection() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild variant="brand" size="lg">
-              <Link href="/signup">Start hiring with Phantom</Link>
+              <Link href="/signup">Start hiring</Link>
             </Button>
             <Button asChild variant="secondary" size="lg">
-              <a href="#phantom">Meet Phantom</a>
+              <a href="#shadow-beat">See how it works</a>
             </Button>
           </div>
 
@@ -88,7 +87,8 @@ export function HeroSection() {
         </div>
 
         <div className="relative flex items-center justify-center">
-          <div className="absolute h-72 w-72 rounded-full bg-brand/10 blur-3xl" aria-hidden />
+          <div className="absolute h-80 w-80 rounded-full bg-brand/20 blur-3xl" aria-hidden />
+          <div className="absolute h-56 w-56 rounded-full bg-electric/10 blur-3xl" aria-hidden />
           <Image
             src="/phantom-ghost-hero.png"
             alt="Phantom, the invisible TA partner"

@@ -47,7 +47,7 @@ export function PricingHeroSection() {
 
       <div className="relative mx-auto max-w-4xl px-6 pb-16 lg:pb-20">
         <div className="absolute inset-x-0 top-1/2 h-40 -translate-y-1/2 rounded-full bg-brand/10 blur-3xl" aria-hidden />
-        <div className="relative flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03] sm:gap-4 sm:p-8">
+        <div className="relative flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03] sm:gap-4 sm:p-8">
           {FLOW_STEPS.map((step, i) => (
             <div key={step.label} className="flex items-center gap-3 sm:gap-4">
               <div className="flex flex-col items-center gap-2">

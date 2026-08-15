@@ -61,7 +61,7 @@ export function ThreeInOneSection() {
           {PILLARS.map((pillar) => (
             <div
               key={pillar.title}
-              className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
+              className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
             >
               <Image
                 src={pillar.image.src}

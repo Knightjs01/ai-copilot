@@ -7,9 +7,9 @@ const RETAINED = ["Skills", "Experience", "Match profile", "Relationship", "Cons
 
 export function TalentMemoryMockup() {
   return (
-    <BrowserFrame url="app.phantomhire.com/talent-memory" badge="Live now">
+    <BrowserFrame url="app.phantomhire.com/talent-memory" badge="Preview">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-white p-3.5">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
             <Flame className="h-4 w-4" />
           </div>
@@ -20,7 +20,7 @@ export function TalentMemoryMockup() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-border bg-white p-3.5">
+          <div className="rounded-xl border border-border bg-card p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Purged
             </p>

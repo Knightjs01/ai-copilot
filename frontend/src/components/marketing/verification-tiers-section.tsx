@@ -7,7 +7,7 @@ import {
 
 export function VerificationTiersSection() {
   return (
-    <section className="border-t border-border bg-slate-50">
+    <section className="border-t border-border bg-secondary/20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -23,7 +23,7 @@ export function VerificationTiersSection() {
           {VERIFICATION_TIERS.map((tier) => (
             <div
               key={tier.id}
-              className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
+              className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
             >
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-foreground">
@@ -49,7 +49,7 @@ export function VerificationTiersSection() {
           ))}
         </div>
 
-        <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]">
+        <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]">
           <div className="flex items-start gap-3">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="flex flex-col gap-2">

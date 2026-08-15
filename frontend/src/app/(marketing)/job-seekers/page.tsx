@@ -5,8 +5,6 @@ import { JobBoardShowcaseSection } from "@/components/marketing/job-board-showca
 import { JobSeekersCtaSection } from "@/components/marketing/job-seekers-cta-section";
 import { JobSeekersHeroSection } from "@/components/marketing/job-seekers-hero-section";
 import { JobSeekersPromiseSection } from "@/components/marketing/job-seekers-promise-section";
-import { MarketingFooter } from "@/components/marketing/marketing-footer";
-import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { PhantomStorySection } from "@/components/marketing/phantom-story-section";
 import { ZeroRetentionSection } from "@/components/marketing/zero-retention-section";
 
@@ -18,18 +16,14 @@ export const metadata: Metadata = {
 
 export default function JobSeekersPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <MarketingNav />
-      <main className="flex-1">
-        <JobSeekersHeroSection />
-        <JobSeekersPromiseSection />
-        <JobBoardShowcaseSection />
-        <JobApplicationShowcaseSection />
-        <ZeroRetentionSection />
-        <PhantomStorySection />
-        <JobSeekersCtaSection />
-      </main>
-      <MarketingFooter />
-    </div>
+    <>
+      <JobSeekersHeroSection />
+      <JobSeekersPromiseSection />
+      <JobBoardShowcaseSection />
+      <JobApplicationShowcaseSection />
+      <ZeroRetentionSection />
+      <PhantomStorySection />
+      <JobSeekersCtaSection />
+    </>
   );
 }

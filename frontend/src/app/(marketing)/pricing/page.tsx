@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 
 import { AtsComparisonSection } from "@/components/marketing/ats-comparison-section";
 import { CommercialFlywheelSection } from "@/components/marketing/commercial-flywheel-section";
-import { MarketingFooter } from "@/components/marketing/marketing-footer";
-import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { PhantomIntelligenceSection } from "@/components/marketing/phantom-intelligence-section";
 import { PlanComparisonTableSection } from "@/components/marketing/plan-comparison-table-section";
 import { PricingFaqSection } from "@/components/marketing/pricing-faq-section";
@@ -21,21 +19,17 @@ export const metadata: Metadata = {
 
 export default function PricingPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <MarketingNav />
-      <main className="flex-1">
-        <PricingHeroSection />
-        <PricingToggleProvider />
-        <TalentMemorySection />
-        <PhantomIntelligenceSection />
-        <AtsComparisonSection />
-        <CommercialFlywheelSection />
-        <PlanComparisonTableSection />
-        <PricingFaqSection />
-        <PricingTrustSection />
-        <PricingFinalCtaSection />
-      </main>
-      <MarketingFooter />
-    </div>
+    <>
+      <PricingHeroSection />
+      <PricingToggleProvider />
+      <TalentMemorySection />
+      <PhantomIntelligenceSection />
+      <AtsComparisonSection />
+      <CommercialFlywheelSection />
+      <PlanComparisonTableSection />
+      <PricingFaqSection />
+      <PricingTrustSection />
+      <PricingFinalCtaSection />
+    </>
   );
 }

@@ -61,7 +61,7 @@ export function CompanyPlansSection({
             return (
               <div
                 key={plan.id}
-                className={`relative flex flex-col gap-4 rounded-2xl border bg-white p-6 shadow-sm shadow-slate-900/[0.03] ${
+                className={`relative flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm shadow-slate-900/[0.03] ${
                   plan.mostPopular ? "border-brand/40 ring-1 ring-brand/20" : "border-border"
                 }`}
               >

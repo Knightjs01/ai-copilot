@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 
 export function JobSeekersCtaSection() {
   return (
-    <section className="border-t border-border bg-slate-50">
+    <section className="border-t border-border bg-secondary/20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
-        <div className="mx-auto flex flex-col items-center gap-5 rounded-3xl border border-border bg-white px-8 py-14 text-center shadow-sm shadow-slate-900/[0.03]">
+        <div className="mx-auto flex flex-col items-center gap-5 rounded-3xl border border-border bg-card px-8 py-14 text-center shadow-sm shadow-slate-900/[0.03]">
           <Image
             src="/shadow-icon.png"
             alt=""

@@ -44,7 +44,7 @@ const ANALYTICS_TIERS = [
 
 export function PhantomIntelligenceSection() {
   return (
-    <section className="border-t border-border bg-slate-50">
+    <section className="border-t border-border bg-secondary/20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -56,7 +56,7 @@ export function PhantomIntelligenceSection() {
           {INSIGHTS.map((insight) => (
             <div
               key={insight}
-              className="flex items-start gap-2.5 rounded-xl border border-border bg-white p-4 shadow-sm shadow-slate-900/[0.03]"
+              className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-4 shadow-sm shadow-slate-900/[0.03]"
             >
               <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
               <p className="text-sm leading-relaxed text-foreground">{insight}</p>
@@ -68,7 +68,7 @@ export function PhantomIntelligenceSection() {
           {ANALYTICS_TIERS.map((tier) => (
             <div
               key={tier.tier}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-6 shadow-sm shadow-slate-900/[0.03]"
+              className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
             >
               <h3 className="text-sm font-semibold text-foreground">{tier.tier}</h3>
               <ul className="flex flex-col gap-1.5">

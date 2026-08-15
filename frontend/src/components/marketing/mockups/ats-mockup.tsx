@@ -34,7 +34,7 @@ export function AtsMockup() {
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {STATS.map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-border bg-white px-3 py-2.5">
+            <div key={stat.label} className="rounded-xl border border-border bg-card px-3 py-2.5">
               <p className="text-lg font-semibold leading-none text-foreground">{stat.value}</p>
               <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{stat.label}</p>
             </div>
@@ -50,7 +50,7 @@ export function AtsMockup() {
               {column.candidates.map((candidate) => (
                 <div
                   key={candidate.callsign}
-                  className="rounded-lg border border-border bg-white p-2.5 shadow-sm"
+                  className="rounded-lg border border-border bg-card p-2.5 shadow-sm"
                 >
                   <p className="text-xs font-medium text-foreground">{candidate.callsign}</p>
                   <p className="text-[10px] text-muted-foreground">{candidate.ref}</p>
