@@ -28,3 +28,23 @@ export function useInviteUser() {
     },
   });
 }
+
+export function useChangeRole(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (role: RoleName) => apiClient.patch<void>(`/users/${userId}/role`, { role }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["team"] });
+    },
+  });
+}
+
+export function useRemoveUser(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.delete<void>(`/users/${userId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["team"] });
+    },
+  });
+}

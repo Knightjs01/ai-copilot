@@ -20,6 +20,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { useInviteUser } from "@/lib/queries/team";
+import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import type { RoleName } from "@/lib/types";
 
 const ROLE_OPTIONS: { value: RoleName; label: string }[] = [
@@ -41,6 +42,7 @@ export function InviteTeammateDialog() {
   const [pendingValues, setPendingValues] = React.useState<FormValues | null>(null);
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const inviteUser = useInviteUser();
+  const container = useThemeScopeContainer();
 
   const {
     register,
@@ -75,7 +77,7 @@ export function InviteTeammateDialog() {
             Invite teammate
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent container={container}>
           <DialogHeader>
             <DialogTitle>Invite a teammate</DialogTitle>
           </DialogHeader>
@@ -116,6 +118,7 @@ export function InviteTeammateDialog() {
         title="Confirm it's you"
         description="Inviting a teammate is a high-risk action — re-enter your password to continue."
         onVerified={handleVerified}
+        container={container}
       />
     </>
   );

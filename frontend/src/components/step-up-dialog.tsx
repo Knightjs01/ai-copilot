@@ -22,6 +22,10 @@ interface StepUpDialogProps {
   title?: string;
   description?: string;
   onVerified: (token: string) => void | Promise<void>;
+  // Optional Portal target so callers rendered inside a page-scoped dark theme (see
+  // dialog.tsx's own comment) stay themed correctly — defaults to document.body when omitted,
+  // so this is additive and every existing caller is unaffected.
+  container?: HTMLElement | null;
 }
 
 /** Re-authentication prompt for high-risk actions (identity reveal, project purge, admin
@@ -34,6 +38,7 @@ export function StepUpDialog({
   title = "Confirm it's you",
   description,
   onVerified,
+  container,
 }: StepUpDialogProps) {
   const { user } = useAuth();
   const [password, setPassword] = React.useState("");
@@ -70,7 +75,7 @@ export function StepUpDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent container={container}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

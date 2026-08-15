@@ -1,21 +1,14 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 
+import { RelativeTime } from "@/components/relative-time";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/stat-tile";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth-context";
 import { useHistoricVaultOverview } from "@/lib/queries/historic-vault";
-
-function StatTile({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl border border-border bg-card px-4 py-3">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <span className="text-xl font-semibold tracking-tight text-foreground">{value}</span>
-    </div>
-  );
-}
 
 function formatAuditAction(action: string): string {
   const [subject = "", ...rest] = action.split(".");
@@ -42,13 +35,21 @@ export default function HistoricVaultPage() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex justify-center py-24">
-        <Spinner className="h-6 w-6 text-muted-foreground" />
+      <div className="flex flex-col gap-8">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-16 w-full" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
   return (
+    <TooltipProvider>
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Historic Vault</h1>
@@ -85,9 +86,7 @@ export default function HistoricVaultPage() {
                     <span className="text-sm font-medium text-foreground">
                       {record.project_title}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(record.purged_at), { addSuffix: true })}
-                    </span>
+                    <RelativeTime date={record.purged_at} className="text-xs text-muted-foreground" />
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {record.candidate_count} candidate{record.candidate_count === 1 ? "" : "s"} ·
@@ -119,9 +118,7 @@ export default function HistoricVaultPage() {
                     <span className="text-xs text-muted-foreground">
                       {entry.actor_email ?? "System"}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
-                    </span>
+                    <RelativeTime date={entry.created_at} className="text-xs text-muted-foreground" />
                   </div>
                 </div>
               ))}
@@ -130,5 +127,6 @@ export default function HistoricVaultPage() {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }

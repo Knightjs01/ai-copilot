@@ -9,11 +9,24 @@ import type {
   PrescreenOutcome,
   ProjectStatus,
   RemotePreference,
+  RoleName,
   ShadowApplicationStatus,
   ShadowJobStatus,
 } from "@/lib/types";
 
 type Variant = NonNullable<BadgeProps["variant"]>;
+
+export const ROLE_LABEL: Record<RoleName, string> = {
+  Owner: "Owner",
+  Admin: "Admin",
+  Member: "Member",
+};
+
+export const ROLE_VARIANT: Record<RoleName, Variant> = {
+  Owner: "success",
+  Admin: "info",
+  Member: "neutral",
+};
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
   draft: "Draft",
