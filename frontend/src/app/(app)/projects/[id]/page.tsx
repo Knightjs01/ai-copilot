@@ -4,8 +4,7 @@ import * as React from "react";
 import { useParams } from "next/navigation";
 
 import { BurnProjectDialog } from "@/components/project/burn-project-dialog";
-import { CandidatesKanban } from "@/components/project/candidates-kanban";
-import { CandidatesListTab } from "@/components/project/candidates-list-tab";
+import { CandidatesTabSection } from "@/components/project/candidates-tab-section";
 import { EditProjectDialog } from "@/components/project/edit-project-dialog";
 import { HiringBlueprintCard } from "@/components/project/hiring-blueprint-card";
 import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-alignment-card";
@@ -69,12 +68,7 @@ export default function ProjectDetailPage() {
 
       {activeTab === "blueprint" && <HiringBlueprintCard project={project} />}
 
-      {activeTab === "candidates" && (
-        <div className="flex flex-col gap-8">
-          <CandidatesKanban projectId={project.id} />
-          <CandidatesListTab projectId={project.id} />
-        </div>
-      )}
+      {activeTab === "candidates" && <CandidatesTabSection projectId={project.id} />}
 
       {activeTab === "vault" && canRevealIdentity && <IdentityVaultTab projectId={project.id} />}
     </div>

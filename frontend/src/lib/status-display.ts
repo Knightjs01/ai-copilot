@@ -52,6 +52,16 @@ export const CANDIDATE_STATUS_COLUMNS: CandidateStatus[] = [
   "withdrawn",
 ];
 
+export const CANDIDATE_STATUS_VARIANT: Record<CandidateStatus, Variant> = {
+  new: "neutral",
+  screening: "info",
+  interviewing: "info",
+  offer: "warning",
+  hired: "success",
+  rejected: "danger",
+  withdrawn: "neutral",
+};
+
 export const PRESCREEN_OUTCOME_LABEL: Record<PrescreenOutcome, string> = {
   advance: "Advance",
   reject: "Reject",

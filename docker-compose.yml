@@ -59,6 +59,11 @@ services:
       - ./frontend/.env
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      # No TTY is ever attached to this container, so pnpm's interactive
+      # "confirm modules purge" prompt (triggered when its dependency
+      # consistency check wants to reinstall) has nothing to answer and
+      # aborts. CI=true is pnpm's own documented fix for exactly this.
+      CI: "true"
     ports:
       - "3000:3000"
     volumes:

@@ -22,6 +22,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { apiClient } from "@/lib/api-client";
 import { useCreateCandidate } from "@/lib/queries/candidates";
+import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import type { Candidate } from "@/lib/types";
 
 const schema = z.object({
@@ -38,6 +39,7 @@ export function AddCandidateDialog({ projectId }: { projectId: string }) {
   const [isUploadingResume, setIsUploadingResume] = React.useState(false);
   const createCandidate = useCreateCandidate(projectId);
   const queryClient = useQueryClient();
+  const themeScopeContainer = useThemeScopeContainer();
 
   const {
     register,
@@ -79,7 +81,7 @@ export function AddCandidateDialog({ projectId }: { projectId: string }) {
           Add candidate
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent container={themeScopeContainer}>
         <DialogHeader>
           <DialogTitle>Add a candidate</DialogTitle>
         </DialogHeader>
