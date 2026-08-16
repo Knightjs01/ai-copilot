@@ -12,6 +12,7 @@ import type {
   RoleName,
   ShadowApplicationStatus,
   ShadowJobStatus,
+  VerificationStatus,
 } from "@/lib/types";
 
 type Variant = NonNullable<BadgeProps["variant"]>;
@@ -160,4 +161,16 @@ export const EMPLOYMENT_TYPE_LABEL: Record<EmploymentType, string> = {
   part_time: "Part-time",
   contract: "Contract",
   fractional: "Fractional",
+};
+
+export const VERIFICATION_STATUS_LABEL: Record<VerificationStatus, string> = {
+  unverified: "Not verified",
+  pending: "Verification pending",
+  verified: "Verified",
+};
+
+export const VERIFICATION_STATUS_VARIANT: Record<VerificationStatus, Variant> = {
+  unverified: "neutral",
+  pending: "info",
+  verified: "success",
 };

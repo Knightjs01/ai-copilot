@@ -24,7 +24,13 @@ import {
   usePassportVersions,
   useSavePassport,
 } from "@/lib/queries/phantom-passport";
-import { CAREER_INTENT_LABEL, NOTICE_PERIOD_LABEL, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
+import {
+  CAREER_INTENT_LABEL,
+  NOTICE_PERIOD_LABEL,
+  REMOTE_PREFERENCE_LABEL,
+  VERIFICATION_STATUS_LABEL,
+  VERIFICATION_STATUS_VARIANT,
+} from "@/lib/status-display";
 import type { CareerEntryInput, CareerIntent, NoticePeriod, RemotePreference } from "@/lib/types";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 
@@ -257,25 +263,19 @@ export default function PassportPage() {
       className={`${styles.phantomDark} flex flex-col gap-6 rounded-2xl p-6 shadow-xl shadow-slate-900/20 sm:p-10`}
     >
       <SecuringCvOverlay active={securing} />
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Your Phantom Passport
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Professional data and personal data are stored separately, recruiters only ever see
-            what&apos;s below the line, never your name.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {passport?.current_version_number != null && (
-            <Badge variant="success">Approved · Version {passport.current_version_number}</Badge>
-          )}
-          {passport && <Badge variant="info">{passport.completion_percentage}% complete</Badge>}
-        </div>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Your Phantom Passport
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          One professional identity, your control. Professional data and personal data are
+          stored separately, recruiters only ever see what&apos;s below the line, never your name.
+        </p>
       </div>
 
-      <Card>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="flex flex-col gap-6">
+          <Card>
         <CardHeader>
           <CardTitle>Parse from CV</CardTitle>
         </CardHeader>
@@ -476,7 +476,7 @@ export default function PassportPage() {
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
-                  className="accent-[#d4af6a]"
+                  className="accent-brand"
                   checked={entry.is_current}
                   onChange={(e) => updateEntry(index, { is_current: e.target.checked })}
                 />
@@ -614,7 +614,7 @@ export default function PassportPage() {
           <label className="flex items-start gap-2.5 text-sm text-foreground">
             <input
               type="checkbox"
-              className="mt-0.5 accent-[#d4af6a]"
+              className="mt-0.5 accent-brand"
               checked={reviewed}
               onChange={(e) => setReviewed(e.target.checked)}
             />
@@ -632,19 +632,95 @@ export default function PassportPage() {
               {approvePassport.isPending ? "Approving…" : "Approve & Build My Passport"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="flex items-center justify-end gap-3">
-        {saveMessage && <p className="text-sm text-muted-foreground">{saveMessage}</p>}
-        <Button
-          variant="secondary"
-          size="lg"
-          onClick={handleSaveClick}
-          disabled={savePassport.isPending || !legalName}
-        >
-          {savePassport.isPending ? "Saving…" : "Save draft"}
-        </Button>
+        <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Passport status
+              </p>
+              {passport ? (
+                <>
+                  <dl className="flex flex-col gap-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">Professional profile</dt>
+                      <dd>
+                        {passport.current_version_number != null ? (
+                          <Badge variant="success">
+                            Approved · v{passport.current_version_number}
+                          </Badge>
+                        ) : (
+                          <Badge variant="neutral">Draft</Badge>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">Personal identity</dt>
+                      <dd>
+                        <Badge variant="neutral">Locked</Badge>
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">Verification</dt>
+                      <dd>
+                        <Badge variant={VERIFICATION_STATUS_VARIANT[passport.verification_status]}>
+                          {VERIFICATION_STATUS_LABEL[passport.verification_status]}
+                        </Badge>
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">Discovery</dt>
+                      <dd>
+                        {passport.current_version_number != null ? (
+                          <Badge variant="success">Active</Badge>
+                        ) : (
+                          <Badge variant="neutral">Not yet discoverable</Badge>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="text-xs text-muted-foreground">
+                    {passport.completion_percentage}% complete
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Save your Passport below to see its status here.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                How identity reveal works
+              </p>
+              <ol className="flex flex-col gap-2.5 text-sm text-foreground">
+                <li>1. A company sees your Callsign, never your name.</li>
+                <li>2. They can send a Reveal Request with a reason.</li>
+                <li>3. You choose to approve or decline — nothing is automatic.</li>
+              </ol>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-2.5 py-5">
+              {saveMessage && <p className="text-xs text-muted-foreground">{saveMessage}</p>}
+              <Button
+                variant="secondary"
+                onClick={handleSaveClick}
+                disabled={savePassport.isPending || !legalName}
+                className="w-full"
+              >
+                {savePassport.isPending ? "Saving…" : "Save draft"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
