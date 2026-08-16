@@ -22,11 +22,11 @@ export function AtsShowcaseSection() {
             </p>
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Turn anonymous interest into intelligent hiring.
+            Fit comes first. Names come later, if at all.
           </h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
             Hiring projects, Callsigns instead of names, AI fit ratings, and a live dashboard of
-            exactly what needs your attention next. This is the actual platform, not a concept.
+            exactly what needs your attention next.
           </p>
           <div>
             <Button asChild variant="brand" size="lg">

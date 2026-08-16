@@ -24,12 +24,12 @@ export function JobBoardShowcaseSection() {
             </p>
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Meet the people who aren&apos;t applying.
+            Most of the people you want aren&apos;t applying anywhere.
           </h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
             Candidates browse and apply without a profile that outs them to their current
             employer. Companies can list a role without naming themselves until they&apos;re
-            ready to. This is the job market you can enter without being seen.
+            ready to. Neither side has to go public before they&apos;re ready.
           </p>
         </div>
       </div>

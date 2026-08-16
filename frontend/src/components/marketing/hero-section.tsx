@@ -27,7 +27,7 @@ export function HeroSection() {
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3.5 py-1.5">
             <Sparkles className="h-3.5 w-3.5 text-brand" />
             <span className="text-xs font-semibold uppercase tracking-wide text-brand">
-              The world&apos;s first Zero-Retention Hiring Platform
+              Zero-Retention Hiring
             </span>
           </div>
 
@@ -38,8 +38,9 @@ export function HeroSection() {
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Discover exceptional people who aren&apos;t publicly looking. Assess talent with AI.
-            Protect candidate identity. And keep control of the data you create.
+            Reach people who aren&apos;t job-searching in public, assess them against real
+            evidence instead of a black-box score, and keep only what the search actually
+            needs, nothing longer than that.
           </p>
 
           <ul className="flex flex-wrap gap-2">
