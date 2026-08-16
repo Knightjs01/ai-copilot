@@ -44,7 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Trust",
     links: [
-      { href: "/security", label: "Security" },
+      { href: "/trust", label: "Security" },
       { href: "/pricing", label: "Pricing" },
       { href: "/about", label: "About" },
     ],

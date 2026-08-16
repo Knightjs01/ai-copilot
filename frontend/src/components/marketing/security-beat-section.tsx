@@ -42,7 +42,7 @@ export function SecurityBeatSection() {
         </p>
 
         <Button asChild variant="secondary" size="lg">
-          <Link href="/hiring-teams#security">See what&apos;s actually implemented</Link>
+          <Link href="/trust">See what&apos;s actually implemented</Link>
         </Button>
       </div>
     </section>
