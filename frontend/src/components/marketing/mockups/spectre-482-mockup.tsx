@@ -5,12 +5,12 @@ import { BrowserFrame } from "@/components/marketing/mockups/browser-frame";
 
 export function Spectre482Mockup() {
   return (
-    <BrowserFrame url="app.phantomhire.com/talent-memory" badge="Live now">
+    <BrowserFrame url="app.phantomhire.com/talent-memory" badge="Preview">
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-border bg-card p-3.5">
           <p className="text-xs text-muted-foreground">VP Engineering — Fintech</p>
           <p className="mt-1 text-sm font-semibold text-foreground">
-            We already know 14 people.
+            We could already know 14 people.
           </p>
           <p className="text-xs text-muted-foreground">8 from Talent Memory · 6 from Shadow</p>
         </div>
@@ -28,7 +28,7 @@ export function Spectre482Mockup() {
               </p>
             </div>
             <span className="ml-auto shrink-0 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
-              96% match
+              Matches on skills & experience
             </span>
           </div>
 

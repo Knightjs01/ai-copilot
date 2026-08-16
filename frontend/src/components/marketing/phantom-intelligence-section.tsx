@@ -1,11 +1,20 @@
 import { TrendingUp } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+
+// The bottom three items in each list below (market supply, salary intelligence, etc.) have no
+// backend basis today — ProjectAnalytics/DashboardStats only ever compute within-project
+// figures. Both this list and the sample insights are captioned as illustrative/Preview rather
+// than implied live output, per the redesign's honesty standard.
 const INSIGHTS = [
-  "Your salary band is 8% below the median for comparable candidates.",
-  "You are competing with 37 companies for this skillset.",
   "Only 214 verified candidates appear to meet all 7 requirements.",
   "73% of applicants lack the required payments experience.",
   "Your biggest pipeline drop-off occurs between recruiter screen and hiring manager.",
+];
+
+const PREVIEW_INSIGHTS = [
+  "Your salary band is 8% below the median for comparable candidates.",
+  "You are competing with 37 companies for this skillset.",
   "12 candidates from previous hiring projects are strong matches.",
 ];
 
@@ -29,6 +38,7 @@ const ANALYTICS_TIERS = [
   },
   {
     tier: "Phantom Intelligence",
+    preview: true,
     items: [
       "Talent market supply",
       "Skill scarcity",
@@ -62,15 +72,36 @@ export function PhantomIntelligenceSection() {
               <p className="text-sm leading-relaxed text-foreground">{insight}</p>
             </div>
           ))}
+          {PREVIEW_INSIGHTS.map((insight) => (
+            <div
+              key={insight}
+              className="flex items-start gap-2.5 rounded-xl border border-dashed border-border bg-secondary/20 p-4"
+            >
+              <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex flex-col gap-1">
+                <Badge variant="outline" className="w-fit text-[10px]">
+                  Illustrative · Preview
+                </Badge>
+                <p className="text-sm leading-relaxed text-muted-foreground">{insight}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-3">
           {ANALYTICS_TIERS.map((tier) => (
             <div
               key={tier.tier}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
+              className={
+                tier.preview
+                  ? "flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-secondary/10 p-6"
+                  : "flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
+              }
             >
-              <h3 className="text-sm font-semibold text-foreground">{tier.tier}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{tier.tier}</h3>
+                {tier.preview && <Badge variant="outline">Preview</Badge>}
+              </div>
               <ul className="flex flex-col gap-1.5">
                 {tier.items.map((item) => (
                   <li key={item} className="text-xs text-muted-foreground">
