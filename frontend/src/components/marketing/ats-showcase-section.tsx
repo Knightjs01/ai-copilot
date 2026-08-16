@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { AtsMockup } from "@/components/marketing/mockups/ats-mockup";
+import { AtsAppShellMockup } from "@/components/marketing/mockups/ats-app-shell-mockup";
 import { Button } from "@/components/ui/button";
 
 export function AtsShowcaseSection() {
@@ -35,7 +35,7 @@ export function AtsShowcaseSection() {
           </div>
         </div>
 
-        <AtsMockup />
+        <AtsAppShellMockup />
       </div>
     </section>
   );
