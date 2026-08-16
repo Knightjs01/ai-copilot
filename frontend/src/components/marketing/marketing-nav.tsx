@@ -23,7 +23,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Discover",
     links: [
-      { href: "/shadow", label: "Shadow" },
+      { href: "/shadow-job-board", label: "Shadow Job Board" },
       { href: "/passport", label: "Candidate Passport" },
     ],
   },
