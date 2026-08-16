@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
 import { AtsAlignmentSection } from "@/components/marketing/ats-alignment-section";
+import { AtsAnalyticsSection } from "@/components/marketing/ats-analytics-section";
 import { AtsFinalCtaSection } from "@/components/marketing/ats-final-cta-section";
+import { AtsGovernanceSection } from "@/components/marketing/ats-governance-section";
 import { AtsHeroSection } from "@/components/marketing/ats-hero-section";
 import { AtsPipelineSection } from "@/components/marketing/ats-pipeline-section";
 
@@ -17,6 +19,8 @@ export default function AtsPage() {
       <AtsHeroSection />
       <AtsPipelineSection />
       <AtsAlignmentSection />
+      <AtsAnalyticsSection />
+      <AtsGovernanceSection />
       <AtsFinalCtaSection />
     </>
   );

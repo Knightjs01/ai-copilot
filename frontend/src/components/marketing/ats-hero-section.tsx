@@ -14,7 +14,7 @@ export function AtsHeroSection() {
             <p className="text-xs font-semibold uppercase tracking-wide text-brand">Phantom ATS</p>
           </div>
           <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            Your ATS. With a brain.
+            Every candidate ranked by evidence.
           </h1>
           <p className="text-lg leading-relaxed text-muted-foreground">
             Hiring projects, Callsigns instead of names, AI fit ratings, and a live dashboard of
