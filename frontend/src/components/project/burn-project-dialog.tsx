@@ -64,7 +64,7 @@ export function BurnProjectDialog({
       <Dialog open={open} onOpenChange={(next) => phase === "idle" && setOpen(next)}>
         <DialogTrigger asChild>
           <Button variant="brand" size="sm">
-            <PhantomIcon className="brightness-0 invert" />
+            <PhantomIcon className="h-4 brightness-0 invert" />
             Purge my project
           </Button>
         </DialogTrigger>
@@ -83,7 +83,7 @@ export function BurnProjectDialog({
               Cancel
             </Button>
             <Button type="button" variant="brand" onClick={handleRequestConfirm}>
-              <PhantomIcon className="brightness-0 invert" />
+              <PhantomIcon className="h-4 brightness-0 invert" />
               Purge this project
             </Button>
           </DialogFooter>

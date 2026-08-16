@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Briefcase } from "lucide-react";
 
 import { PhantomIcon } from "@/components/phantom-icon";
 import { ShadowIcon } from "@/components/shadow-icon";
+
+export const metadata: Metadata = {
+  title: "Log in | Phantom Hire",
+};
 
 const OPTIONS = [
   {

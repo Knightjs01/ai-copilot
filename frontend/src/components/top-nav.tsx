@@ -7,7 +7,6 @@ import { LogOut, Moon, Search, Sun } from "lucide-react";
 import Image from "next/image";
 
 import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
-import { PhantomIcon } from "@/components/phantom-icon";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -37,8 +36,15 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-3 items-center px-6">
         <div className="flex items-center gap-6 justify-self-start">
-          <Link href="/" aria-label="Phantom Hire home">
-            <PhantomIcon className="h-11" priority />
+          <Link href="/" aria-label="Phantom ATS home">
+            <Image
+              src="/phantom-ats-wordmark.png"
+              alt="Phantom ATS"
+              width={1388}
+              height={339}
+              className="h-8 w-auto"
+              priority
+            />
           </Link>
           {user && (
             <nav className="flex items-center gap-4">
@@ -80,16 +86,7 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
           )}
         </div>
 
-        <Link href="/" aria-label="Phantom ATS home" className="justify-self-center">
-          <Image
-            src="/phantom-ats-wordmark.png"
-            alt="Phantom ATS"
-            width={1388}
-            height={339}
-            className="h-8 w-auto"
-            priority
-          />
-        </Link>
+        <div aria-hidden />
 
         {user && (
           <div className="flex items-center gap-2 justify-self-end">
