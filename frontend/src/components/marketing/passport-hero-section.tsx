@@ -1,13 +1,13 @@
 import Link from "next/link";
 
-import { PassportDetailMockup } from "@/components/marketing/mockups/passport-detail-mockup";
+import { PassportIdCardMockup } from "@/components/marketing/mockups/passport-id-card-mockup";
 import { Button } from "@/components/ui/button";
 
 export function PassportHeroSection() {
   return (
     <section className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 py-16 lg:py-20">
-        <div className="flex max-w-2xl flex-col gap-5">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
+        <div className="flex flex-col gap-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
             Candidate Passport
           </p>
@@ -27,7 +27,7 @@ export function PassportHeroSection() {
           </div>
         </div>
 
-        <PassportDetailMockup />
+        <PassportIdCardMockup />
       </div>
     </section>
   );

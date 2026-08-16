@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { PassportMockup } from "@/components/marketing/mockups/passport-mockup";
+import { PassportIdCardMockup } from "@/components/marketing/mockups/passport-id-card-mockup";
 import { Button } from "@/components/ui/button";
 
 export function PassportShowcaseSection() {
@@ -38,7 +38,7 @@ export function PassportShowcaseSection() {
           </div>
         </div>
 
-        <PassportMockup />
+        <PassportIdCardMockup />
       </div>
     </section>
   );

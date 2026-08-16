@@ -4,8 +4,8 @@ import { BrowserFrame } from "@/components/marketing/mockups/browser-frame";
 import { Badge } from "@/components/ui/badge";
 import { VERIFICATION_STATUS_LABEL, VERIFICATION_STATUS_VARIANT } from "@/lib/status-display";
 
-// A fuller "document" view than the homepage's compact teaser (passport-mockup.tsx) — the
-// flagship visual for the dedicated /passport page. Every field mirrors PhantomPassport's real
+// A fuller "document" view, paired with the ID-card mockup on /passport's Features section —
+// every field mirrors PhantomPassport's real
 // shape (headline/seniority/skills/completion_percentage/verification_status/career_entries with
 // their real dual company_name / company_name_anonymized mechanic). Illustrative sample data,
 // same convention as every other mockup on this site.

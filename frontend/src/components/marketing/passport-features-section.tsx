@@ -1,5 +1,7 @@
 import { Briefcase, Layers, MapPin, Sparkles } from "lucide-react";
 
+import { PassportDetailMockup } from "@/components/marketing/mockups/passport-detail-mockup";
+
 // Grounded exactly in PhantomPassport's real fields (frontend/src/lib/types.ts:365-386) — nothing
 // invented.
 const FEATURES = [
@@ -38,19 +40,23 @@ export function PassportFeaturesSection() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((feature) => (
-            <div
-              key={feature.title}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                <feature.icon className="h-5 w-5" />
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-center">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {FEATURES.map((feature) => (
+              <div
+                key={feature.title}
+                className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm shadow-slate-900/[0.03]"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                  <feature.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{feature.body}</p>
               </div>
-              <h3 className="text-sm font-semibold text-foreground">{feature.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{feature.body}</p>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          <PassportDetailMockup />
         </div>
       </div>
     </section>
