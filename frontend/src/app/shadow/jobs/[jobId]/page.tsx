@@ -64,13 +64,15 @@ export default function ShadowJobDetailPage() {
     }
   };
 
+  const salary = job ? formatSalary(job.salary_min, job.salary_max) : null;
+
   return (
     // ShadowTopNav + this outer bg-slate-50 gutter stay light. Only <main> (the actual job
     // detail content) goes obsidian/blue — Shadow keeps its own distinct dark theme, separate
     // from Passport's, per the user's explicit call to not merge the two.
     <div className="min-h-screen bg-slate-50">
       <ShadowTopNav />
-      <main ref={mainRef} className={`${styles.shadowTheme} mx-auto max-w-3xl rounded-2xl px-6 py-10`}>
+      <main ref={mainRef} className={`${styles.shadowTheme} mx-auto max-w-4xl rounded-2xl px-6 py-10`}>
         {(isLoading || authLoading) && (
           <div className="flex justify-center py-16">
             <Spinner className="h-6 w-6 text-muted-foreground" />
@@ -105,57 +107,100 @@ export default function ShadowJobDetailPage() {
                   <Badge variant="outline">{REMOTE_PREFERENCE_LABEL[job.remote_preference]}</Badge>
                 )}
                 {job.seniority && <Badge variant="neutral">{job.seniority}</Badge>}
-                {formatSalary(job.salary_min, job.salary_max) && (
-                  <Badge variant="success">{formatSalary(job.salary_min, job.salary_max)}</Badge>
-                )}
+                {salary && <Badge variant="success">{salary}</Badge>}
               </div>
             </div>
 
-            <Card>
-              <CardContent className="flex flex-col gap-4 py-6">
-                <p className="whitespace-pre-line text-sm text-foreground">{job.description}</p>
-                {job.requirements.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <h3 className="text-sm font-semibold text-foreground">Requirements</h3>
-                    <ul className="list-inside list-disc text-sm text-muted-foreground">
-                      {job.requirements.map((req, i) => (
-                        <li key={i}>{req}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+              <Card>
+                <CardContent className="flex flex-col gap-4 py-6">
+                  <p className="whitespace-pre-line text-sm text-foreground">{job.description}</p>
+                  {job.requirements.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">Requirements</h3>
+                      <ul className="list-inside list-disc text-sm text-muted-foreground">
+                        {job.requirements.map((req, i) => (
+                          <li key={i}>{req}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="flex flex-col items-start gap-3 py-6">
-                {applied ? (
-                  <p className="text-sm font-medium text-success">
-                    Application submitted. Track its status from your Applications page.
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-sm text-muted-foreground">
-                      One-click apply with whatever your Phantom Passport already holds. Nothing
-                      new to fill in.
+              <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
+                <Card>
+                  <CardContent className="flex flex-col gap-3 py-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      About this role
                     </p>
-                    {applyError && <p className="text-sm font-medium text-danger">{applyError}</p>}
-                    <Button
-                      variant="brand"
-                      size="lg"
-                      onClick={handleApplyClick}
-                      disabled={applyMutation.isPending}
-                    >
-                      {applyMutation.isPending
-                        ? "Applying…"
-                        : candidate
-                          ? "Apply with Phantom Passport"
-                          : "Sign up to apply"}
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                    <dl className="flex flex-col gap-2.5 text-sm">
+                      {job.location && (
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="text-muted-foreground">Location</dt>
+                          <dd className="text-foreground">{job.location}</dd>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-muted-foreground">Type</dt>
+                        <dd className="text-foreground">{EMPLOYMENT_TYPE_LABEL[job.employment_type]}</dd>
+                      </div>
+                      {job.remote_preference && (
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="text-muted-foreground">Remote</dt>
+                          <dd className="text-foreground">
+                            {REMOTE_PREFERENCE_LABEL[job.remote_preference]}
+                          </dd>
+                        </div>
+                      )}
+                      {job.seniority && (
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="text-muted-foreground">Seniority</dt>
+                          <dd className="text-foreground">{job.seniority}</dd>
+                        </div>
+                      )}
+                      {salary && (
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="text-muted-foreground">Salary</dt>
+                          <dd className="text-foreground">{salary}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="flex flex-col items-start gap-3 py-6">
+                    {applied ? (
+                      <p className="text-sm font-medium text-success">
+                        Application submitted. Track its status from your Applications page.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          One-click apply with whatever your Phantom Passport already holds.
+                          Nothing new to fill in.
+                        </p>
+                        {applyError && <p className="text-sm font-medium text-danger">{applyError}</p>}
+                        <Button
+                          variant="brand"
+                          size="lg"
+                          className="w-full"
+                          onClick={handleApplyClick}
+                          disabled={applyMutation.isPending}
+                        >
+                          {applyMutation.isPending
+                            ? "Applying…"
+                            : candidate
+                              ? "Apply with Phantom Passport"
+                              : "Sign up to apply"}
+                        </Button>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         )}
       </main>
