@@ -33,7 +33,7 @@ export interface CompanyPlan {
 export const COMPANY_PLANS: CompanyPlan[] = [
   {
     id: "free",
-    name: "Phantom Free",
+    name: "Individual",
     tagline: "For teams exploring Phantom",
     idealFor: "Teams running their first anonymous hire",
     price: { monthly: 0, annualMonthlyEquivalent: 0 },
@@ -57,7 +57,7 @@ export const COMPANY_PLANS: CompanyPlan[] = [
   },
   {
     id: "pro",
-    name: "Phantom Pro",
+    name: "Scale Up",
     tagline: "Full hiring infrastructure for modern TA teams",
     idealFor: "Growing TA teams running multiple live roles",
     price: { monthly: 624, annualMonthlyEquivalent: 499 },
@@ -73,18 +73,18 @@ export const COMPANY_PLANS: CompanyPlan[] = [
       "Unlimited candidate applications",
       "Full Phantom ATS",
       "Shadow marketplace",
-      "AI screening & interview co-pilot",
+      "AI screening & evidence-based fit assessment",
       "Interview transcription & summaries",
-      "Talent Memory & candidate rediscovery",
+      "Talent Memory & candidate rediscovery (Preview)",
       "Reveal Requests",
       "Project Vault & Zero-Retention Purge",
       "Standard ATS integrations",
     ],
-    cta: { label: "Start Pro", href: "/signup" },
+    cta: { label: "Start Scale Up", href: "/signup" },
   },
   {
     id: "scale",
-    name: "Phantom Scale",
+    name: "High Growth",
     tagline: "For scaling TA teams and talent organisations",
     idealFor: "Organisations hiring at volume across multiple teams",
     price: { monthly: 1874, annualMonthlyEquivalent: 1499 },
@@ -96,8 +96,8 @@ export const COMPANY_PLANS: CompanyPlan[] = [
     features: [
       "Unlimited active roles",
       "25 recruiter seats",
-      "Advanced AI screening & interview intelligence",
-      "AI Talent Rediscovery",
+      "Advanced AI screening & evidence-based fit intelligence",
+      "AI Talent Rediscovery (Preview)",
       "Advanced analytics & hiring intelligence",
       "Advanced retention controls",
       "Custom workflows",
@@ -105,11 +105,14 @@ export const COMPANY_PLANS: CompanyPlan[] = [
       "Advanced integrations & security",
       "Priority support",
     ],
-    cta: { label: "Talk to Phantom", href: "mailto:sales@phantomhire.com?subject=Phantom%20Scale" },
+    cta: {
+      label: "Talk to Phantom",
+      href: "mailto:sales@phantomhire.com?subject=Phantom%20High%20Growth",
+    },
   },
   {
     id: "enterprise",
-    name: "Phantom Enterprise",
+    name: "Enterprise",
     tagline: "For organisations where security, scale and control come first",
     idealFor: "Enterprises needing SSO, SCIM, custom retention and dedicated support",
     price: { monthly: null, annualMonthlyEquivalent: null },
@@ -290,7 +293,7 @@ export const FEATURE_COMPARISON_ROWS: FeatureRow[] = [
   },
   {
     category: "Candidate Management",
-    label: "Talent Memory",
+    label: "Talent Memory (Preview)",
     values: { free: false, pro: true, scale: true, enterprise: true },
     proOnly: true,
   },
@@ -301,7 +304,7 @@ export const FEATURE_COMPARISON_ROWS: FeatureRow[] = [
   },
   {
     category: "AI",
-    label: "Interview co-pilot",
+    label: "Evidence-based fit assessment",
     values: { free: false, pro: true, scale: true, enterprise: true },
   },
   {
@@ -311,7 +314,7 @@ export const FEATURE_COMPARISON_ROWS: FeatureRow[] = [
   },
   {
     category: "AI",
-    label: "AI Talent Rediscovery",
+    label: "AI Talent Rediscovery (Preview)",
     values: { free: false, pro: false, scale: true, enterprise: true },
   },
   {

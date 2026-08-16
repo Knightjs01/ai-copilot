@@ -74,7 +74,7 @@ export function PlanComparisonTableSection() {
                     key={plan.id}
                     className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                   >
-                    {plan.name.replace("Phantom ", "")}
+                    {plan.name}
                   </th>
                 ))}
               </tr>
@@ -116,7 +116,7 @@ export function PlanComparisonTableSection() {
       <Dialog open={lockedRow !== null} onOpenChange={(open) => !open && setLockedRow(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{lockedRow?.label} is available on Phantom Pro</DialogTitle>
+            <DialogTitle>{lockedRow?.label} is available on Scale Up</DialogTitle>
             <DialogDescription>
               Don&apos;t lose the talent you&apos;ve already discovered. Save privacy-conscious
               candidate intelligence and rediscover exceptional people when the next role opens.
@@ -127,7 +127,7 @@ export function PlanComparisonTableSection() {
               Continue without {lockedRow?.label}
             </Button>
             <Button asChild variant="brand">
-              <a href="/signup">Upgrade to Pro</a>
+              <a href="/signup">Upgrade to Scale Up</a>
             </Button>
           </DialogFooter>
         </DialogContent>

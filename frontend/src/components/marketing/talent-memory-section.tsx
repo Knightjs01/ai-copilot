@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Spectre482Mockup } from "@/components/marketing/mockups/spectre-482-mockup";
 import { TalentMemoryMockup } from "@/components/marketing/mockups/talent-memory-mockup";
 
@@ -7,9 +8,14 @@ export function TalentMemorySection() {
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
           <div className="flex flex-col gap-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-              Talent Memory
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                Talent Memory
+              </p>
+              <Badge variant="outline" className="text-[10px]">
+                Preview
+              </Badge>
+            </div>
             <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               Your projects can disappear. Your talent intelligence doesn&apos;t have to.
             </h2>

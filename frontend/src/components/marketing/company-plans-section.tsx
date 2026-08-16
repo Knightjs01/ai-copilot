@@ -8,14 +8,14 @@ import { COMPANY_PLANS, type BillingPeriod } from "@/lib/pricing-config";
 
 const TALENT_MEMORY_LABEL: Record<string, string> = {
   not_included: "Not included",
-  included: "Included",
-  included_extended: "Included, extended",
+  included: "Included (Preview)",
+  included_extended: "Included, extended (Preview)",
 };
 
 const ANALYTICS_LABEL: Record<string, string> = {
   basic: "Basic analytics",
   advanced: "Advanced analytics",
-  phantom_intelligence: "Phantom Intelligence",
+  phantom_intelligence: "Phantom Intelligence (Preview)",
 };
 
 function formatPrice(amount: number | null): string {

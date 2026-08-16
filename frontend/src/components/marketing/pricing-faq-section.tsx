@@ -31,7 +31,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "How does Phantom make money?",
     answer:
-      "Companies pay through tiered SaaS plans (Free, Pro, Scale, Enterprise), metered AI compute, or an optional success-fee marketplace model where you only pay when you make a hire.",
+      "Companies pay through tiered SaaS plans (Individual, Scale Up, High Growth, Enterprise), metered AI compute, or an optional success-fee marketplace model where you only pay when you make a hire.",
   },
   {
     question: "What happens when a hiring project closes?",
