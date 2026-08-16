@@ -1,17 +1,28 @@
 import Image from "next/image";
-import { BadgeCheck, Lock } from "lucide-react";
+import { Check } from "lucide-react";
 
 import { VERIFICATION_STATUS_LABEL } from "@/lib/status-display";
 
 // A standalone "ID card" visual — deliberately NOT wrapped in BrowserFrame, a different visual
 // language from every other (browser-screenshot-style) mockup on the site, reserved for this one
-// flagship focal moment. Shows the real single-state verification field (VERIFICATION_STATUS_LABEL
-// .verified) as one badge, not an invented Bronze/Silver/Gold/Platinum tier or a fabricated
-// Identity/Employment/Credentials checklist — neither exists in the real VerificationStatus enum
-// (only unverified/pending/verified). Real completion_percentage + Approved/Version copy replaces
-// an invented "Passport ID" number. Illustrative sample data (Pulse-78), same convention as every
-// other Passport mockup on the site.
+// flagship focal moment. Gold is used here purely as a decorative accent (hex badge, checklist
+// icons, QR-style texture) — it never labels a tier. Shows the real single-state verification
+// field (VERIFICATION_STATUS_LABEL.verified), not an invented Bronze/Silver/Gold/Platinum tier —
+// no such tier exists in the real VerificationStatus enum (only unverified/pending/verified). The
+// 3-item checklist uses real Passport mechanics (approved version, encrypted personal info,
+// identity sealed until reveal), not a fabricated Identity/Employment/Credentials breakdown — no
+// such category set exists in the real data model. The QR-style grid is decorative card texture,
+// not a real scan feature. Illustrative sample data (Pulse-78), same convention as every other
+// Passport mockup on the site.
 const SKILLS = ["Senior Backend", "Distributed Systems", "Payments", "Team Leadership"];
+
+const VERIFICATION_CHECKS = [
+  "Profile reviewed & approved",
+  "Personal info encrypted",
+  "Identity sealed until reveal",
+];
+
+const QR_ROWS = ["1110101", "1010111", "1110010", "0001101", "1011100", "0100111", "1101010"];
 
 const DISSOLVE_DOTS = [
   { top: "6%", left: "86%", size: 6, opacity: 0.7 },
@@ -81,31 +92,62 @@ export function PassportIdCardMockup() {
         </div>
       </div>
 
-      <div className="relative flex w-28 shrink-0 flex-col items-center gap-4 bg-brand px-3 py-6">
+      <div className="relative flex w-32 shrink-0 flex-col items-center gap-3.5 bg-[#100b1f] px-3 py-6">
         <div
-          className="absolute left-1/2 top-9 h-16 w-16 -translate-x-1/2 rounded-full bg-electric/50 blur-2xl"
+          className="absolute left-1/2 top-7 h-20 w-20 -translate-x-1/2 rounded-full bg-[#d4af6a]/25 blur-2xl"
           aria-hidden
         />
-        <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-brand-foreground/15">
-          <BadgeCheck className="h-5 w-5 text-brand-foreground" />
+
+        <div className="relative z-10 h-16 w-16 shrink-0">
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-[#f5da9c] via-[#d4af6a] to-[#a8822f]"
+            style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+            aria-hidden
+          />
+          <div
+            className="absolute inset-[3px] bg-[#100b1f]"
+            style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+            aria-hidden
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Image src="/phantom-icon.png" alt="" width={234} height={190} className="h-8 w-auto" />
+          </div>
         </div>
-        <p className="relative z-10 text-center text-[9px] font-semibold uppercase tracking-[0.15em] text-brand-foreground/70">
-          Verification
-        </p>
-        <p className="relative z-10 text-center text-sm font-bold uppercase tracking-wide text-brand-foreground">
-          {VERIFICATION_STATUS_LABEL.verified}
-        </p>
-        <div className="relative z-10 mt-2 flex flex-col items-center gap-1.5 text-center">
-          <Lock className="h-3.5 w-3.5 text-brand-foreground/70" />
-          <p className="text-[9px] leading-snug text-brand-foreground/70">
-            Identity sealed until you approve a reveal
+
+        <div className="relative z-10 flex flex-col items-center gap-0.5">
+          <p className="text-center text-[9px] font-semibold uppercase tracking-[0.2em] text-[#d4af6a]/70">
+            Verification
+          </p>
+          <p className="text-center text-base font-bold uppercase tracking-wide text-[#e8c988]">
+            {VERIFICATION_STATUS_LABEL.verified}
           </p>
         </div>
-        <div className="relative z-10 mt-auto flex flex-col items-center gap-1">
-          <p className="text-[9px] font-semibold uppercase tracking-wide text-brand-foreground">
-            Phantom Hire
+
+        <div className="relative z-10 flex w-full flex-col gap-2 border-t border-[#d4af6a]/20 pt-3">
+          {VERIFICATION_CHECKS.map((check) => (
+            <div key={check} className="flex items-start gap-1.5">
+              <div className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[#d4af6a]">
+                <Check className="h-2 w-2 text-[#100b1f]" strokeWidth={4} />
+              </div>
+              <p className="text-[9px] leading-tight text-white/75">{check}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative z-10 mt-auto flex flex-col items-center gap-1.5">
+          <div className="grid grid-cols-7 gap-[1.5px] rounded-sm bg-white p-1.5">
+            {QR_ROWS.flatMap((row, r) =>
+              row.split("").map((cell, c) => (
+                <span
+                  key={`${r}-${c}`}
+                  className={cell === "1" ? "h-[2.5px] w-[2.5px] bg-[#100b1f]" : "h-[2.5px] w-[2.5px]"}
+                />
+              ))
+            )}
+          </div>
+          <p className="text-center text-[8px] font-semibold uppercase tracking-[0.15em] text-[#d4af6a]/60">
+            Private by design
           </p>
-          <p className="text-[8px] text-brand-foreground/60">Private by design</p>
         </div>
       </div>
     </div>
