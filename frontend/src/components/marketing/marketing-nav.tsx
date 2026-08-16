@@ -24,7 +24,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Discover",
     links: [
       { href: "/shadow", label: "Shadow" },
-      { href: "/shadow/passport", label: "Candidate Passport" },
+      { href: "/passport", label: "Candidate Passport" },
     ],
   },
   {
