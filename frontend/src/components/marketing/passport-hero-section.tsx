@@ -1,7 +1,16 @@
 import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
 
 import { PassportIdCardMockup } from "@/components/marketing/mockups/passport-id-card-mockup";
 import { Button } from "@/components/ui/button";
+
+const KEY_FEATURES = [
+  "Build your professional record once — it travels with you to every role you apply for",
+  "Apply under a reusable Callsign, recruiters see your evidence, never your name",
+  "Your original CV stays encrypted in your Candidate Vault, never shown to anyone",
+  "You review and approve every version before it's ever visible to a recruiter",
+  "Your real identity only unseals when you personally approve a Reveal Request",
+];
 
 export function PassportHeroSection() {
   return (
@@ -12,14 +21,16 @@ export function PassportHeroSection() {
             Candidate Passport
           </p>
           <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            Apply everywhere. Reveal nothing until you choose to.
+            One passport. A private identity, revealed only when you choose.
           </h1>
-          <p className="text-lg leading-relaxed text-muted-foreground">
-            Build your professional record once — skills, experience, achievements — and it
-            travels with you to every role you apply for under a Callsign, never your name. You
-            review and approve exactly what goes live, and your real identity stays sealed until
-            you personally approve a Reveal Request.
-          </p>
+          <ul className="flex flex-col gap-2.5">
+            {KEY_FEATURES.map((point) => (
+              <li key={point} className="flex items-start gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+                <span className="text-base text-foreground/90">{point}</span>
+              </li>
+            ))}
+          </ul>
           <div>
             <Button asChild variant="brand" size="lg">
               <Link href="/shadow/signup">Build your Passport</Link>
