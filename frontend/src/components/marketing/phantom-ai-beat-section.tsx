@@ -16,7 +16,7 @@ export function PhantomAiBeatSection() {
             </p>
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            AI beside every recruiter.
+            Phantom AI beside every recruiter.
           </h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
             Generate an evidence-based fit assessment for any candidate: what&apos;s strong, what
