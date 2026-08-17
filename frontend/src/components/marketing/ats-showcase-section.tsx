@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 
 const KEY_POINTS = [
   "Hiring projects with Callsigns instead of names",
-  "AI fit ratings on every candidate",
+  "Smart role calibration from your role brief",
+  "AI fit ratings on every candidate, backed by evidence",
+  "AI screening assistant: strengths, gaps, and what to ask next",
+  "Hiring priority tracking against real hiring-manager requirements",
+  "Live pipeline analytics by stage, fit rating, and source",
   "A live dashboard of exactly what needs your attention next",
 ];
 
