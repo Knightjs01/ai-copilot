@@ -87,26 +87,30 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="relative mx-auto w-full max-w-xs sm:max-w-sm">
-          <div className="grid grid-cols-2 gap-4">
-            {CORE_FEATURES.map((feature) => (
+        <div className="flex flex-col items-center gap-5">
+          <div className="grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
+            {CORE_FEATURES.slice(0, 2).map((feature) => (
               <FeatureCard key={feature.label} {...feature} />
             ))}
           </div>
 
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="absolute h-32 w-32 rounded-full bg-brand/25 blur-2xl" aria-hidden />
-            <div className="absolute h-24 w-24 rounded-full bg-electric/15 blur-2xl" aria-hidden />
-            <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-border bg-card shadow-lg shadow-slate-900/10 sm:h-24 sm:w-24">
-              <Image
-                src="/phantom-ghost-hero.png"
-                alt="Phantom, the invisible TA partner"
-                width={668}
-                height={844}
-                className="h-12 w-auto animate-float sm:h-14"
-                priority
-              />
-            </div>
+          <div className="relative flex items-center justify-center">
+            <div className="absolute h-56 w-56 rounded-full bg-brand/20 blur-3xl" aria-hidden />
+            <div className="absolute h-40 w-40 rounded-full bg-electric/10 blur-3xl" aria-hidden />
+            <Image
+              src="/phantom-ghost-hero.png"
+              alt="Phantom, the invisible TA partner"
+              width={668}
+              height={844}
+              className="relative h-44 w-auto animate-float drop-shadow-2xl sm:h-52"
+              priority
+            />
+          </div>
+
+          <div className="grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
+            {CORE_FEATURES.slice(2, 4).map((feature) => (
+              <FeatureCard key={feature.label} {...feature} />
+            ))}
           </div>
         </div>
       </div>
