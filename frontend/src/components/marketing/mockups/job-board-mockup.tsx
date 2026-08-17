@@ -48,7 +48,7 @@ export function JobBoardMockup() {
               alt="Shadow — Anonymous Job Board"
               width={1637}
               height={1096}
-              className="h-6 w-auto sm:h-7"
+              className="h-9 w-auto sm:h-11"
               priority
             />
             <span className="hidden shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-medium text-muted-foreground sm:flex">

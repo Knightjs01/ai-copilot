@@ -65,7 +65,7 @@ export function PassportIdCardMockup() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8a6a1f]">
               Phantom
             </p>
-            <p className="text-lg font-bold tracking-tight text-[#8a6a1f]">Passport</p>
+            <p className="text-lg font-bold tracking-tight text-[#8a6a1f]">Candidate Passport</p>
           </div>
           <GoldHexBadge size={44} />
         </div>

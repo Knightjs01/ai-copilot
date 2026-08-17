@@ -29,7 +29,7 @@ export function AtsShowcaseSection() {
               className="h-4 w-auto"
             />
             <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-              The ATS · Live now
+              The Phantom Talent ATS · Live now
             </p>
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
