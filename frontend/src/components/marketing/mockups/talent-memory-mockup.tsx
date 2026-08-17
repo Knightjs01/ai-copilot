@@ -21,12 +21,15 @@ export function TalentMemoryMockup() {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl border border-border bg-card p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Purged
             </p>
-            <ul className="mt-2 flex flex-col gap-1.5">
+            <ul className="mt-2.5 flex flex-col gap-1.5">
               {PURGED.map((item) => (
-                <li key={item} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <li
+                  key={item}
+                  className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-2 py-1 text-xs text-muted-foreground"
+                >
                   <XCircle className="h-3.5 w-3.5 shrink-0 text-danger/70" />
                   {item}
                 </li>
@@ -35,12 +38,15 @@ export function TalentMemoryMockup() {
           </div>
 
           <div className="rounded-xl border border-brand/20 bg-brand/5 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-brand">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">
               Talent Memory
             </p>
-            <ul className="mt-2 flex flex-col gap-1.5">
+            <ul className="mt-2.5 flex flex-col gap-1.5">
               {RETAINED.map((item) => (
-                <li key={item} className="flex items-center gap-1.5 text-xs text-foreground">
+                <li
+                  key={item}
+                  className="flex items-center gap-1.5 rounded-lg border border-brand/10 bg-card/60 px-2 py-1 text-xs text-foreground"
+                >
                   <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
                   {item}
                 </li>

@@ -16,13 +16,28 @@ export function ShadowRevealRequestMockup() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-foreground">Senior Backend Engineer</p>
-            <p className="text-xs text-muted-foreground">Applied as Echo-14</p>
+            <p className="font-mono text-xs text-muted-foreground">Applied as Echo-14</p>
           </div>
           <Badge variant="warning">{SHADOW_APPLICATION_STATUS_LABEL.reveal_requested}</Badge>
         </div>
 
+        <div className="grid grid-cols-2 gap-2.5 rounded-xl border border-border bg-card p-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Application ID
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] text-foreground">SA-2026-0071</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Requested
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] tabular-nums text-foreground">2h ago</p>
+          </div>
+        </div>
+
         <div className="rounded-xl border border-border bg-card p-3.5">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             <MessageSquareText className="h-3 w-3 shrink-0" />
             Company&apos;s reason
           </p>

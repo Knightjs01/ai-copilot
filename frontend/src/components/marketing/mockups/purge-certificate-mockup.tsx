@@ -27,12 +27,15 @@ export function PurgeCertificateMockup() {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-3.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Destroyed
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            data_categories_destroyed
           </p>
-          <ul className="mt-2 flex flex-col gap-1.5">
+          <ul className="mt-2.5 flex flex-col gap-1.5">
             {CATEGORIES_DESTROYED.map((category) => (
-              <li key={category} className="flex items-center gap-1.5 text-xs text-foreground">
+              <li
+                key={category}
+                className="flex items-center gap-1.5 rounded-lg border border-success/10 bg-success/5 px-2.5 py-1.5 text-xs text-foreground"
+              >
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
                 {category}
               </li>
@@ -40,9 +43,21 @@ export function PurgeCertificateMockup() {
           </ul>
         </div>
 
-        <p className="text-[11px] text-muted-foreground">
-          Certificate ID: PC-2026-0912 · Stored in the Historic Vault
-        </p>
+        <div className="grid grid-cols-2 gap-2.5 rounded-xl border border-border bg-card p-3.5">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Certificate ID
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] text-foreground">PC-2026-0912</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Purged at
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] tabular-nums text-foreground">2026-08-17 · 09:14</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Stored permanently in the Historic Vault</p>
       </div>
     </BrowserFrame>
   );
