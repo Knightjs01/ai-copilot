@@ -1,8 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
 
 import { PassportIdCardMockup } from "@/components/marketing/mockups/passport-id-card-mockup";
 import { Button } from "@/components/ui/button";
+
+const KEY_POINTS = [
+  "Build once, apply everywhere under a Callsign, never your name",
+  "Original CV stays encrypted in your Candidate Vault, never shown to recruiters",
+  "Companies only see what you've reviewed and approved",
+  "Your identity stays sealed until you approve a Reveal Request",
+];
 
 export function PassportShowcaseSection() {
   return (
@@ -24,13 +32,14 @@ export function PassportShowcaseSection() {
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Apply everywhere. Reveal nothing until you choose to.
           </h2>
-          <p className="text-lg leading-relaxed text-muted-foreground">
-            Build your profile once, skills, experience, achievements, and it travels with you
-            to every role you apply for under a Callsign, never your name. Your original CV
-            stays encrypted in your Candidate Vault, never shown to recruiters. Every company
-            only sees what you&apos;ve reviewed and approved, and your real identity stays
-            sealed until you personally approve a Reveal Request.
-          </p>
+          <ul className="flex flex-col gap-2.5">
+            {KEY_POINTS.map((point) => (
+              <li key={point} className="flex items-start gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+                <span className="text-base text-foreground/90">{point}</span>
+              </li>
+            ))}
+          </ul>
           <div>
             <Button asChild variant="brand" size="lg">
               <Link href="/shadow/signup">Build your Passport</Link>

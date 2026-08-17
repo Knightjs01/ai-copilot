@@ -1,7 +1,14 @@
 import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 
 import { TalentMemoryMockup } from "@/components/marketing/mockups/talent-memory-mockup";
 import { Badge } from "@/components/ui/badge";
+
+const KEY_POINTS = [
+  "CVs, notes, and transcripts can be purged entirely when a project closes",
+  "Coming next: a consent-respecting memory of skills and match profile",
+  "A closed search won't mean starting from zero next time",
+];
 
 // Talent Memory has no backend implementation today — this beat is framed honestly as a
 // preview/roadmap item, not live product, per the redesign's decision on unbuilt features.
@@ -24,12 +31,14 @@ export function TalentMemoryBeatSection() {
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Remember great talent without keeping everything forever.
           </h2>
-          <p className="text-lg leading-relaxed text-muted-foreground">
-            When a project closes, its CVs, notes, and transcripts can be purged entirely. What
-            we&apos;re building next: a permitted, consent-respecting memory of the skills and
-            match profile from the people worth rediscovering, so a closed search doesn&apos;t
-            mean starting from zero next time.
-          </p>
+          <ul className="flex flex-col gap-2.5">
+            {KEY_POINTS.map((point) => (
+              <li key={point} className="flex items-start gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+                <span className="text-base text-foreground/90">{point}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>

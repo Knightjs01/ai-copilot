@@ -1,6 +1,13 @@
 import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 
 import { JobBoardMockup } from "@/components/marketing/mockups/job-board-mockup";
+
+const KEY_POINTS = [
+  "No profile that outs candidates to their current employer",
+  "Companies can stay unnamed until they're ready",
+  "Neither side has to go public first",
+];
 
 export function JobBoardShowcaseSection() {
   return (
@@ -26,11 +33,14 @@ export function JobBoardShowcaseSection() {
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Most of the people you want aren&apos;t applying anywhere.
           </h2>
-          <p className="text-lg leading-relaxed text-muted-foreground">
-            Candidates browse and apply without a profile that outs them to their current
-            employer. Companies can list a role without naming themselves until they&apos;re
-            ready to. Neither side has to go public before they&apos;re ready.
-          </p>
+          <ul className="flex flex-col gap-2.5">
+            {KEY_POINTS.map((point) => (
+              <li key={point} className="flex items-start gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+                <span className="text-base text-foreground/90">{point}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
