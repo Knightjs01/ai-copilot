@@ -50,7 +50,13 @@ export function AtsShowcaseSection() {
           </div>
         </div>
 
-        <AtsAppShellMockup />
+        <div className="relative max-h-[420px] overflow-hidden rounded-2xl">
+          <AtsAppShellMockup />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent"
+            aria-hidden
+          />
+        </div>
       </div>
     </section>
   );
