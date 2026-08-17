@@ -1,6 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { KeyRound, ShieldCheck, Users, Workflow } from "lucide-react";
+import {
+  BarChart3,
+  EyeOff,
+  MessageSquareText,
+  Sparkles,
+  Star,
+  Target,
+  ShieldCheck,
+  Workflow,
+} from "lucide-react";
 
 import { AtsAppShellMockup } from "@/components/marketing/mockups/ats-app-shell-mockup";
 import { Button } from "@/components/ui/button";
@@ -12,19 +21,39 @@ const FEATURES = [
     body: "One real pipeline per role, whether candidates came from Shadow or were added directly.",
   },
   {
+    icon: Target,
+    title: "Smart role calibration",
+    body: "Turn a role brief into structured must-haves, nice-to-haves, and evaluation criteria before you screen a single candidate.",
+  },
+  {
+    icon: Sparkles,
+    title: "Phantom AI Screening Assistant",
+    body: "Generate an evidence-based fit assessment on demand: strengths, gaps, and exactly what to ask next.",
+  },
+  {
+    icon: MessageSquareText,
+    title: "Interview prep & handoff notes",
+    body: "Walk into the call with the right questions, then turn your own notes into a clean handoff summary afterward.",
+  },
+  {
     icon: ShieldCheck,
     title: "AI fit rating",
     body: "Every candidate rated Strong, Good, Possible, or Weak Fit, with the evidence attached.",
   },
   {
-    icon: KeyRound,
-    title: "Identity Vault",
-    body: "Real identity stays sealed until an Owner reveals it, with a stated reason, logged.",
+    icon: EyeOff,
+    title: "Anonymous candidate profiles",
+    body: "Every candidate shows up as a Callsign, not a name, until you're ready to know who they are.",
   },
   {
-    icon: Users,
-    title: "Team & roles",
-    body: "Owner, Admin, and Member roles decide exactly what each teammate can see and do.",
+    icon: Star,
+    title: "Hiring priority tracking",
+    body: "Hiring managers submit their top priorities once, see exactly which candidates meet them, backed by evidence.",
+  },
+  {
+    icon: BarChart3,
+    title: "Pipeline analytics",
+    body: "Live breakdowns by stage, fit rating, source, and outcome, know where your pipeline actually stands.",
   },
 ];
 
