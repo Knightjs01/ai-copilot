@@ -1,14 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-const PROMISE_ITEMS = [
-  "Discover people who aren't publicly looking",
-  "Assess talent with AI",
-  "Protect candidate identity",
-  "Keep control of the data you create",
+const CORE_FEATURES = [
+  {
+    label: "Phantom Passport",
+    detail: "one reusable, anonymous identity that follows candidates everywhere, revealed only when they choose",
+  },
+  {
+    label: "Shadow",
+    detail: "the anonymous job board, where candidates search and apply without exposing who they are",
+  },
+  {
+    label: "Phantom ATS",
+    detail: "a smart pipeline that ranks candidates by evidence, not names",
+  },
+  {
+    label: "Phantom AI",
+    detail: "evidence-based fit assessments across every stage of hiring",
+  },
 ];
 
 const SPECIALIST_SECTORS = [
@@ -38,18 +50,19 @@ export function HeroSection() {
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Reach people who aren&apos;t job-searching in public, assess them against real
-            evidence instead of a black-box score, and keep only what the search actually
-            needs, nothing longer than that.
+            Phantom Hire is the all-in-one platform for anonymous, evidence-based hiring, one
+            place to discover, assess, and hire people who aren&apos;t publicly job-searching.
           </p>
 
-          <ul className="flex flex-wrap gap-2">
-            {PROMISE_ITEMS.map((item) => (
-              <li
-                key={item}
-                className="rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-foreground"
-              >
-                {item}
+          <ul className="flex flex-col gap-2.5">
+            {CORE_FEATURES.map((feature) => (
+              <li key={feature.label} className="flex items-start gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+                <span className="text-base text-foreground/90">
+                  <span className="font-semibold text-foreground">{feature.label}</span>
+                  {" — "}
+                  {feature.detail}
+                </span>
               </li>
             ))}
           </ul>
