@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { ShadowBoardShellMockup } from "@/components/marketing/mockups/shadow-board-shell-mockup";
@@ -5,7 +6,16 @@ import { Button } from "@/components/ui/button";
 
 export function ShadowHeroSection() {
   return (
-    <section className="border-t border-border">
+    <section className="relative overflow-hidden border-t border-border">
+      <Image
+        src="/shadow-icon.png"
+        alt=""
+        width={600}
+        height={600}
+        aria-hidden
+        className="pointer-events-none absolute -left-24 -top-20 -z-10 h-[22rem] w-[22rem] select-none opacity-[0.06] sm:h-[30rem] sm:w-[30rem]"
+      />
+
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="flex flex-col gap-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
