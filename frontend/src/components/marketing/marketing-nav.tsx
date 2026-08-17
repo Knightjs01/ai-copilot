@@ -21,7 +21,7 @@ interface NavGroup {
 // information architecture is foundation work, not something to half-ship per page.
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Discover",
+    label: "Candidates",
     links: [
       { href: "/shadow-job-board", label: "Shadow Job Board" },
       { href: "/passport", label: "Candidate Passport" },
