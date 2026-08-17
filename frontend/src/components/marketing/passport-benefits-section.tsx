@@ -1,7 +1,7 @@
 import { CheckCircle2 } from "lucide-react";
 
 const BENEFITS = [
-  "Build it once, apply everywhere, under one Callsign instead of retyping your history for every role.",
+  "Build once, apply everywhere under an anonymous Callsign.",
   "Private by default. Nobody sees your name or current employer until you decide they should.",
   "You control every version and every reveal. Nothing goes out, and nothing is disclosed, without your explicit approval.",
   "Free, permanently. There's no paid tier for candidates — the Passport was never going to be something you buy your way into.",

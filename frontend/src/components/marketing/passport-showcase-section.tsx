@@ -6,7 +6,7 @@ import { PassportIdCardMockup } from "@/components/marketing/mockups/passport-id
 import { Button } from "@/components/ui/button";
 
 const KEY_POINTS = [
-  "Build once, apply everywhere under a Callsign, never your name",
+  "Build once, apply everywhere under an anonymous Callsign",
   "Original CV stays encrypted in your Candidate Vault, never shown to recruiters",
   "Companies only see what you've reviewed and approved",
   "Your identity stays sealed until you approve a Reveal Request",
