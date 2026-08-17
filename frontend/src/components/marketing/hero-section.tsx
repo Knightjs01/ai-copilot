@@ -46,7 +46,7 @@ export function HeroSection() {
           <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Hire with
             <br />
-            total anonymity.
+            total anonymity
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
