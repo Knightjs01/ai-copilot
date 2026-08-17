@@ -1,26 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { EyeOff, LayoutGrid, Search, Sparkles, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-const CORE_FEATURES = [
-  {
-    label: "Phantom Passport",
-    detail: "one reusable, anonymous identity that follows candidates everywhere, revealed only when they choose",
-  },
-  {
-    label: "Shadow",
-    detail: "the anonymous job board, where candidates search and apply without exposing who they are",
-  },
-  {
-    label: "Phantom ATS",
-    detail: "a smart pipeline that ranks candidates by evidence, not names",
-  },
-  {
-    label: "Phantom AI",
-    detail: "evidence-based fit assessments across every stage of hiring",
-  },
+const CORE_FEATURES: { Icon: LucideIcon; label: string; detail: string }[] = [
+  { Icon: EyeOff, label: "Phantom Passport", detail: "Anonymous, reusable candidate identity" },
+  { Icon: Search, label: "Shadow", detail: "Anonymous job board for hidden talent" },
+  { Icon: LayoutGrid, label: "Phantom ATS", detail: "Smart pipeline ranked by evidence" },
+  { Icon: Sparkles, label: "Phantom AI", detail: "Evidence-based fit assessments" },
 ];
 
 const SPECIALIST_SECTORS = [
@@ -30,6 +18,18 @@ const SPECIALIST_SECTORS = [
   "Defence",
   "Aerospace & Executive Search",
 ];
+
+function FeatureCard({ Icon, label, detail }: { Icon: LucideIcon; label: string; detail: string }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm shadow-slate-900/[0.04]">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand">
+        <Icon className="h-4 w-4" />
+      </div>
+      <p className="text-sm font-semibold leading-tight text-foreground">{label}</p>
+      <p className="text-xs leading-snug text-muted-foreground">{detail}</p>
+    </div>
+  );
+}
 
 export function HeroSection() {
   return (
@@ -53,19 +53,6 @@ export function HeroSection() {
             Phantom Hire is the all-in-one platform for anonymous, evidence-based hiring, one
             place to discover, assess, and hire people who aren&apos;t publicly job-searching.
           </p>
-
-          <ul className="flex flex-col gap-2.5">
-            {CORE_FEATURES.map((feature) => (
-              <li key={feature.label} className="flex items-start gap-2.5">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
-                <span className="text-base text-foreground/90">
-                  <span className="font-semibold text-foreground">{feature.label}</span>
-                  {" — "}
-                  {feature.detail}
-                </span>
-              </li>
-            ))}
-          </ul>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild variant="brand" size="lg">
@@ -100,17 +87,31 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="relative flex items-center justify-center">
-          <div className="absolute h-80 w-80 rounded-full bg-brand/20 blur-3xl" aria-hidden />
-          <div className="absolute h-56 w-56 rounded-full bg-electric/10 blur-3xl" aria-hidden />
-          <Image
-            src="/phantom-ghost-hero.png"
-            alt="Phantom, the invisible TA partner"
-            width={668}
-            height={844}
-            className="relative h-72 w-auto animate-float drop-shadow-2xl sm:h-96"
-            priority
-          />
+        <div className="flex flex-col items-center gap-5">
+          <div className="grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
+            {CORE_FEATURES.slice(0, 2).map((feature) => (
+              <FeatureCard key={feature.label} {...feature} />
+            ))}
+          </div>
+
+          <div className="relative flex items-center justify-center">
+            <div className="absolute h-56 w-56 rounded-full bg-brand/20 blur-3xl" aria-hidden />
+            <div className="absolute h-40 w-40 rounded-full bg-electric/10 blur-3xl" aria-hidden />
+            <Image
+              src="/phantom-ghost-hero.png"
+              alt="Phantom, the invisible TA partner"
+              width={668}
+              height={844}
+              className="relative h-44 w-auto animate-float drop-shadow-2xl sm:h-52"
+              priority
+            />
+          </div>
+
+          <div className="grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
+            {CORE_FEATURES.slice(2, 4).map((feature) => (
+              <FeatureCard key={feature.label} {...feature} />
+            ))}
+          </div>
         </div>
       </div>
     </section>
