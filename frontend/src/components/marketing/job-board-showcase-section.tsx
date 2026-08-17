@@ -4,9 +4,10 @@ import { CheckCircle2 } from "lucide-react";
 import { JobBoardMockup } from "@/components/marketing/mockups/job-board-mockup";
 
 const KEY_POINTS = [
-  "No profile that outs candidates to their current employer",
-  "Companies can stay unnamed until they're ready",
-  "Neither side has to go public first",
+  "Browse and apply without alerting your current employer",
+  "See salary and role details upfront, no guessing",
+  "Apply once with your Phantom Passport, use it everywhere",
+  "Reveal who you are only when you choose to",
 ];
 
 export function JobBoardShowcaseSection() {
@@ -31,7 +32,7 @@ export function JobBoardShowcaseSection() {
             </p>
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Most of the people you want aren&apos;t applying anywhere.
+            The next generation hiring marketplace, for candidates who value anonymity.
           </h2>
           <ul className="flex flex-col gap-2.5">
             {KEY_POINTS.map((point) => (
