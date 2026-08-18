@@ -26,7 +26,7 @@ export function ShadowTopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-white/80 backdrop-blur">
-      <div className="mx-auto grid h-16 max-w-6xl grid-cols-3 items-center px-6">
+      <div className="mx-auto grid h-24 max-w-6xl grid-cols-3 items-center px-6">
         <div className="flex items-center gap-6 justify-self-start">
           <Link href="/shadow" aria-label="Shadow home">
             <Image
@@ -70,7 +70,7 @@ export function ShadowTopNav() {
             alt="Shadow: Anonymous Job Board"
             width={1629}
             height={1049}
-            className="h-12 w-auto"
+            className="h-16 w-auto"
             priority
           />
         </Link>
