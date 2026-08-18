@@ -70,7 +70,7 @@ export function ShadowTopNav() {
             alt="Shadow: Anonymous Job Board"
             width={1629}
             height={1049}
-            className="h-9 w-auto"
+            className="h-12 w-auto"
             priority
           />
         </Link>
