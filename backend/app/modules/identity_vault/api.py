@@ -44,6 +44,7 @@ async def reveal_identity(
         candidate_id=candidate_id,
         reason=body.reason,
         disclosure_level=body.disclosure_level,
+        disclosed_fields=body.disclosed_fields,
         ip_address=request.client.host if request.client else None,
     )
 

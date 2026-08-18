@@ -10,7 +10,7 @@ import { useGenerateHiringBlueprint, useHiringBlueprint } from "@/lib/queries/hi
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/types";
 
-function ListSection({ title, items }: { title: string; items: string[] }) {
+export function ListSection({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div>

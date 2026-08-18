@@ -19,3 +19,8 @@ class RevealEventNotFoundError(IdentityVaultError):
 class CallsignGenerationExhaustedError(IdentityVaultError):
     status_code = 500
     detail = "Could not generate a unique callsign — try again"
+
+
+class InvalidDisclosedFieldsError(IdentityVaultError):
+    status_code = 400
+    detail = "disclosed_fields, if given, must be a non-empty list"

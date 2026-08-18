@@ -15,6 +15,7 @@ from app.modules.identity_vault.repository import (
     IdentityVaultRepository,
 )
 from app.modules.intelligence.repository import IntelligencePackRepository
+from app.modules.interview_kit.repository import InterviewKitRepository
 from app.modules.prescreen_assessment.repository import PrescreenAssessmentRepository
 from app.modules.privacy_gateway.repository import SanitizedProfileRepository
 from app.modules.project_deletion.schemas import PurgeCertificate
@@ -33,6 +34,7 @@ _DATA_CATEGORIES_DESTROYED = [
     "Identity reveal audit trail",
     "Candidate records",
     "Hiring blueprint",
+    "Interview kit",
     "Hiring manager alignment",
     "Project membership records",
 ]
@@ -61,6 +63,7 @@ class ProjectDeletionService:
         self._intelligence_pack_repo = IntelligencePackRepository(session)
         self._prescreen_assessment_repo = PrescreenAssessmentRepository(session)
         self._hiring_blueprint_repo = HiringBlueprintRepository(session)
+        self._interview_kit_repo = InterviewKitRepository(session)
         self._hiring_manager_alignment_repo = HiringManagerAlignmentRepository(session)
         self._vault_repo = IdentityVaultRepository(session)
         self._reveal_events_repo = IdentityRevealEventRepository(session)
@@ -96,6 +99,7 @@ class ProjectDeletionService:
         await self._candidate_repo.delete_by_project_id(project_id)
 
         await self._hiring_blueprint_repo.delete_by_project_id(project_id)
+        await self._interview_kit_repo.delete_by_project_id(project_id)
         await self._hiring_manager_alignment_repo.delete_by_project_id(project_id)
         await self._project_member_repo.delete_by_project_id(project_id)
 

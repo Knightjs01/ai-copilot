@@ -5,7 +5,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
-import type { CandidateRevealRequest, RevealedIdentity, RevealRequest } from "@/lib/types";
+import type {
+  CandidateRevealRequest,
+  RevealedIdentity,
+  RevealRequest,
+  ShadowField,
+} from "@/lib/types";
 
 // --- Company side --------------------------------------------------------------------------
 
@@ -61,10 +66,16 @@ export function useMyRevealRequest(applicationId: string | undefined) {
 export function useRespondToRevealRequest(applicationId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (approve: boolean) =>
+    mutationFn: ({
+      approve,
+      disclosedFields,
+    }: {
+      approve: boolean;
+      disclosedFields?: ShadowField[];
+    }) =>
       candidateApiClient.post<CandidateRevealRequest>(
         `/shadow-reveal/applications/me/${applicationId}/respond`,
-        { approve }
+        { approve, disclosed_fields: disclosedFields }
       ),
     onSuccess: (data) => {
       queryClient.setQueryData(["shadow-reveal", "me", applicationId], data);

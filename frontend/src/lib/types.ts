@@ -146,6 +146,23 @@ export interface HiringBlueprint {
   generated_at: string;
 }
 
+export type InterviewKitSourceType = "must_have" | "evaluation_criterion";
+
+export interface InterviewKitQuestion {
+  source_type: InterviewKitSourceType;
+  source_text: string;
+  question_text: string;
+  follow_up_prompts: string[];
+}
+
+export interface InterviewKit {
+  id: string;
+  project_id: string;
+  questions: InterviewKitQuestion[];
+  model_used: string;
+  generated_at: string;
+}
+
 export interface HiringManagerAlignment {
   id: string;
   project_id: string;
@@ -196,13 +213,34 @@ export type RevealReason =
   | "Hiring Manager Review"
   | "Other";
 
+// The exact fields a company Owner can choose to reveal from a candidate's Identity Vault, or a
+// candidate can choose to disclose when approving a Shadow reveal request. When omitted from a
+// reveal/respond call, disclosure_level's tier default applies (matches the pre-existing
+// behavior); when given, it's an exact override — see backend app.core.disclosure.
+export type IdentityField =
+  | "full_name"
+  | "email"
+  | "phone"
+  | "location"
+  | "current_employer"
+  | "current_title"
+  | "linkedin_url"
+  | "expected_salary";
+
+export type ShadowField = "full_name" | "email" | "phone" | "career_history";
+
+export type DisclosureLevel = "basic" | "contact" | "full" | "custom";
+
 // The decrypted Reveal Identity response — the only place vault plaintext ever appears in the
 // frontend. Never persisted to any query cache beyond the reveal dialog's own local state.
+// Fields beyond what disclosed_fields grants are always null, never omitted.
 export interface CandidateIdentitySnapshot {
   reveal_event_id: string;
+  disclosure_level: DisclosureLevel;
+  disclosed_fields: IdentityField[];
   callsign: string;
   candidate_ref: string;
-  full_name: string;
+  full_name: string | null;
   email: string | null;
   phone: string | null;
   location: string | null;
@@ -228,6 +266,8 @@ export interface RevealEventRead {
   candidate_ref: string;
   actor_email: string;
   reason: string;
+  disclosure_level: DisclosureLevel;
+  disclosed_fields: IdentityField[] | null;
   revealed_at: string;
   closed_at: string | null;
   duration_seconds: number | null;
@@ -589,9 +629,11 @@ export interface RevealedCareerEntry {
 // Reveal Request. Deliberately excludes the Passport address — see shadow_reveal/__init__.py.
 export interface RevealedIdentity {
   application_id: string;
+  disclosure_level: DisclosureLevel;
+  disclosed_fields: ShadowField[];
   callsign: string;
-  full_name: string;
-  email: string;
+  full_name: string | null;
+  email: string | null;
   phone: string | null;
   career_entries: RevealedCareerEntry[];
   revealed_at: string;

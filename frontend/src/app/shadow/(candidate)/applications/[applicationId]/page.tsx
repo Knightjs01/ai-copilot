@@ -13,6 +13,16 @@ import {
   SHADOW_APPLICATION_STATUS_LABEL,
   SHADOW_APPLICATION_STATUS_VARIANT,
 } from "@/lib/status-display";
+import type { ShadowField } from "@/lib/types";
+
+const FIELD_OPTIONS: { value: ShadowField; label: string }[] = [
+  { value: "full_name", label: "Name" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "career_history", label: "Career history" },
+];
+
+const ALL_FIELDS = FIELD_OPTIONS.map((f) => f.value);
 
 export default function ApplicationDetailPage() {
   const params = useParams<{ applicationId: string }>();
@@ -23,6 +33,19 @@ export default function ApplicationDetailPage() {
   const withdraw = useWithdrawApplication(params.applicationId);
   const respond = useRespondToRevealRequest(params.applicationId);
   const [respondError, setRespondError] = React.useState<string | null>(null);
+  const [fields, setFields] = React.useState<Set<ShadowField>>(new Set(ALL_FIELDS));
+
+  const toggleField = (field: ShadowField) => {
+    setFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) {
+        next.delete(field);
+      } else {
+        next.add(field);
+      }
+      return next;
+    });
+  };
 
   const canWithdraw = application && application.status !== "withdrawn";
 
@@ -46,8 +69,12 @@ export default function ApplicationDetailPage() {
 
   const handleRespond = async (approve: boolean) => {
     setRespondError(null);
+    // Omit disclosedFields entirely when everything is selected — keeps this reading as a plain
+    // "full" approval instead of "custom" every time.
+    const disclosedFields =
+      approve && fields.size < ALL_FIELDS.length ? Array.from(fields) : undefined;
     try {
-      await respond.mutateAsync(approve);
+      await respond.mutateAsync({ approve, disclosedFields });
     } catch {
       setRespondError("Couldn't submit your decision. Try again.");
     }
@@ -76,20 +103,38 @@ export default function ApplicationDetailPage() {
           <CardContent className="flex flex-col gap-3">
             <p className="text-sm text-foreground">
               <strong>{revealRequest.company_name}</strong> wants to see who&apos;s behind{" "}
-              {application.callsign}. If you approve, they&apos;ll see your name, email, phone,
-              and real employer history. Nothing else.
+              {application.callsign}.
             </p>
             {revealRequest.reason && (
               <p className="rounded-xl bg-slate-50 p-3 text-sm text-muted-foreground">
                 &ldquo;{revealRequest.reason}&rdquo;
               </p>
             )}
+            <p className="text-sm font-medium text-foreground">
+              Choose exactly what to share if you approve:
+            </p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {FIELD_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 text-sm text-foreground"
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-brand"
+                    checked={fields.has(option.value)}
+                    onChange={() => toggleField(option.value)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
             {respondError && <p className="text-sm font-medium text-danger">{respondError}</p>}
             <div className="flex gap-2">
               <Button
                 variant="brand"
                 onClick={() => handleRespond(true)}
-                disabled={respond.isPending}
+                disabled={fields.size === 0 || respond.isPending}
               >
                 Approve reveal
               </Button>

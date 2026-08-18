@@ -40,6 +40,11 @@ async def _setup_project_with_blueprint_and_alignment(client: AsyncClient, *, he
     )
     assert blueprint_response.status_code == 200
 
+    kit_response = await client.post(
+        f"/api/v1/projects/{project_id}/interview-kit", headers=headers
+    )
+    assert kit_response.status_code == 200
+
     alignment_response = await client.put(
         f"/api/v1/projects/{project_id}/hiring-manager-alignment",
         json={"top_requirements": ["5+ years Python"]},
@@ -152,6 +157,10 @@ async def test_burn_project_purges_everything(
         == 1
     )
     assert (
+        await _table_row_count("interview_kits", "project_id", project_id, company_id=company_id)
+        == 1
+    )
+    assert (
         await _table_row_count(
             "hiring_manager_alignments", "project_id", project_id, company_id=company_id
         )
@@ -201,6 +210,10 @@ async def test_burn_project_purges_everything(
     )
     assert (
         await _table_row_count("hiring_blueprints", "project_id", project_id, company_id=company_id)
+        == 0
+    )
+    assert (
+        await _table_row_count("interview_kits", "project_id", project_id, company_id=company_id)
         == 0
     )
     assert (

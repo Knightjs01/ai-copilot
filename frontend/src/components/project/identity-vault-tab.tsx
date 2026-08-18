@@ -181,6 +181,15 @@ export function IdentityVaultTab({ projectId }: { projectId: string }) {
                     Reason: {event.reason}
                     {event.duration_seconds != null && ` · Viewed for ${event.duration_seconds}s`}
                   </p>
+                  {event.disclosed_fields && event.disclosed_fields.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {event.disclosed_fields.map((field) => (
+                        <Badge key={field} variant="outline" className="text-[10px]">
+                          {field.replace(/_/g, " ")}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

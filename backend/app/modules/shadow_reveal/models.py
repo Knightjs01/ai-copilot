@@ -1,9 +1,10 @@
 import enum
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -37,4 +38,7 @@ class ShadowRevealRequest(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Set only when the candidate approves — the level they chose to disclose at. Null while
     # pending/declined, since there's nothing to disclose either way.
     disclosure_level: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # The exact resolved field set the candidate chose to disclose. Same null-while-pending/
+    # declined lifecycle as disclosure_level.
+    disclosed_fields: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

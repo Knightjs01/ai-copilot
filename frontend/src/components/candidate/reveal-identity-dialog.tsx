@@ -16,7 +16,7 @@ import {
 import { Field } from "@/components/ui/field";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { useCloseReveal, useRevealIdentity } from "@/lib/queries/identity-vault";
-import type { CandidateIdentitySnapshot, RevealReason } from "@/lib/types";
+import type { CandidateIdentitySnapshot, IdentityField, RevealReason } from "@/lib/types";
 
 const REASON_OPTIONS: { value: RevealReason; label: string }[] = [
   { value: "Hiring Manager Interview", label: "Hiring Manager Interview" },
@@ -26,6 +26,19 @@ const REASON_OPTIONS: { value: RevealReason; label: string }[] = [
   { value: "Hiring Manager Review", label: "Hiring Manager Review" },
   { value: "Other", label: "Other" },
 ];
+
+const FIELD_OPTIONS: { value: IdentityField; label: string }[] = [
+  { value: "full_name", label: "Name" },
+  { value: "current_title", label: "Job title" },
+  { value: "current_employer", label: "Current employer" },
+  { value: "location", label: "Location" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "expected_salary", label: "Salary expectations" },
+  { value: "linkedin_url", label: "LinkedIn profile" },
+];
+
+const ALL_FIELDS = FIELD_OPTIONS.map((f) => f.value);
 
 type Phase = "closed" | "confirm" | "snapshot";
 
@@ -43,21 +56,37 @@ function SnapshotRow({ label, value }: { label: string; value: string | null }) 
 export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
   const [phase, setPhase] = React.useState<Phase>("closed");
   const [reason, setReason] = React.useState<RevealReason | null>(null);
+  const [fields, setFields] = React.useState<Set<IdentityField>>(new Set(ALL_FIELDS));
   const [snapshot, setSnapshot] = React.useState<CandidateIdentitySnapshot | null>(null);
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const openedAtRef = React.useRef(0);
   const reveal = useRevealIdentity(candidateId);
   const closeReveal = useCloseReveal();
 
+  const toggleField = (field: IdentityField) => {
+    setFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) {
+        next.delete(field);
+      } else {
+        next.add(field);
+      }
+      return next;
+    });
+  };
+
   const handleRequestConfirm = () => {
-    if (!reason) return;
+    if (!reason || fields.size === 0) return;
     setStepUpOpen(true);
   };
 
   const handleVerified = async (stepUpToken: string) => {
     if (!reason) return;
+    // Omit disclosedFields entirely when everything is selected — keeps the audit trail reading
+    // "full" for the routine case instead of "custom" every time.
+    const disclosedFields = fields.size === ALL_FIELDS.length ? undefined : Array.from(fields);
     reveal.mutate(
-      { reason, stepUpToken },
+      { reason, stepUpToken, disclosedFields },
       {
         onSuccess: (data) => {
           setSnapshot(data);
@@ -75,6 +104,7 @@ export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
     }
     setSnapshot(null);
     setReason(null);
+    setFields(new Set(ALL_FIELDS));
     setPhase("closed");
   };
 
@@ -105,6 +135,24 @@ export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
           <Field label="Reason for access">
             <PillToggleGroup options={REASON_OPTIONS} value={reason} onChange={setReason} />
           </Field>
+          <Field label="Fields to reveal">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {FIELD_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 text-sm text-foreground"
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-brand"
+                    checked={fields.has(option.value)}
+                    onChange={() => toggleField(option.value)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </Field>
           {reveal.isError && (
             <p className="mt-2 text-sm font-medium text-danger">
               Couldn&apos;t reveal identity. Try again.
@@ -118,7 +166,7 @@ export function RevealIdentityDialog({ candidateId }: { candidateId: string }) {
               type="button"
               variant="secondary"
               onClick={handleRequestConfirm}
-              disabled={!reason || reveal.isPending}
+              disabled={!reason || fields.size === 0 || reveal.isPending}
             >
               {reveal.isPending ? "Revealing…" : "Reveal Identity"}
             </Button>

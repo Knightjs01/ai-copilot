@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.disclosure import DisclosureLevel
+from app.core.disclosure import SHADOW_TIER_FIELDS, DisclosureLevel, ShadowField
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
 from app.modules.auth.models import User
@@ -23,6 +23,7 @@ from app.modules.shadow_jobs.models import ShadowApplication, ShadowApplicationS
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 from app.modules.shadow_reveal.exceptions import (
     DuplicateRevealRequestError,
+    InvalidDisclosedFieldsError,
     RevealNotApprovedError,
     RevealRequestNotFoundError,
     RevealRequestNotPendingError,
@@ -138,8 +139,17 @@ class ShadowRevealService:
         if request.status != RevealRequestStatus.PENDING.value:
             raise RevealRequestNotPendingError()
 
+        if body.disclosed_fields is not None and not body.disclosed_fields:
+            raise InvalidDisclosedFieldsError()
+
+        stored_level = DisclosureLevel.CUSTOM if body.disclosed_fields else body.disclosure_level
         request = await self._requests.respond(
-            request, approve=body.approve, disclosure_level=body.disclosure_level.value
+            request,
+            approve=body.approve,
+            disclosure_level=stored_level.value,
+            disclosed_fields=(
+                [f.value for f in body.disclosed_fields] if body.disclosed_fields else None
+            ),
         )
         await self._applications.update_status(
             application,
@@ -157,7 +167,7 @@ class ShadowRevealService:
             target_id=application.id,
             extra_data={
                 "reveal_request_id": str(request.id),
-                **({"disclosure_level": body.disclosure_level.value} if body.approve else {}),
+                **({"disclosure_level": stored_level.value} if body.approve else {}),
             },
         )
 
@@ -211,8 +221,12 @@ class ShadowRevealService:
         # approved before this column existed — default to FULL so old approvals keep behaving
         # exactly as they did before disclosure levels existed, rather than silently narrowing.
         disclosure_level = DisclosureLevel(request.disclosure_level or DisclosureLevel.FULL.value)
-        include_contact = disclosure_level in (DisclosureLevel.CONTACT, DisclosureLevel.FULL)
-        include_full = disclosure_level == DisclosureLevel.FULL
+        if request.disclosed_fields:
+            effective_fields = {ShadowField(f) for f in request.disclosed_fields}
+        else:
+            effective_fields = set(
+                SHADOW_TIER_FIELDS.get(disclosure_level, SHADOW_TIER_FIELDS[DisclosureLevel.FULL])
+            )
 
         career_entries = (
             [
@@ -223,19 +237,24 @@ class ShadowRevealService:
                 )
                 for entry in await self._career_entries.list_by_passport_id(passport.id)
             ]
-            if include_full
+            if ShadowField.CAREER_HISTORY in effective_fields
             else []
         )
 
         return RevealedIdentity(
             application_id=application.id,
             disclosure_level=disclosure_level,
+            disclosed_fields=sorted(effective_fields, key=lambda f: f.value),
             callsign=application.callsign,
-            full_name=security.decrypt_secret(personal_info.legal_name_encrypted),
-            email=candidate_user.email if include_contact else None,
+            full_name=(
+                security.decrypt_secret(personal_info.legal_name_encrypted)
+                if ShadowField.FULL_NAME in effective_fields
+                else None
+            ),
+            email=candidate_user.email if ShadowField.EMAIL in effective_fields else None,
             phone=(
                 security.decrypt_secret(personal_info.phone_encrypted)
-                if include_contact and personal_info.phone_encrypted
+                if ShadowField.PHONE in effective_fields and personal_info.phone_encrypted
                 else None
             ),
             career_entries=career_entries,

@@ -1,11 +1,12 @@
 import secrets
 import uuid
 from datetime import datetime, timezone
+from typing import TypeVar
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.disclosure import DisclosureLevel
+from app.core.disclosure import IDENTITY_TIER_FIELDS, DisclosureLevel, IdentityField
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
 from app.modules.auth.models import User
@@ -14,6 +15,7 @@ from app.modules.candidates.repository import CandidateRepository
 from app.modules.identity_vault.exceptions import (
     CallsignGenerationExhaustedError,
     IdentityVaultNotFoundError,
+    InvalidDisclosedFieldsError,
     RevealEventNotFoundError,
 )
 from app.modules.identity_vault.models import CandidateIdentityVault
@@ -138,11 +140,21 @@ class IdentityVaultService:
         reason: str,
         ip_address: str | None,
         disclosure_level: DisclosureLevel = DisclosureLevel.FULL,
+        disclosed_fields: list[IdentityField] | None = None,
     ) -> IdentitySnapshot:
         vault = await self._get_vault(candidate_id)
         candidate = await self._candidates_repo.get_by_id(candidate_id)
         if candidate is None:
             raise IdentityVaultNotFoundError()
+
+        if disclosed_fields is not None:
+            if not disclosed_fields:
+                raise InvalidDisclosedFieldsError()
+            effective_fields = set(disclosed_fields)
+            stored_level = DisclosureLevel.CUSTOM
+        else:
+            effective_fields = set(IDENTITY_TIER_FIELDS[disclosure_level])
+            stored_level = disclosure_level
 
         event = await self._events.create(
             company_id=actor.company_id,
@@ -151,7 +163,8 @@ class IdentityVaultService:
             actor_user_id=actor.id,
             reason=reason,
             ip_address=ip_address,
-            disclosure_level=disclosure_level.value,
+            disclosure_level=stored_level.value,
+            disclosed_fields=[f.value for f in effective_fields],
         )
         await self._audit.record(
             company_id=actor.company_id,
@@ -162,30 +175,38 @@ class IdentityVaultService:
             extra_data={
                 "reveal_event_id": str(event.id),
                 "reason": reason,
-                "disclosure_level": disclosure_level.value,
+                "disclosure_level": stored_level.value,
             },
         )
 
         def _decrypt(value: str | None) -> str | None:
             return security.decrypt_secret(value) if value else None
 
-        # Each level is a strict superset of the one before — see app/core/disclosure.py.
-        include_contact = disclosure_level in (DisclosureLevel.CONTACT, DisclosureLevel.FULL)
-        include_full = disclosure_level == DisclosureLevel.FULL
+        _T = TypeVar("_T")
+
+        def _field(field: IdentityField, value: _T | None) -> _T | None:
+            return value if field in effective_fields else None
 
         return IdentitySnapshot(
             reveal_event_id=event.id,
-            disclosure_level=disclosure_level,
+            disclosure_level=stored_level,
+            disclosed_fields=sorted(effective_fields, key=lambda f: f.value),
             callsign=candidate.callsign,
             candidate_ref=candidate.candidate_ref,
-            full_name=security.decrypt_secret(vault.full_name_encrypted),
-            email=_decrypt(vault.email_encrypted) if include_contact else None,
-            phone=_decrypt(vault.phone_encrypted) if include_contact else None,
-            location=_decrypt(vault.location_encrypted),
-            current_employer=_decrypt(vault.current_employer_encrypted) if include_full else None,
-            current_title=_decrypt(vault.current_title_encrypted) if include_full else None,
-            linkedin_url=_decrypt(vault.linkedin_url_encrypted) if include_full else None,
-            expected_salary=candidate.expected_salary if include_full else None,
+            full_name=_field(
+                IdentityField.FULL_NAME, security.decrypt_secret(vault.full_name_encrypted)
+            ),
+            email=_field(IdentityField.EMAIL, _decrypt(vault.email_encrypted)),
+            phone=_field(IdentityField.PHONE, _decrypt(vault.phone_encrypted)),
+            location=_field(IdentityField.LOCATION, _decrypt(vault.location_encrypted)),
+            current_employer=_field(
+                IdentityField.CURRENT_EMPLOYER, _decrypt(vault.current_employer_encrypted)
+            ),
+            current_title=_field(
+                IdentityField.CURRENT_TITLE, _decrypt(vault.current_title_encrypted)
+            ),
+            linkedin_url=_field(IdentityField.LINKEDIN_URL, _decrypt(vault.linkedin_url_encrypted)),
+            expected_salary=_field(IdentityField.EXPECTED_SALARY, candidate.expected_salary),
         )
 
     async def close_reveal(self, *, reveal_event_id: uuid.UUID, duration_seconds: int) -> None:
@@ -259,6 +280,9 @@ class IdentityVaultService:
                 ),
                 reason=e.reason,
                 disclosure_level=DisclosureLevel(e.disclosure_level),
+                disclosed_fields=(
+                    [IdentityField(f) for f in e.disclosed_fields] if e.disclosed_fields else None
+                ),
                 revealed_at=e.created_at,
                 closed_at=e.closed_at,
                 duration_seconds=e.duration_seconds,

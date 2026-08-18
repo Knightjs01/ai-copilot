@@ -42,6 +42,10 @@ from app.modules.intelligence.llm_client import (  # noqa: E402
     CandidateProfileExtraction,
     EducationEntry,
 )
+from app.modules.interview_kit.llm_client import (  # noqa: E402
+    InterviewKitExtraction,
+    InterviewKitQuestionDraft,
+)
 from app.modules.phantom_passport.llm_client import (  # noqa: E402
     CareerEntryExtraction,
     PassportExtraction,
@@ -164,6 +168,41 @@ def fake_hiring_blueprint_llm_client() -> FakeHiringBlueprintLLMClient:
     return FakeHiringBlueprintLLMClient()
 
 
+class FakeInterviewKitLLMClient:
+    """Test double for app.modules.interview_kit.llm_client.InterviewKitLLMClient — returns
+    exactly one deterministic question per grounding item, matching the real invariant the
+    service enforces (one question per must-have + evaluation-criterion, in order). Kept
+    separate from the other fakes: different module, different domain, different dependency
+    override."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[list[str], list[str]]] = []
+
+    async def generate_kit(
+        self,
+        *,
+        role_summary: str,
+        must_have_qualifications: list[str],
+        evaluation_criteria: list[str],
+    ) -> InterviewKitExtraction:
+        self.calls.append((must_have_qualifications, evaluation_criteria))
+        grounding_items = list(must_have_qualifications) + list(evaluation_criteria)
+        return InterviewKitExtraction(
+            questions=[
+                InterviewKitQuestionDraft(
+                    question_text=f"Tell me about a time you demonstrated: {item}",
+                    follow_up_prompts=["Fake follow-up prompt"],
+                )
+                for item in grounding_items
+            ]
+        )
+
+
+@pytest.fixture
+def fake_interview_kit_llm_client() -> FakeInterviewKitLLMClient:
+    return FakeInterviewKitLLMClient()
+
+
 class FakePrescreenAssessmentLLMClient:
     """Test double for app.modules.prescreen_assessment.llm_client.PrescreenAssessmentLLMClient
     — returns canned, deterministic responses instead of calling the real Claude API. Kept
@@ -260,6 +299,7 @@ async def client(
     sent_emails: CapturingEmailSender,
     fake_llm_client: FakeLLMClient,
     fake_hiring_blueprint_llm_client: FakeHiringBlueprintLLMClient,
+    fake_interview_kit_llm_client: FakeInterviewKitLLMClient,
     fake_prescreen_assessment_llm_client: FakePrescreenAssessmentLLMClient,
     fake_passport_llm_client: FakePassportLLMClient,
     test_storage: EncryptingFileStorage,
@@ -269,6 +309,7 @@ async def client(
     from app.modules.candidates.dependencies import get_file_storage
     from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
     from app.modules.intelligence.dependencies import get_llm_client
+    from app.modules.interview_kit.dependencies import get_interview_kit_llm_client
     from app.modules.phantom_passport.dependencies import (
         get_llm_client as get_passport_llm_client,
     )
@@ -280,6 +321,7 @@ async def client(
     app.dependency_overrides[get_hiring_blueprint_llm_client] = (
         lambda: fake_hiring_blueprint_llm_client
     )
+    app.dependency_overrides[get_interview_kit_llm_client] = lambda: fake_interview_kit_llm_client
     app.dependency_overrides[get_prescreen_assessment_llm_client] = (
         lambda: fake_prescreen_assessment_llm_client
     )
@@ -293,5 +335,6 @@ async def client(
         app.dependency_overrides.pop(get_file_storage, None)
         app.dependency_overrides.pop(get_llm_client, None)
         app.dependency_overrides.pop(get_hiring_blueprint_llm_client, None)
+        app.dependency_overrides.pop(get_interview_kit_llm_client, None)
         app.dependency_overrides.pop(get_prescreen_assessment_llm_client, None)
         app.dependency_overrides.pop(get_passport_llm_client, None)

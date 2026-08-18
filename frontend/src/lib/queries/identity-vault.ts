@@ -3,16 +3,33 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
-import type { CandidateIdentitySnapshot, VaultDashboardStats, VaultListItem } from "@/lib/types";
+import type {
+  CandidateIdentitySnapshot,
+  IdentityField,
+  VaultDashboardStats,
+  VaultListItem,
+} from "@/lib/types";
 
 export function useRevealIdentity(candidateId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ reason, stepUpToken }: { reason: string; stepUpToken: string }) =>
+    mutationFn: ({
+      reason,
+      stepUpToken,
+      disclosedFields,
+    }: {
+      reason: string;
+      stepUpToken: string;
+      disclosedFields?: IdentityField[];
+    }) =>
       apiClient.post<CandidateIdentitySnapshot>(
         `/identity-vault/candidates/${candidateId}/reveal`,
-        { reason },
+        { reason, disclosed_fields: disclosedFields },
         stepUpToken
       ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["identity-vault", "dashboard"] });
+    },
   });
 }
 

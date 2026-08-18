@@ -24,3 +24,8 @@ class RevealRequestNotPendingError(ShadowRevealError):
 class RevealNotApprovedError(ShadowRevealError):
     status_code = 400
     detail = "The candidate has not approved a reveal for this application"
+
+
+class InvalidDisclosedFieldsError(ShadowRevealError):
+    status_code = 400
+    detail = "disclosed_fields, if given, must be a non-empty list"

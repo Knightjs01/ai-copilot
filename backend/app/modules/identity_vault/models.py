@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -55,5 +56,9 @@ class IdentityRevealEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     reason: Mapped[str] = mapped_column(Text)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     disclosure_level: Mapped[str] = mapped_column(String(20), default="full")
+    # The exact resolved field set disclosed — populated for every reveal going forward,
+    # whether it came from an explicit selection or a tier default. NULL only for pre-migration
+    # rows, never for new ones.
+    disclosed_fields: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

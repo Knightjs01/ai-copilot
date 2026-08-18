@@ -195,6 +195,100 @@ async def test_candidate_can_decline_reveal_request(client: AsyncClient) -> None
     assert second_response.status_code == 400
 
 
+async def test_respond_with_custom_fields_narrows_disclosure(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowreveal-customfields.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client,
+        job_id=job["id"],
+        email="applicant@shadowreveal-customfields.com",
+        full_name="Narrowed Applicant",
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={"reason": "Confirming interest"},
+        headers=headers,
+    )
+
+    approve_response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": True, "disclosed_fields": ["full_name"]},
+        headers=candidate_headers,
+    )
+    assert approve_response.status_code == 200, approve_response.text
+
+    revealed_response = await client.get(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert revealed_response.status_code == 200, revealed_response.text
+    revealed = revealed_response.json()
+    assert revealed["full_name"] == "Narrowed Applicant"
+    assert revealed["email"] is None
+    assert revealed["career_entries"] == []
+    assert revealed["disclosure_level"] == "custom"
+    assert revealed["disclosed_fields"] == ["full_name"]
+
+
+async def test_respond_with_empty_disclosed_fields_rejected(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowreveal-emptyfields.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="applicant@shadowreveal-emptyfields.com"
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={},
+        headers=headers,
+    )
+
+    response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": True, "disclosed_fields": []},
+        headers=candidate_headers,
+    )
+    assert response.status_code == 400, response.text
+
+
+async def test_respond_without_disclosed_fields_falls_back_to_tier(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowreveal-tierfallback.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client,
+        job_id=job["id"],
+        email="applicant@shadowreveal-tierfallback.com",
+        full_name="Tier Fallback Applicant",
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={},
+        headers=headers,
+    )
+
+    approve_response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": True, "disclosure_level": "contact"},
+        headers=candidate_headers,
+    )
+    assert approve_response.status_code == 200, approve_response.text
+
+    revealed_response = await client.get(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert revealed_response.status_code == 200, revealed_response.text
+    revealed = revealed_response.json()
+    assert revealed["full_name"] == "Tier Fallback Applicant"
+    assert revealed["email"] == "applicant@shadowreveal-tierfallback.com"
+    assert revealed["phone"] == "+44 20 7946 0958"
+    assert revealed["career_entries"] == []
+    assert revealed["disclosure_level"] == "contact"
+    assert sorted(revealed["disclosed_fields"]) == ["email", "full_name", "phone"]
+
+
 async def test_reveal_request_scoped_to_owning_candidate(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@shadowreveal-scope.com")
     headers = auth_headers(owner["access_token"])

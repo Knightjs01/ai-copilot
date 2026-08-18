@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.core.disclosure import DisclosureLevel
+from app.core.disclosure import DisclosureLevel, ShadowField
 from app.modules.shadow_reveal.models import RevealRequestStatus
 
 
@@ -41,6 +41,9 @@ class RevealDecision(BaseModel):
     # candidate deciding how much to give: they can approve a reveal while still withholding
     # contact details or career history if all the company needs is confirmation of interest.
     disclosure_level: DisclosureLevel = DisclosureLevel.FULL
+    # Explicit field-level override — when given, takes precedence over disclosure_level entirely
+    # (must be non-empty). When omitted, disclosure_level's tier default applies exactly as before.
+    disclosed_fields: list[ShadowField] | None = None
 
 
 class RevealedCareerEntry(BaseModel):
@@ -56,8 +59,9 @@ class RevealedIdentity(BaseModel):
 
     application_id: uuid.UUID
     disclosure_level: DisclosureLevel
+    disclosed_fields: list[ShadowField]
     callsign: str
-    full_name: str
+    full_name: str | None
     email: str | None
     phone: str | None
     career_entries: list[RevealedCareerEntry]

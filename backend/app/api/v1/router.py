@@ -12,6 +12,7 @@ from app.modules.hiring_manager_alignment.api import router as hiring_manager_al
 from app.modules.historic_vault.api import router as historic_vault_router
 from app.modules.identity_vault.api import router as identity_vault_router
 from app.modules.intelligence.api import router as intelligence_router
+from app.modules.interview_kit.api import router as interview_kit_router
 from app.modules.phantom_passport.api import router as phantom_passport_router
 from app.modules.prescreen_assessment.api import router as prescreen_assessment_router
 from app.modules.privacy_gateway.api import router as privacy_gateway_router
@@ -29,6 +30,7 @@ api_router.include_router(candidates_router)
 api_router.include_router(privacy_gateway_router)
 api_router.include_router(intelligence_router)
 api_router.include_router(hiring_blueprint_router)
+api_router.include_router(interview_kit_router)
 api_router.include_router(hiring_manager_alignment_router)
 api_router.include_router(prescreen_assessment_router)
 api_router.include_router(project_deletion_router)

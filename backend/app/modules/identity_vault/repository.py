@@ -77,6 +77,7 @@ class IdentityRevealEventRepository:
         reason: str,
         ip_address: str | None,
         disclosure_level: str,
+        disclosed_fields: list[str] | None = None,
     ) -> IdentityRevealEvent:
         event = IdentityRevealEvent(
             company_id=company_id,
@@ -86,6 +87,7 @@ class IdentityRevealEventRepository:
             reason=reason,
             ip_address=ip_address,
             disclosure_level=disclosure_level,
+            disclosed_fields=disclosed_fields,
         )
         self._session.add(event)
         await self._session.flush()

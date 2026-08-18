@@ -70,8 +70,10 @@ export function ApplicantCard({ jobId, profile }: { jobId: string; profile: Shad
               <Eye className="h-3.5 w-3.5" />
               Identity revealed
             </div>
-            <p className="text-sm text-foreground">{identity.full_name}</p>
-            <p className="text-sm text-muted-foreground">{identity.email}</p>
+            {identity.full_name && (
+              <p className="text-sm text-foreground">{identity.full_name}</p>
+            )}
+            {identity.email && <p className="text-sm text-muted-foreground">{identity.email}</p>}
             {identity.phone && <p className="text-sm text-muted-foreground">{identity.phone}</p>}
             {identity.career_entries.map((entry, i) => (
               <p key={i} className="text-xs text-muted-foreground">

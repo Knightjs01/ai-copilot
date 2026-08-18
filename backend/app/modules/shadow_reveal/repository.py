@@ -48,11 +48,13 @@ class ShadowRevealRequestRepository:
         *,
         approve: bool,
         disclosure_level: str | None = None,
+        disclosed_fields: list[str] | None = None,
     ) -> ShadowRevealRequest:
         request.status = (
             RevealRequestStatus.APPROVED.value if approve else RevealRequestStatus.DECLINED.value
         )
         request.disclosure_level = disclosure_level if approve else None
+        request.disclosed_fields = disclosed_fields if approve else None
         request.responded_at = datetime.now(timezone.utc)
         await self._session.flush()
         return request

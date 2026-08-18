@@ -368,6 +368,112 @@ async def test_rls_blocks_cross_tenant_identity_vault_reads(client: AsyncClient)
             assert cross_tenant_query.fetchall() == []
 
 
+async def test_reveal_with_custom_fields_omits_unselected_fields(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@customfields.com", company_name="Custom Fields Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+    candidate = await _create_candidate(
+        client,
+        headers=headers,
+        project_id=project["id"],
+        full_name="Custom Fields Candidate",
+        email="custom.fields@example.com",
+        phone="555-0100",
+    )
+    await client.patch(
+        f"/api/v1/identity-vault/candidates/{candidate['id']}",
+        json={"current_employer": "Narrowed Corp"},
+        headers=headers,
+    )
+
+    reveal_response = await client.post(
+        f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
+        json={"reason": "Confirming right to work", "disclosed_fields": ["full_name"]},
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert reveal_response.status_code == 200, reveal_response.text
+    snapshot = reveal_response.json()
+    assert snapshot["full_name"] == "Custom Fields Candidate"
+    assert snapshot["email"] is None
+    assert snapshot["phone"] is None
+    assert snapshot["current_employer"] is None
+    assert snapshot["location"] is None
+    assert snapshot["disclosure_level"] == "custom"
+    assert snapshot["disclosed_fields"] == ["full_name"]
+
+
+async def test_reveal_with_empty_disclosed_fields_rejected(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@emptyfields.com", company_name="Empty Fields Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+    candidate = await _create_candidate(
+        client, headers=headers, project_id=project["id"], full_name="Empty Fields Candidate"
+    )
+
+    response = await client.post(
+        f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
+        json={"reason": "Other", "disclosed_fields": []},
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert response.status_code == 400, response.text
+
+
+async def test_reveal_without_disclosed_fields_matches_tier_default(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@tierdefault.com", company_name="Tier Default Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+    candidate = await _create_candidate(
+        client,
+        headers=headers,
+        project_id=project["id"],
+        full_name="Tier Default Candidate",
+        email="tier.default@example.com",
+        phone="555-0101",
+    )
+    await client.patch(
+        f"/api/v1/identity-vault/candidates/{candidate['id']}",
+        json={"location": "Hull, UK"},
+        headers=headers,
+    )
+
+    reveal_response = await client.post(
+        f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
+        json={"reason": "Other", "disclosure_level": "basic"},
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert reveal_response.status_code == 200, reveal_response.text
+    snapshot = reveal_response.json()
+    assert snapshot["full_name"] == "Tier Default Candidate"
+    assert snapshot["location"] == "Hull, UK"
+    assert snapshot["email"] is None
+    assert snapshot["phone"] is None
+    assert snapshot["disclosure_level"] == "basic"
+    assert sorted(snapshot["disclosed_fields"]) == ["full_name", "location"]
+
+
+async def test_dashboard_audit_trail_includes_disclosed_fields(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@auditfields.com", company_name="Audit Fields Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+    candidate = await _create_candidate(
+        client, headers=headers, project_id=project["id"], full_name="Audit Fields Candidate"
+    )
+
+    await client.post(
+        f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
+        json={"reason": "Other", "disclosed_fields": ["full_name"]},
+        headers=await step_up_headers(client, headers=headers),
+    )
+
+    dashboard = await client.get(
+        f"/api/v1/identity-vault/projects/{project['id']}/dashboard", headers=headers
+    )
+    assert dashboard.status_code == 200, dashboard.text
+    reveals = dashboard.json()["recent_reveals"]
+    assert len(reveals) == 1
+    assert reveals[0]["disclosed_fields"] == ["full_name"]
+
+
 async def test_app_auth_role_has_no_grants_on_identity_vault_tables() -> None:
     from app.core.config import get_settings
     from sqlalchemy.ext.asyncio import create_async_engine

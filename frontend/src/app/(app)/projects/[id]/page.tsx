@@ -9,6 +9,7 @@ import { EditProjectDialog } from "@/components/project/edit-project-dialog";
 import { HiringBlueprintCard } from "@/components/project/hiring-blueprint-card";
 import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-alignment-card";
 import { IdentityVaultTab } from "@/components/project/identity-vault-tab";
+import { InterviewKitCard } from "@/components/project/interview-kit-card";
 import { ProjectAnalyticsCard } from "@/components/project/project-analytics-card";
 import { RoleInfoCard } from "@/components/project/role-info-card";
 import { Spinner } from "@/components/ui/spinner";
@@ -66,7 +67,12 @@ export default function ProjectDetailPage() {
         </>
       )}
 
-      {activeTab === "blueprint" && <HiringBlueprintCard project={project} />}
+      {activeTab === "blueprint" && (
+        <>
+          <HiringBlueprintCard project={project} />
+          <InterviewKitCard project={project} />
+        </>
+      )}
 
       {activeTab === "candidates" && <CandidatesTabSection projectId={project.id} />}
 
