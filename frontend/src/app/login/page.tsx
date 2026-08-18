@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Briefcase } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { PhantomIcon } from "@/components/phantom-icon";
-import { ShadowIcon } from "@/components/shadow-icon";
 
 export const metadata: Metadata = {
   title: "Log in | Phantom Hire",
@@ -12,20 +11,30 @@ export const metadata: Metadata = {
 
 const OPTIONS = [
   {
-    href: "/login/recruiter",
-    title: "Recruiter / Corporate Profile",
-    description:
-      "Run hiring projects, screen candidates, and post Shadow jobs from your Talent Acquisition workspace.",
-    cta: "Log in as a recruiter",
-    icon: <Briefcase className="h-5 w-5 text-brand" />,
-  },
-  {
     href: "/shadow/login",
     title: "Candidate",
     description:
       "Build your Phantom Passport, browse the Shadow job board, and manage your applications, pseudonymously, on your terms.",
-    cta: "Log in as a candidate",
-    icon: <ShadowIcon className="h-6 w-auto" />,
+    cta: "Log in as a Candidate",
+    logo: {
+      src: "/shadow-wordmark.png",
+      alt: "Shadow: Anonymous Job Board",
+      width: 1629,
+      height: 1049,
+    },
+  },
+  {
+    href: "/login/recruiter",
+    title: "Recruiter - Talent ATS",
+    description:
+      "Run hiring projects, screen candidates, and post Shadow jobs from your Talent Acquisition workspace.",
+    cta: "Log in as a Recruiter",
+    logo: {
+      src: "/phantom-ats-wordmark.png",
+      alt: "Phantom ATS",
+      width: 1388,
+      height: 339,
+    },
   },
 ];
 
@@ -58,10 +67,14 @@ export default function LoginChooserPage() {
         {OPTIONS.map((option) => (
           <Link key={option.href} href={option.href} className="group">
             <div className="flex h-full flex-col justify-between gap-6 rounded-2xl border border-border bg-white p-7 shadow-sm shadow-slate-900/[0.03] transition-all group-hover:border-brand/40 group-hover:shadow-md">
-              <div className="flex flex-col gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10">
-                  {option.icon}
-                </div>
+              <div className="flex flex-col gap-4">
+                <Image
+                  src={option.logo.src}
+                  alt={option.logo.alt}
+                  width={option.logo.width}
+                  height={option.logo.height}
+                  className="h-12 w-auto self-start"
+                />
                 <div className="flex flex-col gap-1">
                   <h2 className="text-lg font-semibold text-foreground">{option.title}</h2>
                   <p className="text-sm text-muted-foreground">{option.description}</p>
