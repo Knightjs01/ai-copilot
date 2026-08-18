@@ -21,9 +21,6 @@ const OPTIONS = [
       alt: "Shadow: Anonymous Job Board",
       width: 1525,
       height: 550,
-      // Single line of icon+text fills nearly the whole canvas, so a modest box height
-      // already reads at full size.
-      heightClass: "h-12",
     },
   },
   {
@@ -37,11 +34,6 @@ const OPTIONS = [
       alt: "Phantom ATS",
       width: 1388,
       height: 339,
-      // The big "Phantom" wordmark only occupies the top ~70% of this canvas -- the rest is
-      // the much smaller "HIRE" subscript -- so matching Shadow's box height by pixels alone
-      // renders "Phantom" visibly smaller than Shadow's single-line mark. A taller box gets
-      // the actual readable word to a comparable size.
-      heightClass: "h-[70px]",
     },
   },
 ];
@@ -81,7 +73,7 @@ export default function LoginChooserPage() {
                   alt={option.logo.alt}
                   width={option.logo.width}
                   height={option.logo.height}
-                  className={`${option.logo.heightClass} w-auto self-start`}
+                  className="h-14 w-auto self-start"
                 />
                 <div className="flex flex-col gap-1">
                   <h2 className="text-lg font-semibold text-foreground">{option.title}</h2>
