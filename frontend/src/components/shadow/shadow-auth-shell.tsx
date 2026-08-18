@@ -22,7 +22,7 @@ export function ShadowAuthShell({
             alt="Shadow: Anonymous Job Board"
             width={1629}
             height={1049}
-            className="h-14 w-auto"
+            className="h-24 w-auto sm:h-28"
             priority
           />
         </Link>
