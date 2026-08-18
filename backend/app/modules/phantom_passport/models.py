@@ -101,7 +101,6 @@ class PassportPersonalInfo(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     legal_name_encrypted: Mapped[str] = mapped_column(Text)
     phone_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
-    address_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class PassportCareerEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):

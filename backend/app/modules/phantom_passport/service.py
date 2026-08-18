@@ -29,6 +29,7 @@ from app.modules.phantom_passport.schemas import (
     CvDocumentRead,
     CvParseCareerEntry,
     CvParseResult,
+    IndustriesSuggestionResponse,
     PassportRead,
     PassportUpdate,
     PassportVersionRead,
@@ -112,11 +113,6 @@ class PhantomPassportService:
             phone_encrypted=(
                 security.encrypt_secret(body.personal_info.phone)
                 if body.personal_info.phone
-                else None
-            ),
-            address_encrypted=(
-                security.encrypt_secret(body.personal_info.address)
-                if body.personal_info.address
                 else None
             ),
         )
@@ -357,6 +353,19 @@ class PhantomPassportService:
             raise AiSuggestionFailedError(str(exc)) from exc
         return SkillsSuggestionResponse(suggested_skills=suggestions)
 
+    async def suggest_industries(
+        self, *, headline: str | None, summary: str | None, existing_industries: list[str]
+    ) -> IndustriesSuggestionResponse:
+        if self._llm_client is None:
+            raise ValueError("suggest_industries requires an llm_client")
+        try:
+            suggestions = await self._llm_client.suggest_industries(
+                headline=headline, summary=summary, existing_industries=existing_industries
+            )
+        except LLMRequestError as exc:
+            raise AiSuggestionFailedError(str(exc)) from exc
+        return IndustriesSuggestionResponse(suggested_industries=suggestions)
+
     async def list_versions(self, *, candidate: CandidateUser) -> list[PassportVersionRead]:
         # A list endpoint — "no Passport yet" is just zero versions, not an error, matching
         # every other list-of-a-candidate's-own-things endpoint in this app.
@@ -414,11 +423,6 @@ class PhantomPassportService:
                 phone=(
                     security.decrypt_secret(personal_info.phone_encrypted)
                     if personal_info.phone_encrypted
-                    else None
-                ),
-                address=(
-                    security.decrypt_secret(personal_info.address_encrypted)
-                    if personal_info.address_encrypted
                     else None
                 ),
             ),

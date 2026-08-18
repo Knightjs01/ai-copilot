@@ -7,6 +7,8 @@ import { fetchOrNull } from "@/lib/queries/helpers";
 import type {
   CvDocumentStatus,
   CvParseResult,
+  IndustriesSuggestionRequest,
+  IndustriesSuggestionResponse,
   PassportUpdateInput,
   PassportVersionSummary,
   PhantomPassport,
@@ -120,6 +122,16 @@ export function useSuggestSkills() {
     mutationFn: (input: SkillsSuggestionRequest) =>
       candidateApiClient.post<SkillsSuggestionResponse>(
         "/phantom-passport/suggest-skills",
+        input
+      ),
+  });
+}
+
+export function useSuggestIndustries() {
+  return useMutation({
+    mutationFn: (input: IndustriesSuggestionRequest) =>
+      candidateApiClient.post<IndustriesSuggestionResponse>(
+        "/phantom-passport/suggest-industries",
         input
       ),
   });

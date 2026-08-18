@@ -1,7 +1,9 @@
 "use client";
 
-import { CheckCircle2, Sparkles } from "lucide-react";
+import * as React from "react";
+import { CheckCircle2, FileText, Sparkles } from "lucide-react";
 
+import { AnonymisedCvDialog } from "@/components/candidate/passport-wizard/anonymised-cv-dialog";
 import { PassportCard } from "@/components/candidate/passport-wizard/passport-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +12,7 @@ import { VERIFICATION_STATUS_LABEL, VERIFICATION_STATUS_VARIANT } from "@/lib/st
 import type { CareerEntryInput, PassportVersionSummary, PhantomPassport } from "@/lib/types";
 
 const PRIVACY_CHECKLIST = [
-  "Your name, phone, and address are encrypted and stored separately from your professional profile.",
+  "Your name, email, and phone are encrypted and stored separately from your professional profile.",
   "Your real employer names stay hidden — only the anonymized names below are ever shown.",
   "Your original CV file stays in your private Candidate Vault and is never sent to a company.",
   "A company can only see your real identity after you personally approve a Reveal Request.",
@@ -21,9 +23,14 @@ interface ReviewStepProps {
   versions: PassportVersionSummary[] | undefined;
   careerEntries: CareerEntryInput[];
   headline: string;
+  seniority: string;
+  summary: string;
+  skills: string[];
+  industries: string[];
   canApprove: boolean;
   reviewed: boolean;
   onReviewedChange: (value: boolean) => void;
+  onNavigateToProfileStep: () => void;
   approveError: string | null;
   onApprove: () => void;
   isApproving: boolean;
@@ -35,14 +42,20 @@ export function ReviewStep({
   versions,
   careerEntries,
   headline,
+  seniority,
+  summary,
+  skills,
+  industries,
   canApprove,
   reviewed,
   onReviewedChange,
+  onNavigateToProfileStep,
   approveError,
   onApprove,
   isApproving,
   isSaving,
 }: ReviewStepProps) {
+  const [showCvDialog, setShowCvDialog] = React.useState(false);
   const isPublished = passport?.current_version_number != null;
   const latestVersion = versions?.[0];
 
@@ -62,7 +75,7 @@ export function ReviewStep({
         <CardHeader>
           <CardTitle>Privacy summary</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+        <CardContent className="flex flex-col gap-4">
           <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div className="flex flex-col gap-1 rounded-xl bg-background p-3">
               <dt className="text-xs text-muted-foreground">Personal</dt>
@@ -99,33 +112,32 @@ export function ReviewStep({
               </dd>
             </div>
           </dl>
+          <Button
+            type="button"
+            variant="secondary"
+            className="self-start"
+            onClick={() => setShowCvDialog(true)}
+          >
+            <FileText className="h-4 w-4" /> View my anonymised CV
+          </Button>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>What recruiters will see</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {careerEntries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No career history added yet — add a role in the previous step.
-            </p>
-          ) : (
-            careerEntries.map((entry, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between gap-3 rounded-xl bg-background px-4 py-2.5 text-sm"
-              >
-                <span className="font-medium text-foreground">{entry.title || "Untitled role"}</span>
-                <span className="text-muted-foreground">
-                  {entry.company_name_anonymized || entry.company_name || "Anonymized employer"}
-                </span>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <AnonymisedCvDialog
+        open={showCvDialog}
+        onOpenChange={setShowCvDialog}
+        headline={headline}
+        seniority={seniority}
+        summary={summary}
+        skills={skills}
+        industries={industries}
+        careerEntries={careerEntries}
+        onApprove={() => onReviewedChange(true)}
+        onDeclineAndEdit={() => {
+          onReviewedChange(false);
+          onNavigateToProfileStep();
+        }}
+      />
 
       <Card>
         <CardHeader>

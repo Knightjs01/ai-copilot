@@ -366,13 +366,11 @@ export type VerificationStatus = "unverified" | "pending" | "verified";
 export interface PersonalInfo {
   legal_name: string;
   phone: string | null;
-  address: string | null;
 }
 
 export interface PersonalInfoInput {
   legal_name: string;
   phone?: string | null;
-  address?: string | null;
 }
 
 // company_name is the real employer — only ever visible to the owning candidate themselves (via
@@ -510,6 +508,17 @@ export interface SkillsSuggestionRequest {
 
 export interface SkillsSuggestionResponse {
   suggested_skills: string[];
+}
+
+// See POST /phantom-passport/suggest-industries.
+export interface IndustriesSuggestionRequest {
+  headline?: string | null;
+  summary?: string | null;
+  existing_industries: string[];
+}
+
+export interface IndustriesSuggestionResponse {
+  suggested_industries: string[];
 }
 
 export type EmploymentType = "full_time" | "part_time" | "contract" | "fractional";

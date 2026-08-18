@@ -37,13 +37,11 @@ class CareerEntryRead(BaseModel):
 class PersonalInfoInput(BaseModel):
     legal_name: str = Field(min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
-    address: str | None = Field(default=None, max_length=500)
 
 
 class PersonalInfoRead(BaseModel):
     legal_name: str
     phone: str | None
-    address: str | None
 
 
 class PassportUpdate(BaseModel):
@@ -161,6 +159,16 @@ class SkillsSuggestionRequest(BaseModel):
 
 class SkillsSuggestionResponse(BaseModel):
     suggested_skills: list[str]
+
+
+class IndustriesSuggestionRequest(BaseModel):
+    headline: str | None = Field(default=None, max_length=255)
+    summary: str | None = Field(default=None, max_length=5000)
+    existing_industries: list[_ShortListItem] = Field(default_factory=list, max_length=50)
+
+
+class IndustriesSuggestionResponse(BaseModel):
+    suggested_industries: list[str]
 
 
 class ShadowProfileSnapshot(BaseModel):

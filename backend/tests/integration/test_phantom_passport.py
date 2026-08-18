@@ -38,7 +38,6 @@ async def _default_passport_payload() -> dict:
         "personal_info": {
             "legal_name": "Jamie Candidate",
             "phone": "+44 20 7946 0958",
-            "address": "1 Example Street, London",
         },
         "career_entries": [
             {
@@ -282,3 +281,36 @@ async def test_suggest_skills_happy_path(
     assert response.status_code == 200, response.text
     assert response.json() == {"suggested_skills": ["Fake suggested skill"]}
     assert fake_passport_llm_client.skills_suggestion_calls == [["Leadership"]]
+
+
+async def test_suggest_industries_happy_path(
+    client: AsyncClient, fake_passport_llm_client: FakePassportLLMClient
+) -> None:
+    tokens = await candidate_signup(client, email="suggest-industries@example.com")
+    headers = auth_headers(tokens["access_token"])
+
+    response = await client.post(
+        "/api/v1/phantom-passport/suggest-industries",
+        json={
+            "headline": "Senior Product Leader",
+            "summary": "Led a payments platform.",
+            "existing_industries": ["FinTech"],
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {"suggested_industries": ["Fake suggested industry"]}
+    assert fake_passport_llm_client.industries_suggestion_calls == [["FinTech"]]
+
+
+async def test_personal_info_no_longer_returns_address(client: AsyncClient) -> None:
+    # Confirms address is actually gone from the schema (not just unused in the default test
+    # payload) — an address in the request body is silently dropped, and never comes back.
+    tokens = await candidate_signup(client, email="no-address@example.com")
+    headers = auth_headers(tokens["access_token"])
+    payload = await _default_passport_payload()
+    payload["personal_info"]["address"] = "1 Example Street, London"
+
+    response = await client.put("/api/v1/phantom-passport/me", json=payload, headers=headers)
+    assert response.status_code == 200, response.text
+    assert "address" not in response.json()["personal_info"]

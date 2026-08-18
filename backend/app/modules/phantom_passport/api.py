@@ -14,6 +14,8 @@ from app.modules.phantom_passport.llm_client import LLMClient
 from app.modules.phantom_passport.schemas import (
     CvDocumentRead,
     CvParseResult,
+    IndustriesSuggestionRequest,
+    IndustriesSuggestionResponse,
     PassportRead,
     PassportUpdate,
     PassportVersionRead,
@@ -135,4 +137,16 @@ async def suggest_skills(
 ) -> SkillsSuggestionResponse:
     return await PhantomPassportService(session, llm_client=llm_client).suggest_skills(
         headline=body.headline, summary=body.summary, existing_skills=body.existing_skills
+    )
+
+
+@router.post("/suggest-industries", response_model=IndustriesSuggestionResponse)
+async def suggest_industries(
+    body: IndustriesSuggestionRequest,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+    llm_client: LLMClient = Depends(get_llm_client),
+) -> IndustriesSuggestionResponse:
+    return await PhantomPassportService(session, llm_client=llm_client).suggest_industries(
+        headline=body.headline, summary=body.summary, existing_industries=body.existing_industries
     )

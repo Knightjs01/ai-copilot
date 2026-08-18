@@ -5,6 +5,7 @@ import pytest
 
 from app.modules.phantom_passport.llm_client import (
     _EXTRACTION_TOOL,
+    _INDUSTRIES_SUGGESTION_TOOL,
     _SKILLS_SUGGESTION_TOOL,
     _SUMMARY_SUGGESTION_TOOL,
     AnthropicLLMClient,
@@ -203,3 +204,44 @@ async def test_suggest_skills_missing_tool_use_raises() -> None:
 
     with pytest.raises(LLMRequestError):
         await client.suggest_skills(headline=None, summary=None, existing_skills=[])
+
+
+async def test_suggest_industries_sends_forced_tool_use_request() -> None:
+    client = _make_client()
+    mock_create = AsyncMock(
+        return_value=_fake_tool_response({"suggested_industries": ["FinTech", "B2B SaaS"]})
+    )
+    client._client.messages.create = mock_create  # type: ignore[method-assign]
+
+    result = await client.suggest_industries(
+        headline="Senior Product Leader",
+        summary="Led a payments platform.",
+        existing_industries=["Payments"],
+    )
+
+    mock_create.assert_awaited_once()
+    call_kwargs = mock_create.await_args.kwargs
+    assert call_kwargs["tools"] == [_INDUSTRIES_SUGGESTION_TOOL]
+    content = call_kwargs["messages"][0]["content"]
+    assert "Payments" in content
+    assert result == ["FinTech", "B2B SaaS"]
+
+
+async def test_suggest_industries_rejects_string_instead_of_list() -> None:
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=_fake_tool_response({"suggested_industries": "<item>Not a real list</item>"})
+    )
+
+    with pytest.raises(LLMRequestError):
+        await client.suggest_industries(headline=None, summary=None, existing_industries=[])
+
+
+async def test_suggest_industries_missing_tool_use_raises() -> None:
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=SimpleNamespace(content=[SimpleNamespace(type="text", text="no tool call")])
+    )
+
+    with pytest.raises(LLMRequestError):
+        await client.suggest_industries(headline=None, summary=None, existing_industries=[])

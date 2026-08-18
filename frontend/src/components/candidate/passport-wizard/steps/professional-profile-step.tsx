@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
 
 import {
   Accordion,
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { TagInput } from "@/components/ui/tag-input";
 import { Textarea } from "@/components/ui/textarea";
 import type { CareerEntryInput } from "@/lib/types";
 
@@ -40,10 +41,10 @@ interface ProfessionalProfileStepProps {
   onYearsExperienceChange: (value: string) => void;
   summary: string;
   onSummaryChange: (value: string) => void;
-  skillsText: string;
-  onSkillsTextChange: (value: string) => void;
-  industriesText: string;
-  onIndustriesTextChange: (value: string) => void;
+  skills: string[];
+  onSkillsChange: (value: string[]) => void;
+  industries: string[];
+  onIndustriesChange: (value: string[]) => void;
   aiSuggestedFields: string[] | null;
 
   careerEntries: CareerEntryInput[];
@@ -63,8 +64,11 @@ interface ProfessionalProfileStepProps {
   isSuggestingSkills: boolean;
   skillsSuggestions: string[] | null;
   skillsSuggestionError: string | null;
-  onApplySkillSuggestion: (skill: string) => void;
-  onDismissSkillsSuggestions: () => void;
+
+  onRequestIndustriesSuggestion: () => void;
+  isSuggestingIndustries: boolean;
+  industriesSuggestions: string[] | null;
+  industriesSuggestionError: string | null;
 }
 
 export function ProfessionalProfileStep({
@@ -76,10 +80,10 @@ export function ProfessionalProfileStep({
   onYearsExperienceChange,
   summary,
   onSummaryChange,
-  skillsText,
-  onSkillsTextChange,
-  industriesText,
-  onIndustriesTextChange,
+  skills,
+  onSkillsChange,
+  industries,
+  onIndustriesChange,
   aiSuggestedFields,
   careerEntries,
   onUpdateEntry,
@@ -95,17 +99,11 @@ export function ProfessionalProfileStep({
   isSuggestingSkills,
   skillsSuggestions,
   skillsSuggestionError,
-  onApplySkillSuggestion,
-  onDismissSkillsSuggestions,
+  onRequestIndustriesSuggestion,
+  isSuggestingIndustries,
+  industriesSuggestions,
+  industriesSuggestionError,
 }: ProfessionalProfileStepProps) {
-  const existingSkills = skillsText
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  const offeredSkills = (skillsSuggestions ?? []).filter(
-    (skill) => !existingSkills.includes(skill.trim().toLowerCase())
-  );
-
   return (
     <Accordion
       type="multiple"
@@ -190,7 +188,7 @@ export function ProfessionalProfileStep({
       <AccordionItem value="skills" className="rounded-2xl border border-border bg-card px-4">
         <AccordionTrigger>Skills & industries</AccordionTrigger>
         <AccordionContent>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
             <Field
               label={
                 <>
@@ -200,58 +198,20 @@ export function ProfessionalProfileStep({
               }
               htmlFor="skills"
             >
-              <Input
+              <TagInput
                 id="skills"
-                placeholder="Comma-separated, e.g. Product Strategy, Team Leadership"
-                value={skillsText}
-                onChange={(e) => onSkillsTextChange(e.target.value)}
+                values={skills}
+                onValuesChange={onSkillsChange}
+                placeholder="Type a skill and press Enter"
+                suggestions={skillsSuggestions ?? undefined}
+                onRequestSuggestions={onRequestSkillsSuggestion}
+                isSuggesting={isSuggestingSkills}
+                suggestionsButtonLabel="Suggest skills"
               />
-            </Field>
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="self-start"
-                onClick={onRequestSkillsSuggestion}
-                disabled={isSuggestingSkills}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                {isSuggestingSkills ? "Thinking…" : "Suggest skills"}
-              </Button>
               {skillsSuggestionError && (
                 <p className="text-xs font-medium text-danger">{skillsSuggestionError}</p>
               )}
-              {offeredSkills.length > 0 && (
-                <div className="flex flex-col gap-2 rounded-xl border border-info/20 bg-info/5 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-info">
-                      Phantom AI suggests
-                    </p>
-                    <button
-                      type="button"
-                      onClick={onDismissSkillsSuggestions}
-                      className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      aria-label="Dismiss suggestions"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {offeredSkills.map((skill) => (
-                      <button
-                        key={skill}
-                        type="button"
-                        onClick={() => onApplySkillSuggestion(skill)}
-                        className="inline-flex items-center gap-1 rounded-full border border-info/30 bg-card px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-info/10"
-                      >
-                        <Plus className="h-3 w-3" /> {skill}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            </Field>
             <Field
               label={
                 <>
@@ -261,12 +221,19 @@ export function ProfessionalProfileStep({
               }
               htmlFor="industries"
             >
-              <Input
+              <TagInput
                 id="industries"
-                placeholder="Comma-separated, e.g. FinTech, B2B SaaS"
-                value={industriesText}
-                onChange={(e) => onIndustriesTextChange(e.target.value)}
+                values={industries}
+                onValuesChange={onIndustriesChange}
+                placeholder="Type an industry and press Enter"
+                suggestions={industriesSuggestions ?? undefined}
+                onRequestSuggestions={onRequestIndustriesSuggestion}
+                isSuggesting={isSuggestingIndustries}
+                suggestionsButtonLabel="Suggest industries"
               />
+              {industriesSuggestionError && (
+                <p className="text-xs font-medium text-danger">{industriesSuggestionError}</p>
+              )}
             </Field>
           </div>
         </AccordionContent>

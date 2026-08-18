@@ -64,6 +64,10 @@ class LLMClient(Protocol):
         self, *, headline: str | None, summary: str | None, existing_skills: list[str]
     ) -> list[str]: ...
 
+    async def suggest_industries(
+        self, *, headline: str | None, summary: str | None, existing_industries: list[str]
+    ) -> list[str]: ...
+
 
 _EXTRACTION_TOOL: dict[str, Any] = {
     "name": "record_phantom_passport",
@@ -180,6 +184,27 @@ _SKILLS_SUGGESTION_TOOL: dict[str, Any] = {
             },
         },
         "required": ["suggested_skills"],
+    },
+}
+
+_INDUSTRIES_SUGGESTION_TOOL: dict[str, Any] = {
+    "name": "record_industry_suggestions",
+    "description": (
+        "Records a short list of industries/sectors a candidate may want to add to their "
+        "profile, inferred from their headline and summary. Never repeat an industry already "
+        "in existing_industries. Only suggest industries reasonably implied by the given text "
+        "— never invent experience."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "suggested_industries": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Up to 5 new industries not already present in existing_industries.",
+            },
+        },
+        "required": ["suggested_industries"],
     },
 }
 
@@ -334,6 +359,52 @@ class AnthropicLLMClient:
                 for s in _as_list(
                     tool_use_block.input.get("suggested_skills", []),
                     field_name="suggested_skills",
+                )
+            ]
+        except (KeyError, TypeError, AttributeError) as exc:
+            raise LLMRequestError(f"Malformed structured response from Claude: {exc}") from exc
+
+    async def suggest_industries(
+        self, *, headline: str | None, summary: str | None, existing_industries: list[str]
+    ) -> list[str]:
+        headline_line = f"Headline: {headline}\n" if headline else ""
+        summary_line = f"Summary: {summary}\n" if summary else ""
+        existing_line = (
+            f"Existing industries (do not repeat these): {', '.join(existing_industries)}\n"
+            if existing_industries
+            else ""
+        )
+        try:
+            response = await self._client.messages.create(  # type: ignore[call-overload]
+                model=self._model,
+                max_tokens=512,
+                tools=[_INDUSTRIES_SUGGESTION_TOOL],
+                tool_choice={"type": "tool", "name": _INDUSTRIES_SUGGESTION_TOOL["name"]},
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            "Suggest additional industries/sectors for this candidate's "
+                            f"profile.\n\n{headline_line}{summary_line}{existing_line}"
+                        ),
+                    }
+                ],
+            )
+        except anthropic.APIError as exc:
+            raise LLMRequestError(f"Claude API request failed: {exc}") from exc
+
+        tool_use_block = next(
+            (block for block in response.content if block.type == "tool_use"), None
+        )
+        if tool_use_block is None:
+            raise LLMRequestError("Claude did not return the expected structured tool call")
+
+        try:
+            return [
+                str(s)
+                for s in _as_list(
+                    tool_use_block.input.get("suggested_industries", []),
+                    field_name="suggested_industries",
                 )
             ]
         except (KeyError, TypeError, AttributeError) as exc:

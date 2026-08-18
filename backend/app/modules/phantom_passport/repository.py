@@ -116,13 +116,11 @@ class PassportPersonalInfoRepository:
         passport_id: uuid.UUID,
         legal_name_encrypted: str,
         phone_encrypted: str | None,
-        address_encrypted: str | None,
     ) -> PassportPersonalInfo:
         existing = await self.get_by_passport_id(passport_id)
         if existing is not None:
             existing.legal_name_encrypted = legal_name_encrypted
             existing.phone_encrypted = phone_encrypted
-            existing.address_encrypted = address_encrypted
             await self._session.flush()
             return existing
 
@@ -130,7 +128,6 @@ class PassportPersonalInfoRepository:
             passport_id=passport_id,
             legal_name_encrypted=legal_name_encrypted,
             phone_encrypted=phone_encrypted,
-            address_encrypted=address_encrypted,
         )
         self._session.add(info)
         await self._session.flush()

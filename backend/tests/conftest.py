@@ -254,6 +254,7 @@ class FakePassportLLMClient:
         self.calls: list[str] = []
         self.summary_suggestion_calls: list[str] = []
         self.skills_suggestion_calls: list[list[str]] = []
+        self.industries_suggestion_calls: list[list[str]] = []
 
     async def extract_passport_from_cv(self, *, redacted_text: str) -> PassportExtraction:
         self.calls.append(redacted_text)
@@ -287,6 +288,12 @@ class FakePassportLLMClient:
     ) -> list[str]:
         self.skills_suggestion_calls.append(existing_skills)
         return ["Fake suggested skill"]
+
+    async def suggest_industries(
+        self, *, headline: str | None, summary: str | None, existing_industries: list[str]
+    ) -> list[str]:
+        self.industries_suggestion_calls.append(existing_industries)
+        return ["Fake suggested industry"]
 
 
 @pytest.fixture

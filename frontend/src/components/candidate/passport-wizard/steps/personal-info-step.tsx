@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -11,10 +11,13 @@ interface PersonalInfoStepProps {
   onFirstNameChange: (value: string) => void;
   lastName: string;
   onLastNameChange: (value: string) => void;
+  // Read-only — this is the candidate's real login email from candidate_auth signup, not a
+  // second editable contact field. One email per candidate, already verified.
+  email: string;
   phone: string;
   onPhoneChange: (value: string) => void;
-  address: string;
-  onAddressChange: (value: string) => void;
+  location: string;
+  onLocationChange: (value: string) => void;
 }
 
 export function PersonalInfoStep({
@@ -22,10 +25,11 @@ export function PersonalInfoStep({
   onFirstNameChange,
   lastName,
   onLastNameChange,
+  email,
   phone,
   onPhoneChange,
-  address,
-  onAddressChange,
+  location,
+  onLocationChange,
 }: PersonalInfoStepProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -57,11 +61,22 @@ export function PersonalInfoStep({
               />
             </Field>
           </div>
+          <Field label="Email address" htmlFor="email">
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-muted-foreground">
+              <Mail className="h-4 w-4 shrink-0" />
+              {email}
+            </div>
+          </Field>
           <Field label="Phone" htmlFor="phone">
             <Input id="phone" value={phone} onChange={(e) => onPhoneChange(e.target.value)} />
           </Field>
-          <Field label="Address" htmlFor="address">
-            <Input id="address" value={address} onChange={(e) => onAddressChange(e.target.value)} />
+          <Field label="Location" htmlFor="location">
+            <Input
+              id="location"
+              placeholder="e.g. London, UK"
+              value={location}
+              onChange={(e) => onLocationChange(e.target.value)}
+            />
           </Field>
         </CardContent>
       </Card>
