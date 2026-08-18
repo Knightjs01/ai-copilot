@@ -391,9 +391,9 @@ export function PassportWizard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr] lg:items-start">
-        <div className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-24">
-          <div className="flex justify-center lg:justify-start">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[260px_1fr] md:items-start">
+        <div className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-5 md:sticky md:top-24">
+          <div className="flex justify-center md:justify-start">
             <PassportProgressRing percentage={passport?.completion_percentage ?? 0} />
           </div>
           <PassportStepRail

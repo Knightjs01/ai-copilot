@@ -24,7 +24,7 @@ export function PassportStepRail({
 }: PassportStepRailProps) {
   return (
     <>
-      <nav className="hidden flex-col gap-1 lg:flex" aria-label="Passport setup steps">
+      <nav className="hidden flex-col gap-1 md:flex" aria-label="Passport setup steps">
         {steps.map((step, index) => {
           const isCompleted = completedIndices.has(index);
           const isActive = index === activeIndex;
@@ -62,7 +62,7 @@ export function PassportStepRail({
         })}
       </nav>
 
-      <div className="flex items-center gap-2 lg:hidden" aria-label="Passport setup steps">
+      <div className="flex items-center gap-2 md:hidden" aria-label="Passport setup steps">
         {steps.map((step, index) => {
           const isCompleted = completedIndices.has(index);
           const isActive = index === activeIndex;
