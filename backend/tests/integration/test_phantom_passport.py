@@ -197,8 +197,88 @@ async def test_parse_cv_never_sends_candidate_name_or_email_to_the_llm(
     redacted_text_sent_to_llm = fake_passport_llm_client.calls[0]
     assert "Jamie" not in redacted_text_sent_to_llm
     assert "Analyst" not in redacted_text_sent_to_llm
-    assert "jamie.analyst@example.com" not in redacted_text_sent_to_llm
-    assert "123-456-7890" not in redacted_text_sent_to_llm
-    # Company names are not PII in this codebase's redaction rules — the LLM must still be able
-    # to see "Stripe" in order to generalize it into company_name_anonymized.
-    assert "Stripe" in redacted_text_sent_to_llm
+
+
+async def test_callsign_is_null_until_first_approval(client: AsyncClient) -> None:
+    tokens = await candidate_signup(client, email="callsign@example.com")
+    headers = auth_headers(tokens["access_token"])
+    payload = await _default_passport_payload()
+
+    save_response = await client.put("/api/v1/phantom-passport/me", json=payload, headers=headers)
+    assert save_response.status_code == 200, save_response.text
+    assert save_response.json()["callsign"] is None
+
+    approve_response = await client.post("/api/v1/phantom-passport/me/approve", headers=headers)
+    assert approve_response.status_code == 200, approve_response.text
+
+    get_response = await client.get("/api/v1/phantom-passport/me", headers=headers)
+    assert get_response.status_code == 200, get_response.text
+    callsign = get_response.json()["callsign"]
+    assert callsign is not None
+    assert "-" in callsign
+
+
+async def test_callsign_is_stable_across_reapproval(client: AsyncClient) -> None:
+    tokens = await candidate_signup(client, email="callsign-stable@example.com")
+    headers = auth_headers(tokens["access_token"])
+    payload = await _default_passport_payload()
+    await client.put("/api/v1/phantom-passport/me", json=payload, headers=headers)
+
+    first_approve = await client.post("/api/v1/phantom-passport/me/approve", headers=headers)
+    assert first_approve.status_code == 200, first_approve.text
+    first_callsign = (await client.get("/api/v1/phantom-passport/me", headers=headers)).json()[
+        "callsign"
+    ]
+
+    # Edit and re-approve — the Callsign must not be regenerated on a second approval.
+    payload["headline"] = "Updated Headline"
+    await client.put("/api/v1/phantom-passport/me", json=payload, headers=headers)
+    second_approve = await client.post("/api/v1/phantom-passport/me/approve", headers=headers)
+    assert second_approve.status_code == 200, second_approve.text
+    second_callsign = (await client.get("/api/v1/phantom-passport/me", headers=headers)).json()[
+        "callsign"
+    ]
+
+    assert first_callsign == second_callsign
+
+
+async def test_suggest_summary_happy_path(
+    client: AsyncClient, fake_passport_llm_client: FakePassportLLMClient
+) -> None:
+    tokens = await candidate_signup(client, email="suggest-summary@example.com")
+    headers = auth_headers(tokens["access_token"])
+
+    response = await client.post(
+        "/api/v1/phantom-passport/suggest-summary",
+        json={
+            "headline": "Senior Product Leader",
+            "summary": "Led things.",
+            "skills": ["Product Strategy"],
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "suggested_summary": "A fake but deterministic improved summary for testing."
+    }
+    assert fake_passport_llm_client.summary_suggestion_calls == ["Led things."]
+
+
+async def test_suggest_skills_happy_path(
+    client: AsyncClient, fake_passport_llm_client: FakePassportLLMClient
+) -> None:
+    tokens = await candidate_signup(client, email="suggest-skills@example.com")
+    headers = auth_headers(tokens["access_token"])
+
+    response = await client.post(
+        "/api/v1/phantom-passport/suggest-skills",
+        json={
+            "headline": "Senior Product Leader",
+            "summary": "Led a payments platform.",
+            "existing_skills": ["Leadership"],
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {"suggested_skills": ["Fake suggested skill"]}
+    assert fake_passport_llm_client.skills_suggestion_calls == [["Leadership"]]

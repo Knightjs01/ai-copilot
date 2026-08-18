@@ -39,8 +39,8 @@ export function SecuringCvOverlay({ active }: { active: boolean }) {
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-              // Electric-purple glow — matches the shared Phantom Dark palette's --electric accent.
-              className="drop-shadow-[0_0_30px_rgba(167,123,244,0.55)]"
+              // Electric-purple glow — matches the light theme's --electric accent (262 70% 58%).
+              className="drop-shadow-[0_0_30px_rgba(128,73,223,0.45)]"
             >
               <PhantomIcon className="h-14" />
             </motion.div>
@@ -57,14 +57,14 @@ export function SecuringCvOverlay({ active }: { active: boolean }) {
               {STEPS.map((step) => (
                 <li key={step.label} className="flex items-center gap-2.5 text-sm">
                   {/* framer-motion's animate prop interpolates literal color strings in JS, not
-                      CSS variables — these can't ride the shared theme module's scope the way
-                      ordinary Tailwind classes do, so the palette's equivalents are hardcoded
-                      directly here. Idle: secondary-panel bg, dim muted label. Completed: brand
-                      purple bg, near-white label — matching the shared Phantom Dark palette's
-                      --secondary/--brand/--brand-foreground/--foreground. */}
+                      CSS variables — these can't ride the light theme's tokens the way ordinary
+                      Tailwind classes do, so the palette's equivalents are hardcoded directly
+                      here. Idle: secondary-panel bg, muted label. Completed: brand purple bg,
+                      near-black label — matching the light theme's
+                      --secondary/--brand/--foreground token values. */}
                   <motion.span
-                    initial={{ backgroundColor: "rgb(25 31 46)" }}
-                    animate={{ backgroundColor: "rgb(148 129 218)" }}
+                    initial={{ backgroundColor: "rgb(241 245 249)" }}
+                    animate={{ backgroundColor: "rgb(100 79 176)" }}
                     transition={{ delay: step.delay, duration: 0.3 }}
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
                   >
@@ -73,12 +73,12 @@ export function SecuringCvOverlay({ active }: { active: boolean }) {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: step.delay + 0.15, duration: 0.2 }}
                     >
-                      <Check className="h-3 w-3 text-[#0c1322]" strokeWidth={2.5} />
+                      <Check className="h-3 w-3 text-white" strokeWidth={2.5} />
                     </motion.span>
                   </motion.span>
                   <motion.span
-                    initial={{ color: "rgb(160 171 187)" }}
-                    animate={{ color: "rgb(244 247 250)" }}
+                    initial={{ color: "rgb(101 117 139)" }}
+                    animate={{ color: "rgb(15 23 41)" }}
                     transition={{ delay: step.delay, duration: 0.3 }}
                     className={cn("font-medium")}
                   >

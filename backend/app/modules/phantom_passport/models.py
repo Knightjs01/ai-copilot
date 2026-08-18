@@ -79,6 +79,12 @@ class PhantomPassport(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base
     current_version_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("passport_versions.id"), nullable=True
     )
+    # Generated once, at first approval (see PhantomPassportService.approve_passport) — never
+    # regenerated after that. A stable identity for the Passport itself, distinct from
+    # shadow_jobs' per-application Callsigns (fresh for every job application, deliberately, so
+    # applying to two roles never links back to the same person). Only ever returned to the
+    # owning candidate via GET /phantom-passport/me — never added to any company-facing schema.
+    callsign: Mapped[str | None] = mapped_column(String(50), nullable=True, unique=True)
 
 
 class PassportPersonalInfo(UUIDPrimaryKeyMixin, TimestampMixin, Base):

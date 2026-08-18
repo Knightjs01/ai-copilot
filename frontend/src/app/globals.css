@@ -34,6 +34,12 @@
     --electric: 262 70% 58%;
     --electric-foreground: 0 0% 100%;
 
+    /* Muted premium gold — used selectively for verification/status/premium-milestone accents
+       (e.g. the Candidate Passport builder), never as a page-wide wash. Contrast-checked:
+       ~5:1 against white as text, and white-on-gold is the same ~5:1 the other direction. */
+    --gold: 36 65% 35%;
+    --gold-foreground: 0 0% 100%;
+
     /* Semantic status colors — used only for small badges/pills, never as a whole-app brand
        color. Everything else in the product stays on the slate axis above. */
     --success: 152 60% 36%;

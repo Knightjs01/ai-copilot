@@ -84,6 +84,10 @@ class PassportRead(BaseModel):
     # clear this — the last-approved version keeps being what new applications use until the
     # candidate explicitly re-approves.
     current_version_number: int | None
+    # Generated once, at first approval — a stable identity for the Passport itself, distinct
+    # from shadow_jobs' per-application Callsigns. Only ever returned here, to the owning
+    # candidate — never added to ShadowProfileSnapshot or any other company-facing schema.
+    callsign: str | None
     personal_info: PersonalInfoRead
     career_entries: list[CareerEntryRead]
 
@@ -135,6 +139,28 @@ class PassportVersionRead(BaseModel):
     version_number: int
     approved_at: datetime
     source_cv_filename: str | None
+
+
+class SummaryImprovementRequest(BaseModel):
+    headline: str | None = Field(default=None, max_length=255)
+    summary: str = Field(min_length=1, max_length=5000)
+    skills: list[_ShortListItem] = Field(default_factory=list, max_length=100)
+
+
+class SummaryImprovementResponse(BaseModel):
+    # A suggestion only — the candidate applies or dismisses it client-side, exactly like
+    # ai_suggested_fields from CV parsing. Never written to the Passport by this endpoint.
+    suggested_summary: str
+
+
+class SkillsSuggestionRequest(BaseModel):
+    headline: str | None = Field(default=None, max_length=255)
+    summary: str | None = Field(default=None, max_length=5000)
+    existing_skills: list[_ShortListItem] = Field(default_factory=list, max_length=100)
+
+
+class SkillsSuggestionResponse(BaseModel):
+    suggested_skills: list[str]
 
 
 class ShadowProfileSnapshot(BaseModel):

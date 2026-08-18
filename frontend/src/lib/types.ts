@@ -421,6 +421,10 @@ export interface PhantomPassport {
   // Non-null iff the candidate has approved a Passport Version — see PassportVersionSummary.
   // Nothing is discoverable/usable for applying until this is set.
   current_version_number: number | null;
+  // Generated once, at first approval — a stable identity for the Passport itself, distinct
+  // from Shadow's per-application callsigns (fresh for every job application, deliberately).
+  // Only ever returned to the owning candidate, never surfaced on any company-facing schema.
+  callsign: string | null;
   personal_info: PersonalInfo;
   career_entries: CareerEntry[];
 }
@@ -483,6 +487,29 @@ export interface PassportVersionSummary {
   version_number: number;
   approved_at: string;
   source_cv_filename: string | null;
+}
+
+// AI co-pilot: on-demand, always returned for the candidate to Apply or Dismiss — never
+// silently written to the Passport. See POST /phantom-passport/suggest-summary.
+export interface SummaryImprovementRequest {
+  headline?: string | null;
+  summary: string;
+  skills: string[];
+}
+
+export interface SummaryImprovementResponse {
+  suggested_summary: string;
+}
+
+// See POST /phantom-passport/suggest-skills.
+export interface SkillsSuggestionRequest {
+  headline?: string | null;
+  summary?: string | null;
+  existing_skills: string[];
+}
+
+export interface SkillsSuggestionResponse {
+  suggested_skills: string[];
 }
 
 export type EmploymentType = "full_time" | "part_time" | "contract" | "fractional";

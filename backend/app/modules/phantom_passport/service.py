@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,8 @@ from app.modules.auth import security
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.candidates.storage import EncryptingFileStorage, FileStorage, LocalFileStorage
 from app.modules.phantom_passport.exceptions import (
+    AiSuggestionFailedError,
+    CallsignGenerationExhaustedError,
     CvParsingFailedError,
     InvalidCvFileError,
     OriginalCvNotFoundError,
@@ -31,6 +34,8 @@ from app.modules.phantom_passport.schemas import (
     PassportVersionRead,
     PersonalInfoRead,
     ShadowProfileSnapshot,
+    SkillsSuggestionResponse,
+    SummaryImprovementResponse,
 )
 from app.modules.privacy_gateway.extraction import extract_text
 from app.modules.privacy_gateway.redaction import PHONE_PATTERN, redact_text
@@ -46,6 +51,17 @@ _ALLOWED_CV_CONTENT_TYPES = {
     "application/msword": ".doc",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 }
+
+# A third, deliberately independent word pool — shadow_jobs.service already establishes the
+# convention that Shadow (per-application) and ATS (per-project) Callsigns use separate pools by
+# design, so two independent identity systems never visually collide. A Passport-level Callsign
+# is a third, similarly independent concept: one stable identity for the Passport itself, never
+# regenerated, and never exposed on any company-facing schema (see PassportRead's own comment).
+_PASSPORT_CALLSIGN_WORDS = [
+    "Nova", "Pulse", "Vertex", "Aurora", "Zephyr", "Meridian", "Solstice", "Tundra",
+    "Cascade", "Harbor", "Prism", "Kestrel", "Obsidian", "Willow", "Beacon", "Compass",
+]  # fmt: skip
+_MAX_CALLSIGN_ATTEMPTS = 5
 
 
 class PhantomPassportService:
@@ -294,12 +310,52 @@ class PhantomPassportService:
         )
         await self._passports.set_current_version(passport, version_id=version.id)
 
+        # Generated once, at first approval only — never regenerated on later re-approvals.
+        if passport.callsign is None:
+            callsign = await self._generate_callsign()
+            await self._passports.set_callsign(passport, callsign=callsign)
+
         return PassportVersionRead(
             id=version.id,
             version_number=version.version_number,
             approved_at=version.approved_at,
             source_cv_filename=version.source_cv_filename,
         )
+
+    async def _generate_callsign(self) -> str:
+        for _ in range(_MAX_CALLSIGN_ATTEMPTS):
+            callsign = f"{secrets.choice(_PASSPORT_CALLSIGN_WORDS)}-{secrets.randbelow(90) + 10}"
+            if not await self._passports.callsign_exists(callsign):
+                return callsign
+        raise CallsignGenerationExhaustedError()
+
+    # --- AI co-pilot (opt-in suggestions, never silently applied) -----------------------------
+
+    async def suggest_summary_improvement(
+        self, *, headline: str | None, summary: str, skills: list[str]
+    ) -> SummaryImprovementResponse:
+        if self._llm_client is None:
+            raise ValueError("suggest_summary_improvement requires an llm_client")
+        try:
+            suggestion = await self._llm_client.suggest_summary_improvement(
+                headline=headline, summary=summary, skills=skills
+            )
+        except LLMRequestError as exc:
+            raise AiSuggestionFailedError(str(exc)) from exc
+        return SummaryImprovementResponse(suggested_summary=suggestion)
+
+    async def suggest_skills(
+        self, *, headline: str | None, summary: str | None, existing_skills: list[str]
+    ) -> SkillsSuggestionResponse:
+        if self._llm_client is None:
+            raise ValueError("suggest_skills requires an llm_client")
+        try:
+            suggestions = await self._llm_client.suggest_skills(
+                headline=headline, summary=summary, existing_skills=existing_skills
+            )
+        except LLMRequestError as exc:
+            raise AiSuggestionFailedError(str(exc)) from exc
+        return SkillsSuggestionResponse(suggested_skills=suggestions)
 
     async def list_versions(self, *, candidate: CandidateUser) -> list[PassportVersionRead]:
         # A list endpoint — "no Passport yet" is just zero versions, not an error, matching
@@ -352,6 +408,7 @@ class PhantomPassportService:
             verification_status=passport.verification_status,
             completion_percentage=_completion_percentage(passport, career_entries),
             current_version_number=current_version_number,
+            callsign=passport.callsign,
             personal_info=PersonalInfoRead(
                 legal_name=security.decrypt_secret(personal_info.legal_name_encrypted),
                 phone=(

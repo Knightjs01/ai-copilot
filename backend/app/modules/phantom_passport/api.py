@@ -17,6 +17,10 @@ from app.modules.phantom_passport.schemas import (
     PassportRead,
     PassportUpdate,
     PassportVersionRead,
+    SkillsSuggestionRequest,
+    SkillsSuggestionResponse,
+    SummaryImprovementRequest,
+    SummaryImprovementResponse,
 )
 from app.modules.phantom_passport.service import PhantomPassportService
 
@@ -108,3 +112,27 @@ async def list_my_passport_versions(
     session: AsyncSession = Depends(get_db),
 ) -> list[PassportVersionRead]:
     return await PhantomPassportService(session).list_versions(candidate=candidate)
+
+
+@router.post("/suggest-summary", response_model=SummaryImprovementResponse)
+async def suggest_summary(
+    body: SummaryImprovementRequest,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+    llm_client: LLMClient = Depends(get_llm_client),
+) -> SummaryImprovementResponse:
+    return await PhantomPassportService(session, llm_client=llm_client).suggest_summary_improvement(
+        headline=body.headline, summary=body.summary, skills=body.skills
+    )
+
+
+@router.post("/suggest-skills", response_model=SkillsSuggestionResponse)
+async def suggest_skills(
+    body: SkillsSuggestionRequest,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+    llm_client: LLMClient = Depends(get_llm_client),
+) -> SkillsSuggestionResponse:
+    return await PhantomPassportService(session, llm_client=llm_client).suggest_skills(
+        headline=body.headline, summary=body.summary, existing_skills=body.existing_skills
+    )

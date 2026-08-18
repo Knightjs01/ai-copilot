@@ -88,6 +88,17 @@ class PhantomPassportRepository:
         await self._session.flush()
         return passport
 
+    async def callsign_exists(self, callsign: str) -> bool:
+        result = await self._session.execute(
+            select(PhantomPassport.id).where(PhantomPassport.callsign == callsign)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def set_callsign(self, passport: PhantomPassport, *, callsign: str) -> PhantomPassport:
+        passport.callsign = callsign
+        await self._session.flush()
+        return passport
+
 
 class PassportPersonalInfoRepository:
     def __init__(self, session: AsyncSession) -> None:

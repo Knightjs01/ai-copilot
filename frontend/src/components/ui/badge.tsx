@@ -14,6 +14,7 @@ const badgeVariants = cva(
         warning: "bg-warning/15 text-warning-foreground",
         danger: "bg-danger/10 text-danger",
         info: "bg-info/10 text-info",
+        gold: "bg-gold/10 text-gold",
       },
     },
     defaultVariants: {

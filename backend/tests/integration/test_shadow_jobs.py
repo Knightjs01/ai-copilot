@@ -262,6 +262,41 @@ async def test_company_applicant_list_is_anonymized(client: AsyncClient) -> None
     assert job_with_count.json()["applicant_count"] == 1
 
 
+async def test_company_applicant_list_never_exposes_passport_callsign(client: AsyncClient) -> None:
+    # The Passport's own persistent Callsign (generated once, at first approval — see
+    # phantom_passport/service.py) is a genuinely different identity from the per-application
+    # Callsign this endpoint legitimately returns (profile["callsign"] above). This confirms the
+    # isolation holds: a company can never see the Passport-level Callsign anywhere.
+    owner = await signup(client, email="owner@shadowjobs-passport-callsign.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    await _publish_job(client, headers=headers, job_id=job["id"])
+
+    candidate_tokens = await candidate_signup(
+        client, email="applicant@shadowjobs-passport-callsign.com", full_name="Jordan Applicant"
+    )
+    candidate_headers = auth_headers(candidate_tokens["access_token"])
+    await _save_passport(client, headers=candidate_headers)
+
+    passport_response = await client.get("/api/v1/phantom-passport/me", headers=candidate_headers)
+    assert passport_response.status_code == 200, passport_response.text
+    passport_callsign = passport_response.json()["callsign"]
+    assert passport_callsign is not None
+
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{job['id']}/apply", headers=candidate_headers
+    )
+    assert apply_response.status_code == 201, apply_response.text
+    application_callsign = apply_response.json()["callsign"]
+    assert application_callsign != passport_callsign
+
+    applicants_response = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert applicants_response.status_code == 200, applicants_response.text
+    assert passport_callsign not in applicants_response.text
+
+
 async def test_candidate_can_withdraw_application(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@shadowjobs-withdraw.com")
     headers = auth_headers(owner["access_token"])

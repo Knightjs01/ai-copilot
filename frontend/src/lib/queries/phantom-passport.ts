@@ -10,6 +10,10 @@ import type {
   PassportUpdateInput,
   PassportVersionSummary,
   PhantomPassport,
+  SkillsSuggestionRequest,
+  SkillsSuggestionResponse,
+  SummaryImprovementRequest,
+  SummaryImprovementResponse,
 } from "@/lib/types";
 
 export function useMyPassport() {
@@ -96,5 +100,27 @@ export function usePassportVersions() {
     queryKey: ["phantom-passport", "versions"],
     queryFn: () =>
       candidateApiClient.get<PassportVersionSummary[]>("/phantom-passport/versions"),
+  });
+}
+
+// AI co-pilot suggestions — always returned for the candidate to review, never applied
+// automatically. Not tied to query invalidation; callers apply/dismiss the result themselves.
+export function useSuggestSummary() {
+  return useMutation({
+    mutationFn: (input: SummaryImprovementRequest) =>
+      candidateApiClient.post<SummaryImprovementResponse>(
+        "/phantom-passport/suggest-summary",
+        input
+      ),
+  });
+}
+
+export function useSuggestSkills() {
+  return useMutation({
+    mutationFn: (input: SkillsSuggestionRequest) =>
+      candidateApiClient.post<SkillsSuggestionResponse>(
+        "/phantom-passport/suggest-skills",
+        input
+      ),
   });
 }

@@ -5,6 +5,8 @@ import pytest
 
 from app.modules.phantom_passport.llm_client import (
     _EXTRACTION_TOOL,
+    _SKILLS_SUGGESTION_TOOL,
+    _SUMMARY_SUGGESTION_TOOL,
     AnthropicLLMClient,
     LLMRequestError,
 )
@@ -126,3 +128,78 @@ async def test_invalid_years_experience_type_falls_back_to_none() -> None:
     result = await client.extract_passport_from_cv(redacted_text="some text")
 
     assert result.years_experience is None
+
+
+async def test_suggest_summary_improvement_sends_forced_tool_use_request() -> None:
+    client = _make_client()
+    mock_create = AsyncMock(
+        return_value=_fake_tool_response({"improved_summary": "A tighter, more specific rewrite."})
+    )
+    client._client.messages.create = mock_create  # type: ignore[method-assign]
+
+    result = await client.suggest_summary_improvement(
+        headline="Senior Product Leader", summary="Led things.", skills=["Product Strategy"]
+    )
+
+    mock_create.assert_awaited_once()
+    call_kwargs = mock_create.await_args.kwargs
+    assert call_kwargs["tools"] == [_SUMMARY_SUGGESTION_TOOL]
+    assert call_kwargs["tool_choice"] == {
+        "type": "tool",
+        "name": _SUMMARY_SUGGESTION_TOOL["name"],
+    }
+    content = call_kwargs["messages"][0]["content"]
+    assert "Senior Product Leader" in content
+    assert "Led things." in content
+    assert result == "A tighter, more specific rewrite."
+
+
+async def test_suggest_summary_improvement_missing_tool_use_raises() -> None:
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=SimpleNamespace(content=[SimpleNamespace(type="text", text="no tool call")])
+    )
+
+    with pytest.raises(LLMRequestError):
+        await client.suggest_summary_improvement(headline=None, summary="A summary.", skills=[])
+
+
+async def test_suggest_skills_sends_forced_tool_use_request() -> None:
+    client = _make_client()
+    mock_create = AsyncMock(
+        return_value=_fake_tool_response({"suggested_skills": ["Payments", "SaaS"]})
+    )
+    client._client.messages.create = mock_create  # type: ignore[method-assign]
+
+    result = await client.suggest_skills(
+        headline="Senior Product Leader",
+        summary="Led a payments platform.",
+        existing_skills=["Leadership"],
+    )
+
+    mock_create.assert_awaited_once()
+    call_kwargs = mock_create.await_args.kwargs
+    assert call_kwargs["tools"] == [_SKILLS_SUGGESTION_TOOL]
+    content = call_kwargs["messages"][0]["content"]
+    assert "Leadership" in content
+    assert result == ["Payments", "SaaS"]
+
+
+async def test_suggest_skills_rejects_string_instead_of_list() -> None:
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=_fake_tool_response({"suggested_skills": "<item>Not a real list</item>"})
+    )
+
+    with pytest.raises(LLMRequestError):
+        await client.suggest_skills(headline=None, summary=None, existing_skills=[])
+
+
+async def test_suggest_skills_missing_tool_use_raises() -> None:
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=SimpleNamespace(content=[SimpleNamespace(type="text", text="no tool call")])
+    )
+
+    with pytest.raises(LLMRequestError):
+        await client.suggest_skills(headline=None, summary=None, existing_skills=[])
