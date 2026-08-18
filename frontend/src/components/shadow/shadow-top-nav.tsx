@@ -68,8 +68,8 @@ export function ShadowTopNav() {
           <Image
             src="/shadow-wordmark.png"
             alt="Shadow: Anonymous Job Board"
-            width={1629}
-            height={1049}
+            width={1525}
+            height={550}
             className="h-16 w-auto"
             priority
           />

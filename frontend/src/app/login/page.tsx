@@ -19,8 +19,8 @@ const OPTIONS = [
     logo: {
       src: "/shadow-wordmark.png",
       alt: "Shadow: Anonymous Job Board",
-      width: 1629,
-      height: 1049,
+      width: 1525,
+      height: 550,
     },
   },
   {

@@ -46,8 +46,8 @@ export function JobBoardMockup() {
             <Image
               src="/shadow-wordmark.png"
               alt="Shadow — Anonymous Job Board"
-              width={1637}
-              height={1096}
+              width={1525}
+              height={550}
               className="h-9 w-auto sm:h-11"
               priority
             />
