@@ -16,6 +16,9 @@ from app.modules.identity_vault.repository import (
 )
 from app.modules.intelligence.repository import IntelligencePackRepository
 from app.modules.interview_kit.repository import InterviewKitRepository
+from app.modules.interviews.repository import InterviewRepository
+from app.modules.messages.repository import MessageThreadRepository
+from app.modules.passport_matching.repository import PassportJobMatchRepository
 from app.modules.prescreen_assessment.repository import PrescreenAssessmentRepository
 from app.modules.privacy_gateway.repository import SanitizedProfileRepository
 from app.modules.project_deletion.schemas import PurgeCertificate
@@ -45,6 +48,9 @@ _DATA_CATEGORIES_DESTROYED = [
 _SHADOW_DATA_CATEGORIES_DESTROYED = [
     "Shadow job board listing and applicants",
     "Identity reveal requests and audit trail",
+    "Phantom AI match scores",
+    "Candidate/company messages",
+    "Scheduled interviews",
 ]
 
 
@@ -71,6 +77,9 @@ class ProjectDeletionService:
         self._shadow_job_repo = ShadowJobRepository(session)
         self._shadow_application_repo = ShadowApplicationRepository(session)
         self._shadow_reveal_repo = ShadowRevealRequestRepository(session)
+        self._passport_match_repo = PassportJobMatchRepository(session)
+        self._message_thread_repo = MessageThreadRepository(session)
+        self._interview_repo = InterviewRepository(session)
         self._audit = AuditService(session)
         self._storage = storage
 
@@ -114,7 +123,12 @@ class ProjectDeletionService:
             applications = await self._shadow_application_repo.list_by_job(shadow_job.id)
             application_ids = [a.id for a in applications]
             await self._shadow_reveal_repo.delete_by_application_ids(application_ids)
+            # Message rows cascade automatically via messages.thread_id's ON DELETE CASCADE --
+            # only the MessageThread rows need an explicit purge call here.
+            await self._message_thread_repo.delete_by_shadow_application_ids(application_ids)
+            await self._interview_repo.delete_by_shadow_application_ids(application_ids)
             await self._shadow_application_repo.delete_by_job_id(shadow_job.id)
+            await self._passport_match_repo.delete_by_shadow_job_id(shadow_job.id)
             await self._shadow_job_repo.delete_by_id(shadow_job.id)
             data_categories_destroyed += _SHADOW_DATA_CATEGORIES_DESTROYED
 

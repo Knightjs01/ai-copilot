@@ -66,6 +66,9 @@ class ShadowJobBoardListing(BaseModel):
 
     id: uuid.UUID
     company_name: str
+    # None unless the company has opted in to a public profile page (Company.is_profile_public)
+    # -- fails open, no link shown, when a company hasn't opted in.
+    company_slug: str | None
     title: str
     department: str | None
     seniority: str | None
@@ -123,3 +126,5 @@ class ShadowProfile(BaseModel):
     notice_period: str | None
     career_intent: str
     career_entries: list[ShadowCareerEntrySummary]
+    unread_message_count: int = 0
+    has_upcoming_interview: bool = False

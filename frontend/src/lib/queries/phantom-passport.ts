@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
 import type {
@@ -10,6 +11,7 @@ import type {
   IndustriesSuggestionRequest,
   IndustriesSuggestionResponse,
   PassportUpdateInput,
+  PassportVerification,
   PassportVersionSummary,
   PhantomPassport,
   SkillsSuggestionRequest,
@@ -22,6 +24,17 @@ export function useMyPassport() {
   return useQuery({
     queryKey: ["phantom-passport", "me"],
     queryFn: () => fetchOrNull(() => candidateApiClient.get<PhantomPassport>("/phantom-passport/me")),
+  });
+}
+
+// Public /phantom-passport/verify/{callsign} -- no auth required, resolves a 404 (bad or
+// nonexistent callsign) to null rather than throwing.
+export function useVerifyPassport(callsign: string | undefined) {
+  return useQuery({
+    queryKey: ["phantom-passport", "verify", callsign],
+    queryFn: () =>
+      fetchOrNull(() => apiClient.get<PassportVerification>(`/phantom-passport/verify/${callsign}`)),
+    enabled: !!callsign,
   });
 }
 

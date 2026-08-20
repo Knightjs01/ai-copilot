@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, FileText, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, FileText, History, Sparkles } from "lucide-react";
 
 import { AnonymisedCvDialog } from "@/components/candidate/passport-wizard/anonymised-cv-dialog";
 import { PassportCard } from "@/components/candidate/passport-wizard/passport-card";
@@ -112,14 +113,21 @@ export function ReviewStep({
               </dd>
             </div>
           </dl>
-          <Button
-            type="button"
-            variant="secondary"
-            className="self-start"
-            onClick={() => setShowCvDialog(true)}
-          >
-            <FileText className="h-4 w-4" /> View my anonymised CV
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="self-start"
+              onClick={() => setShowCvDialog(true)}
+            >
+              <FileText className="h-4 w-4" /> View my anonymised CV
+            </Button>
+            <Button type="button" variant="secondary" className="self-start" asChild>
+              <Link href="/shadow/passport/identity-activity">
+                <History className="h-4 w-4" /> Identity activity
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

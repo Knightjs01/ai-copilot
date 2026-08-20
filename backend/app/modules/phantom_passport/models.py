@@ -44,6 +44,20 @@ class VerificationStatus(str, enum.Enum):
     VERIFIED = "verified"
 
 
+class PassportVisibility(str, enum.Enum):
+    """Controls pre-application discoverability in company-side candidate search (see
+    passport_matching.service.search_candidates_for_job). MATCH_ONLY and DISCOVERABLE behave
+    identically in that search today — both included, ranked by AI match against a specific job.
+    The distinction exists for a future generic candidate-browse mode (search without a specific
+    job in mind) that isn't built yet; DISCOVERABLE is meant to also surface there once it
+    exists, MATCH_ONLY isn't. Only PRIVATE is excluded from search. Defaults to PRIVATE so
+    nothing changes for any existing candidate until they explicitly opt in."""
+
+    PRIVATE = "private"
+    MATCH_ONLY = "match_only"
+    DISCOVERABLE = "discoverable"
+
+
 class PhantomPassport(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     """The Shadow Profile — anonymous professional data only. No name, email, phone, or any
     other direct identifier lives on this table; that split is enforced at the schema level
@@ -73,6 +87,7 @@ class PhantomPassport(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base
     verification_status: Mapped[str] = mapped_column(
         String(20), default=VerificationStatus.UNVERIFIED.value
     )
+    visibility: Mapped[str] = mapped_column(String(20), default=PassportVisibility.PRIVATE.value)
     # Null until the candidate has explicitly approved a snapshot — see PassportVersion. This is
     # the only "is it approved" signal; a separate boolean would just be a second field that can
     # drift out of sync with this one.

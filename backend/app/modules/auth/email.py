@@ -82,3 +82,13 @@ def build_invite_email(*, company_name: str, accept_url: str) -> tuple[str, str]
     subject = f"You've been invited to join {company_name} on AI Interview Copilot"
     body = f"You've been invited to join {company_name}. Accept your invite:\n\n{accept_url}"
     return subject, body
+
+
+def build_job_alert_email(*, job_title: str, alert_names: list[str]) -> tuple[str, str]:
+    subject = f"New match for your job alert: {job_title}"
+    matched = ", ".join(alert_names)
+    body = (
+        f"A new role just went live that matches your saved search ({matched}):\n\n{job_title}\n\n"
+        "Open the Shadow job board to view it and apply with your Phantom Passport."
+    )
+    return subject, body

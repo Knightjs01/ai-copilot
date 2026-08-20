@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Briefcase, MapPin } from "lucide-react";
+import { AlertTriangle, Bookmark, BookmarkCheck, Briefcase, CheckCircle2, MapPin } from "lucide-react";
 
 import { ApplyDisclosureDialog } from "@/components/candidate/apply-disclosure-dialog";
+import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
 import { ShadowTopNav } from "@/components/shadow/shadow-top-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,9 +14,55 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api-client";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import { useJobMatch } from "@/lib/queries/passport-matching";
+import { useSaveJob, useSavedJobs, useUnsaveJob } from "@/lib/queries/saved-jobs";
 import { useApplyToShadowJob, useShadowBoardJob } from "@/lib/queries/shadow-jobs";
-import { EMPLOYMENT_TYPE_LABEL, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
+import {
+  EMPLOYMENT_TYPE_LABEL,
+  MATCH_TIER_VARIANT,
+  REMOTE_PREFERENCE_LABEL,
+} from "@/lib/status-display";
 import styles from "../../shadow-theme.module.css";
+
+function MatchToneList({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: string[];
+  tone: "positive" | "caution";
+}) {
+  if (items.length === 0) return null;
+  const Icon = tone === "positive" ? CheckCircle2 : AlertTriangle;
+  return (
+    <div>
+      <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h4>
+      <ul
+        className={
+          tone === "positive"
+            ? "flex flex-col gap-1.5 rounded-xl border border-success/20 bg-success/5 p-3"
+            : "flex flex-col gap-1.5 rounded-xl border border-warning/20 bg-warning/5 p-3"
+        }
+      >
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+            <Icon
+              className={
+                tone === "positive"
+                  ? "mt-0.5 h-3.5 w-3.5 shrink-0 text-success"
+                  : "mt-0.5 h-3.5 w-3.5 shrink-0 text-warning"
+              }
+            />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function formatSalary(min: number | null, max: number | null): string | null {
   if (!min && !max) return null;
@@ -29,12 +77,23 @@ export default function ShadowJobDetailPage() {
   const { candidate, isLoading: authLoading } = useCandidateAuth();
   const { data: job, isLoading } = useShadowBoardJob(params.jobId);
   const applyMutation = useApplyToShadowJob(params.jobId);
+  const { data: savedJobs } = useSavedJobs({ enabled: !!candidate });
+  const isSaved = !!savedJobs?.some((saved) => saved.job.id === params.jobId);
+  const saveJob = useSaveJob();
+  const unsaveJob = useUnsaveJob();
+  const { data: match } = useJobMatch(params.jobId, { enabled: !!candidate });
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(false);
   const [disclosureOpen, setDisclosureOpen] = React.useState(false);
   // Portal target for ApplyDisclosureDialog so it renders inside the themed <main> instead of
   // document.body — see DialogContent's comment in dialog.tsx.
   const mainRef = React.useRef<HTMLElement>(null);
+  const { setContext } = useShadowCopilot();
+
+  React.useEffect(() => {
+    setContext({ type: "job", id: params.jobId });
+    return () => setContext({ type: "none" });
+  }, [params.jobId, setContext]);
 
   const handleApplyClick = () => {
     setApplyError(null);
@@ -90,8 +149,47 @@ export default function ShadowJobDetailPage() {
         {job && (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{job.title}</h1>
-              <p className="text-sm text-muted-foreground">{job.company_name}</p>
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                  {job.title}
+                </h1>
+                {candidate && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() =>
+                      isSaved ? unsaveJob.mutate(job.id) : saveJob.mutate({ shadowJobId: job.id })
+                    }
+                    disabled={saveJob.isPending || unsaveJob.isPending}
+                  >
+                    {isSaved ? (
+                      <>
+                        <BookmarkCheck className="h-4 w-4 text-brand" /> Saved
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="h-4 w-4" /> Save
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {job.company_name}
+                {job.company_slug && (
+                  <>
+                    {" · "}
+                    <Link
+                      href={`/shadow/companies/${job.company_slug}`}
+                      className="text-brand underline-offset-2 hover:underline"
+                    >
+                      View company profile
+                    </Link>
+                  </>
+                )}
+              </p>
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 {job.location && (
                   <span className="flex items-center gap-1">
@@ -129,6 +227,23 @@ export default function ShadowJobDetailPage() {
               </Card>
 
               <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
+                {match && (
+                  <Card>
+                    <CardContent className="flex flex-col gap-3 py-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Why this matches
+                        </p>
+                        <Badge variant={MATCH_TIER_VARIANT[match.match_tier]}>
+                          {match.match_tier}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-foreground">{match.summary}</p>
+                      <MatchToneList title="Strengths" items={match.strengths} tone="positive" />
+                      <MatchToneList title="Gaps" items={match.gaps} tone="caution" />
+                    </CardContent>
+                  </Card>
+                )}
                 <Card>
                   <CardContent className="flex flex-col gap-3 py-5">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

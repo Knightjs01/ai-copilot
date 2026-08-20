@@ -44,6 +44,7 @@ class PhantomPassportRepository:
         salary_max: int | None,
         notice_period: str | None,
         career_intent: str,
+        visibility: str,
     ) -> PhantomPassport:
         existing = await self.get_by_candidate_user_id(candidate_user_id)
         if existing is not None:
@@ -59,6 +60,7 @@ class PhantomPassportRepository:
             existing.salary_max = salary_max
             existing.notice_period = notice_period
             existing.career_intent = career_intent
+            existing.visibility = visibility
             await self._session.flush()
             return existing
 
@@ -76,10 +78,30 @@ class PhantomPassportRepository:
             salary_max=salary_max,
             notice_period=notice_period,
             career_intent=career_intent,
+            visibility=visibility,
         )
         self._session.add(passport)
         await self._session.flush()
         return passport
+
+    async def list_discoverable_candidates(self, *, limit: int = 50) -> list[PhantomPassport]:
+        """The candidate pool for company-side search (passport_matching.service.
+        search_candidates_for_job). visibility != PRIVATE, career_intent != NOT_LOOKING (checked
+        regardless of visibility -- see PassportVisibility's docstring), and an approved version
+        must exist (nothing to score without one). No real pagination yet -- see the module's
+        Phase 5 plan for why a flat limit is an honest, documented simplification for now."""
+        result = await self._session.execute(
+            select(PhantomPassport)
+            .where(
+                PhantomPassport.visibility != "private",
+                PhantomPassport.career_intent != "not_looking",
+                PhantomPassport.current_version_id.is_not(None),
+                PhantomPassport.deleted_at.is_(None),
+            )
+            .order_by(PhantomPassport.updated_at.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
 
     async def set_current_version(
         self, passport: PhantomPassport, *, version_id: uuid.UUID
@@ -93,6 +115,14 @@ class PhantomPassportRepository:
             select(PhantomPassport.id).where(PhantomPassport.callsign == callsign)
         )
         return result.scalar_one_or_none() is not None
+
+    async def get_by_callsign(self, callsign: str) -> PhantomPassport | None:
+        result = await self._session.execute(
+            select(PhantomPassport).where(
+                PhantomPassport.callsign == callsign, PhantomPassport.deleted_at.is_(None)
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def set_callsign(self, passport: PhantomPassport, *, callsign: str) -> PhantomPassport:
         passport.callsign = callsign

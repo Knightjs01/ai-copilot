@@ -363,6 +363,11 @@ export type RemotePreference = "remote" | "hybrid" | "onsite" | "flexible";
 
 export type VerificationStatus = "unverified" | "pending" | "verified";
 
+// Controls pre-application discoverability in company-side candidate search. MATCH_ONLY and
+// DISCOVERABLE behave identically in that search today (see backend PassportVisibility's
+// docstring) -- both included, ranked by AI match. Only PRIVATE is excluded.
+export type PassportVisibility = "private" | "match_only" | "discoverable";
+
 export interface PersonalInfo {
   legal_name: string;
   phone: string | null;
@@ -415,6 +420,7 @@ export interface PhantomPassport {
   notice_period: NoticePeriod | null;
   career_intent: CareerIntent;
   verification_status: VerificationStatus;
+  visibility: PassportVisibility;
   completion_percentage: number;
   // Non-null iff the candidate has approved a Passport Version — see PassportVersionSummary.
   // Nothing is discoverable/usable for applying until this is set.
@@ -440,6 +446,7 @@ export interface PassportUpdateInput {
   salary_max?: number | null;
   notice_period?: NoticePeriod | null;
   career_intent?: CareerIntent | null;
+  visibility?: PassportVisibility | null;
   personal_info: PersonalInfoInput;
   career_entries: CareerEntryInput[];
 }
@@ -578,6 +585,9 @@ export type ShadowJobUpdateInput = Partial<Omit<ShadowJobCreateInput, "project_i
 export interface ShadowJobBoardListing {
   id: string;
   company_name: string;
+  // null unless the company has opted in to a public profile page -- fails open, no link shown,
+  // when a company hasn't opted in.
+  company_slug: string | null;
   title: string;
   department: string | null;
   seniority: string | null;
@@ -602,10 +612,179 @@ export interface ShadowApplication {
   applied_at: string;
 }
 
+// A candidate's private bookmark on a Shadow job board listing. `collection_name` is a
+// free-text label ("Dream roles", "Remote") -- no separate collections model, see backend
+// saved_shadow_jobs/__init__.py.
+export interface SavedShadowJob {
+  id: string;
+  collection_name: string | null;
+  created_at: string;
+  job: ShadowJobBoardListing;
+}
+
+// A candidate's saved search on the Shadow job board -- notifies by email when a newly
+// published job matches (see backend job_alerts/__init__.py). Null criteria fields are
+// wildcards; at least one must be set (enforced server-side and mirrored client-side).
+export interface JobAlert {
+  id: string;
+  name: string | null;
+  seniority: string | null;
+  remote_preference: RemotePreference | null;
+  employment_type: EmploymentType | null;
+  location: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface JobAlertCreateInput {
+  name?: string | null;
+  seniority?: string | null;
+  remote_preference?: RemotePreference | null;
+  employment_type?: EmploymentType | null;
+  location?: string | null;
+}
+
+export interface JobAlertUpdateInput {
+  name?: string | null;
+  seniority?: string | null;
+  remote_preference?: RemotePreference | null;
+  employment_type?: EmploymentType | null;
+  location?: string | null;
+  is_active?: boolean;
+}
+
+// Public /phantom-passport/verify/{callsign} shape -- no PII, no personal_info, no career
+// history. Confirms a real, approved Phantom Passport exists behind this Callsign; nothing more.
+export interface PassportVerification {
+  callsign: string;
+  headline: string | null;
+  seniority: string | null;
+  verification_status: VerificationStatus;
+  completion_percentage: number;
+}
+
+export type CompanySizeBand = "1-10" | "11-50" | "51-200" | "201-500" | "500+";
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  email_domain: string;
+  is_verified_domain: boolean;
+  description: string | null;
+  culture: string | null;
+  benefits: string[];
+  size: CompanySizeBand | null;
+  industry: string[];
+  is_profile_public: boolean;
+}
+
+export interface CompanyUpdateInput {
+  description?: string | null;
+  culture?: string | null;
+  benefits?: string[];
+  size?: CompanySizeBand | null;
+  industry?: string[];
+  is_profile_public?: boolean;
+}
+
+// Public /companies/{slug} shape -- no id/email_domain/is_verified_domain.
+export interface CompanyProfile {
+  name: string;
+  slug: string;
+  description: string | null;
+  culture: string | null;
+  benefits: string[];
+  size: CompanySizeBand | null;
+  industry: string[];
+}
+
 export interface ShadowCareerEntrySummary {
   title: string;
   company_name_anonymized: string;
   is_current: boolean;
+}
+
+export type MatchTier = "Excellent Match" | "Strong Match" | "Potential Match" | "Weak Match";
+
+// A real, cached AI match score between the candidate's approved Passport and one job. Kept
+// separate from ShadowJobBoardListing (mirrors how SavedShadowJob wraps a `job:` field rather
+// than mutating the base listing type) -- the public board stays auth-agnostic, computed match
+// data lives in its own fetch. See backend passport_matching/schemas.py.
+export interface ShadowJobMatch {
+  job_id: string;
+  match_tier: MatchTier;
+  match_score: number;
+  strengths: string[];
+  gaps: string[];
+  summary: string;
+  generated_at: string;
+}
+
+// One discoverable candidate ranked against a company's job — see backend
+// passport_matching/schemas.py::CandidateSearchResult. No PII field, same discipline as
+// ShadowProfile. `match_summary` (not `summary`) to avoid colliding with the passport's own bio.
+export interface CandidateSearchResult {
+  callsign: string;
+  headline: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  summary: string | null;
+  skills: string[];
+  industries: string[];
+  location: string | null;
+  remote_preference: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  notice_period: string | null;
+  career_intent: string;
+  career_entries: ShadowCareerEntrySummary[];
+  match_tier: MatchTier;
+  match_score: number;
+  match_summary: string;
+  strengths: string[];
+  gaps: string[];
+}
+
+export interface BoardFilters {
+  seniority: string | null;
+  remote_preference: string | null;
+  employment_type: string | null;
+  location: string | null;
+}
+
+// The Phantom AI co-pilot -- a scoped, tool-calling assistant, not an open chat. `context_type`
+// tells the backend what the candidate is currently looking at so it can route accurately
+// without ever being given (or having to guess) an ID. See backend copilot/schemas.py.
+export type CopilotContextType = "job" | "application" | "interview" | "passport" | "none";
+
+export type CopilotAction =
+  | "search_jobs"
+  | "explain_match"
+  | "suggest_improvements"
+  | "summarize_applications"
+  | "interview_prep"
+  | "reply";
+
+export interface CopilotMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface CopilotChatRequest {
+  message: string;
+  context_type: CopilotContextType;
+  context_id?: string | null;
+  history: CopilotMessage[];
+}
+
+export interface CopilotChatResponse {
+  reply: string;
+  action: CopilotAction;
+  board_filters: BoardFilters | null;
+  match: ShadowJobMatch | null;
+  suggested_summary: string | null;
+  interview_prep_questions: string[] | null;
 }
 
 // The recruiter-facing anonymized applicant card — deliberately has no field that could hold a
@@ -628,6 +807,57 @@ export interface ShadowProfile {
   notice_period: NoticePeriod | null;
   career_intent: CareerIntent;
   career_entries: ShadowCareerEntrySummary[];
+  unread_message_count: number;
+  has_upcoming_interview: boolean;
+}
+
+export type MessageSenderType = "company" | "candidate";
+
+// is_mine/sender_label are resolved server-side per the requesting principal -- the frontend
+// never has to guess who's who. See backend messages/schemas.py.
+export interface Message {
+  id: string;
+  sender_type: MessageSenderType;
+  sender_label: string;
+  body: string;
+  created_at: string;
+  is_mine: boolean;
+}
+
+export interface MessageThread {
+  application_id: string;
+  messages: Message[];
+}
+
+// One row in either side's thread list/inbox.
+export interface MessageThreadSummary {
+  application_id: string;
+  job_title: string;
+  company_name: string;
+  callsign: string;
+  last_message_preview: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+}
+
+export type InterviewStatus = "scheduled" | "cancelled" | "completed";
+
+export interface Interview {
+  id: string;
+  application_id: string;
+  scheduled_at: string;
+  location: string | null;
+  meeting_link: string | null;
+  status: InterviewStatus;
+  created_at: string;
+}
+
+// The candidate's flat "My Interviews" list embeds job/company/callsign context so the portal
+// never needs a per-application drill-down. See backend interviews/schemas.py.
+export interface CandidateInterviewSummary extends Interview {
+  job_title: string;
+  company_name: string;
+  callsign: string;
 }
 
 export type RevealRequestStatus = "pending" | "approved" | "declined";
@@ -653,6 +883,23 @@ export interface CandidateRevealRequest {
   reason: string | null;
   status: RevealRequestStatus;
   requested_at: string;
+}
+
+// One row in the candidate-wide "Identity Activity" timeline -- spans every application, unlike
+// CandidateRevealRequest which is scoped to one. disclosure_level/disclosed_fields are null
+// while pending/declined; disclosed_fields specifically stays null even when approved unless the
+// candidate explicitly narrowed disclosure (a routine full approval only sets disclosure_level).
+export interface CandidateRevealHistoryItem {
+  id: string;
+  shadow_application_id: string;
+  job_title: string;
+  company_name: string;
+  reason: string | null;
+  status: RevealRequestStatus;
+  requested_at: string;
+  responded_at: string | null;
+  disclosure_level: DisclosureLevel | null;
+  disclosed_fields: ShadowField[] | null;
 }
 
 export interface RevealedCareerEntry {

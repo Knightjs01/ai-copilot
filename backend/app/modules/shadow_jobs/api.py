@@ -6,15 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
+    get_email_sender,
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
 )
+from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.dependencies import require_verified_domain
+from app.modules.job_alerts.service import JobAlertService
 from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.schemas import (
     ShadowApplicationRead,
@@ -97,9 +100,13 @@ async def publish_job(
     actor: User = Depends(require_verified_domain),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
+    email_sender: EmailSender = Depends(get_email_sender),
 ) -> ShadowJobRead:
     service = ShadowJobService(session)
     job = await service.publish_job(actor=actor, job_id=job_id)
+    # No background job runner exists in this codebase -- job alert matching happens
+    # synchronously, right here, the one real moment a "new matching job" notification can fire.
+    await JobAlertService(session, email_sender=email_sender).notify_matching_alerts(job)
     return await _to_job_read(service, job)
 
 

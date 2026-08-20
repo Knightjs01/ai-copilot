@@ -32,6 +32,7 @@ from app.modules.phantom_passport.schemas import (
     IndustriesSuggestionResponse,
     PassportRead,
     PassportUpdate,
+    PassportVerificationRead,
     PassportVersionRead,
     PersonalInfoRead,
     ShadowProfileSnapshot,
@@ -88,6 +89,21 @@ class PhantomPassportService:
             raise PassportNotFoundError()
         return await self._to_read_model(passport)
 
+    async def get_verification_by_callsign(self, callsign: str) -> PassportVerificationRead | None:
+        """Public verification lookup -- a callsign only ever exists post-approval (see
+        approve_passport), so there's no separate "not approved" branch to handle here."""
+        passport = await self._passports.get_by_callsign(callsign)
+        if passport is None or passport.callsign is None:
+            return None
+        career_entries = await self._career_entries.list_by_passport_id(passport.id)
+        return PassportVerificationRead(
+            callsign=passport.callsign,
+            headline=passport.headline,
+            seniority=passport.seniority,
+            verification_status=passport.verification_status,
+            completion_percentage=_completion_percentage(passport, career_entries),
+        )
+
     async def save_passport(
         self, *, candidate: CandidateUser, body: PassportUpdate
     ) -> PassportRead:
@@ -105,6 +121,7 @@ class PhantomPassportService:
             salary_max=body.salary_max,
             notice_period=body.notice_period,
             career_intent=body.career_intent or "just_exploring",
+            visibility=body.visibility or "private",
         )
 
         await self._personal_info.upsert(
@@ -415,6 +432,7 @@ class PhantomPassportService:
             notice_period=passport.notice_period,
             career_intent=passport.career_intent,
             verification_status=passport.verification_status,
+            visibility=passport.visibility,
             completion_percentage=_completion_percentage(passport, career_entries),
             current_version_number=current_version_number,
             callsign=passport.callsign,

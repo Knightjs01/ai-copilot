@@ -46,6 +46,11 @@ from app.modules.interview_kit.llm_client import (  # noqa: E402
     InterviewKitExtraction,
     InterviewKitQuestionDraft,
 )
+from app.modules.copilot.llm_client import CopilotRouteDraft  # noqa: E402
+from app.modules.passport_matching.llm_client import (  # noqa: E402
+    BoardFilterDraft,
+    PassportMatchDraft,
+)
 from app.modules.phantom_passport.llm_client import (  # noqa: E402
     CareerEntryExtraction,
     PassportExtraction,
@@ -203,6 +208,86 @@ def fake_interview_kit_llm_client() -> FakeInterviewKitLLMClient:
     return FakeInterviewKitLLMClient()
 
 
+class FakePassportMatchingLLMClient:
+    """Test double for app.modules.passport_matching.llm_client.PassportMatchingLLMClient —
+    deterministic canned tier/score/strengths/gaps and canned filter parses instead of calling
+    the real Claude API. Kept separate from the other fakes: different module, different domain,
+    different dependency override."""
+
+    def __init__(self) -> None:
+        self.score_calls: list[tuple[dict, dict]] = []
+        self.search_calls: list[str] = []
+
+    async def score_match(self, *, passport_snapshot: dict, job_facts: dict) -> PassportMatchDraft:
+        self.score_calls.append((passport_snapshot, job_facts))
+        return PassportMatchDraft(
+            match_tier="Strong Match",
+            match_score=72,
+            strengths=["Fake strength: relevant skills overlap"],
+            gaps=["Fake gap: limited seniority evidence"],
+            summary="Fake summary: a solid, not perfect, fit.",
+        )
+
+    async def parse_search_query(self, *, query: str) -> BoardFilterDraft:
+        self.search_calls.append(query)
+        # Deterministic canned parse: only recognizes a couple of fixed keywords so tests can
+        # assert on predictable output without depending on real NLP.
+        remote_preference = "remote" if "remote" in query.lower() else None
+        employment_type = (
+            "full_time" if "full-time" in query.lower() or "full time" in query.lower() else None
+        )
+        return BoardFilterDraft(
+            seniority=None,
+            remote_preference=remote_preference,
+            employment_type=employment_type,
+            location=None,
+        )
+
+
+@pytest.fixture
+def fake_passport_matching_llm_client() -> FakePassportMatchingLLMClient:
+    return FakePassportMatchingLLMClient()
+
+
+class FakeCopilotLLMClient:
+    """Test double for app.modules.copilot.llm_client.CopilotLLMClient — deterministic
+    keyword-based routing instead of calling the real Claude API, same "a couple of fixed
+    keywords, not real NLP" convention as FakePassportMatchingLLMClient.parse_search_query."""
+
+    def __init__(self) -> None:
+        self.route_calls: list[str] = []
+        self.prep_calls: list[dict] = []
+
+    async def route(
+        self, *, message: str, history: list[dict], context_type: str
+    ) -> CopilotRouteDraft:
+        self.route_calls.append(message)
+        lowered = message.lower()
+        if "search" in lowered or "find" in lowered:
+            return CopilotRouteDraft(action="search_jobs", query=message)
+        if "match" in lowered:
+            return CopilotRouteDraft(action="explain_match")
+        if "improve" in lowered or "summary" in lowered:
+            return CopilotRouteDraft(action="suggest_improvements")
+        if "application" in lowered or "status" in lowered:
+            return CopilotRouteDraft(action="summarize_applications")
+        if "prep" in lowered or "interview" in lowered:
+            return CopilotRouteDraft(action="interview_prep")
+        return CopilotRouteDraft(
+            action="reply",
+            message="Fake reply: I can help with jobs, matches, your Passport, applications, or interview prep.",
+        )
+
+    async def generate_interview_prep(self, *, job_facts: dict) -> list[str]:
+        self.prep_calls.append(job_facts)
+        return ["Fake prep question 1", "Fake prep question 2"]
+
+
+@pytest.fixture
+def fake_copilot_llm_client() -> FakeCopilotLLMClient:
+    return FakeCopilotLLMClient()
+
+
 class FakePrescreenAssessmentLLMClient:
     """Test double for app.modules.prescreen_assessment.llm_client.PrescreenAssessmentLLMClient
     — returns canned, deterministic responses instead of calling the real Claude API. Kept
@@ -323,14 +408,20 @@ async def client(
     fake_interview_kit_llm_client: FakeInterviewKitLLMClient,
     fake_prescreen_assessment_llm_client: FakePrescreenAssessmentLLMClient,
     fake_passport_llm_client: FakePassportLLMClient,
+    fake_passport_matching_llm_client: FakePassportMatchingLLMClient,
+    fake_copilot_llm_client: FakeCopilotLLMClient,
     test_storage: EncryptingFileStorage,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
     from app.modules.auth.dependencies import get_email_sender
     from app.modules.candidates.dependencies import get_file_storage
+    from app.modules.copilot.dependencies import get_copilot_llm_client
     from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
     from app.modules.intelligence.dependencies import get_llm_client
     from app.modules.interview_kit.dependencies import get_interview_kit_llm_client
+    from app.modules.passport_matching.dependencies import (
+        get_passport_matching_llm_client,
+    )
     from app.modules.phantom_passport.dependencies import (
         get_llm_client as get_passport_llm_client,
     )
@@ -347,6 +438,10 @@ async def client(
         lambda: fake_prescreen_assessment_llm_client
     )
     app.dependency_overrides[get_passport_llm_client] = lambda: fake_passport_llm_client
+    app.dependency_overrides[get_passport_matching_llm_client] = (
+        lambda: fake_passport_matching_llm_client
+    )
+    app.dependency_overrides[get_copilot_llm_client] = lambda: fake_copilot_llm_client
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -359,3 +454,5 @@ async def client(
         app.dependency_overrides.pop(get_interview_kit_llm_client, None)
         app.dependency_overrides.pop(get_prescreen_assessment_llm_client, None)
         app.dependency_overrides.pop(get_passport_llm_client, None)
+        app.dependency_overrides.pop(get_passport_matching_llm_client, None)
+        app.dependency_overrides.pop(get_copilot_llm_client, None)

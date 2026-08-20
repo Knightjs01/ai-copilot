@@ -4,7 +4,16 @@ import * as React from "react";
 import { Command } from "cmdk";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, Briefcase, LayoutGrid, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import {
+  Archive,
+  Briefcase,
+  Building2,
+  LayoutGrid,
+  ShieldCheck,
+  UserSearch,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
@@ -23,6 +32,18 @@ const NAV_COMMANDS: NavCommand[] = [
   { label: "Security", href: "/security", icon: ShieldCheck },
   { label: "Historic Vault", href: "/historic-vault", icon: Archive, permission: "historic_vault.view" },
   { label: "Shadow Jobs", href: "/shadow-jobs", icon: LayoutGrid, permission: "shadow_jobs.view" },
+  {
+    label: "Search Candidates",
+    href: "/search-candidates",
+    icon: UserSearch,
+    permission: "shadow_candidates.search",
+  },
+  {
+    label: "Company Profile",
+    href: "/company",
+    icon: Building2,
+    permission: "company.manage_settings",
+  },
 ];
 
 // cmdk renders each Group's `heading` prop wrapped in a [cmdk-group-heading] element with no

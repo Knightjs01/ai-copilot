@@ -57,6 +57,7 @@ class PassportUpdate(BaseModel):
     salary_max: int | None = Field(default=None, ge=0)
     notice_period: str | None = Field(default=None, max_length=100)
     career_intent: str | None = Field(default=None, max_length=100)
+    visibility: str | None = Field(default=None, max_length=20)
     personal_info: PersonalInfoInput
     career_entries: list[CareerEntryInput] = Field(default_factory=list, max_length=50)
 
@@ -76,6 +77,7 @@ class PassportRead(BaseModel):
     notice_period: str | None
     career_intent: str
     verification_status: str
+    visibility: str
     completion_percentage: int
     # Non-null iff the candidate has explicitly approved a snapshot — see PassportVersion. A
     # Shadow application can't be submitted until this is set. Draft edits after approval don't
@@ -169,6 +171,18 @@ class IndustriesSuggestionRequest(BaseModel):
 
 class IndustriesSuggestionResponse(BaseModel):
     suggested_industries: list[str]
+
+
+class PassportVerificationRead(BaseModel):
+    """Public /phantom-passport/verify/{callsign} shape -- no PII, no personal_info, no career
+    history. Confirms a real, approved Phantom Passport exists behind this Callsign; nothing
+    more."""
+
+    callsign: str
+    headline: str | None
+    seniority: str | None
+    verification_status: str
+    completion_percentage: int
 
 
 class ShadowProfileSnapshot(BaseModel):

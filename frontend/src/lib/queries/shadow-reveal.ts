@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
 import type {
+  CandidateRevealHistoryItem,
   CandidateRevealRequest,
   RevealedIdentity,
   RevealRequest,
@@ -49,6 +50,15 @@ export function useFetchRevealedIdentity(jobId: string) {
 }
 
 // --- Candidate side -------------------------------------------------------------------------
+
+// The candidate-wide "Identity Activity" timeline -- every reveal request/response across every
+// application, not scoped to one like useMyRevealRequest below.
+export function useMyRevealHistory() {
+  return useQuery({
+    queryKey: ["shadow-reveal", "my-history"],
+    queryFn: () => candidateApiClient.get<CandidateRevealHistoryItem[]>("/shadow-reveal/my-history"),
+  });
+}
 
 export function useMyRevealRequest(applicationId: string | undefined) {
   return useQuery({

@@ -1,0 +1,222 @@
+"use client";
+
+import * as React from "react";
+import { format } from "date-fns";
+import { Calendar, CheckCircle2, XCircle } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth-context";
+import {
+  useApplicantInterviews,
+  useCancelInterview,
+  useCompleteInterview,
+  useScheduleInterview,
+} from "@/lib/queries/shadow-jobs";
+import { INTERVIEW_STATUS_LABEL, INTERVIEW_STATUS_VARIANT } from "@/lib/status-display";
+import { useToast } from "@/lib/toast-context";
+import type { Interview } from "@/lib/types";
+
+function InterviewRow({
+  interview,
+  jobId,
+  applicationId,
+  canSchedule,
+}: {
+  interview: Interview;
+  jobId: string;
+  applicationId: string;
+  canSchedule: boolean;
+}) {
+  const cancelInterview = useCancelInterview(jobId, applicationId, interview.id);
+  const completeInterview = useCompleteInterview(jobId, applicationId, interview.id);
+  const toast = useToast();
+
+  const handleCancel = () => {
+    cancelInterview.mutate(undefined, {
+      onSuccess: () => toast({ title: "Interview cancelled", variant: "success" }),
+      onError: () => toast({ title: "Couldn't cancel interview", variant: "danger" }),
+    });
+  };
+
+  const handleComplete = () => {
+    completeInterview.mutate(undefined, {
+      onSuccess: () => toast({ title: "Interview marked complete", variant: "success" }),
+      onError: () => toast({ title: "Couldn't update interview", variant: "danger" }),
+    });
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+      <div className="flex flex-col gap-0.5">
+        <p className="text-sm font-medium text-foreground">
+          {format(new Date(interview.scheduled_at), "d MMM yyyy, h:mm a")}
+        </p>
+        {interview.location && (
+          <p className="text-xs text-muted-foreground">{interview.location}</p>
+        )}
+        {interview.meeting_link && (
+          <a
+            href={interview.meeting_link}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-brand underline underline-offset-2"
+          >
+            {interview.meeting_link}
+          </a>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={INTERVIEW_STATUS_VARIANT[interview.status]}>
+          {INTERVIEW_STATUS_LABEL[interview.status]}
+        </Badge>
+        {canSchedule && interview.status === "scheduled" && (
+          <>
+            <button
+              type="button"
+              onClick={handleComplete}
+              disabled={completeInterview.isPending}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-success"
+              aria-label="Mark complete"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={cancelInterview.isPending}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-danger"
+              aria-label="Cancel interview"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ScheduleInterviewDialog({
+  jobId,
+  applicationId,
+  callsign,
+}: {
+  jobId: string;
+  applicationId: string;
+  callsign: string;
+}) {
+  const { hasPermission } = useAuth();
+  const canSchedule = hasPermission("interviews.schedule");
+  const [open, setOpen] = React.useState(false);
+  const [scheduledAt, setScheduledAt] = React.useState("");
+  const [location, setLocation] = React.useState("");
+  const [meetingLink, setMeetingLink] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+
+  const { data: interviews, isLoading } = useApplicantInterviews(
+    open ? jobId : undefined,
+    open ? applicationId : undefined
+  );
+  const scheduleInterview = useScheduleInterview(jobId, applicationId);
+
+  const handleSchedule = async () => {
+    if (!scheduledAt) return;
+    setError(null);
+    try {
+      await scheduleInterview.mutateAsync({
+        scheduled_at: new Date(scheduledAt).toISOString(),
+        location: location || undefined,
+        meeting_link: meetingLink || undefined,
+      });
+      setScheduledAt("");
+      setLocation("");
+      setMeetingLink("");
+    } catch {
+      setError("Couldn't schedule interview. Check the date is in the future and try again.");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="secondary" size="sm">
+          <Calendar className="h-3.5 w-3.5" />
+          Interview
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Interviews with {callsign}</DialogTitle>
+          <DialogDescription>
+            Schedule, reschedule, or cancel interviews for this applicant.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!isLoading && interviews && interviews.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {interviews.map((interview) => (
+              <InterviewRow
+                key={interview.id}
+                interview={interview}
+                jobId={jobId}
+                applicationId={applicationId}
+                canSchedule={canSchedule}
+              />
+            ))}
+          </div>
+        )}
+
+        {canSchedule && (
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
+            <Field label="Date & time" htmlFor="scheduledAt">
+              <Input
+                id="scheduledAt"
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+              />
+            </Field>
+            <Field label="Location (optional)" htmlFor="location">
+              <Input
+                id="location"
+                placeholder="e.g. Zoom, or office address"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </Field>
+            <Field label="Meeting link (optional)" htmlFor="meetingLink">
+              <Input
+                id="meetingLink"
+                placeholder="https://…"
+                value={meetingLink}
+                onChange={(e) => setMeetingLink(e.target.value)}
+              />
+            </Field>
+            {error && <p className="text-sm font-medium text-danger">{error}</p>}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="brand"
+                onClick={handleSchedule}
+                disabled={!scheduledAt || scheduleInterview.isPending}
+              >
+                {scheduleInterview.isPending ? "Scheduling…" : "Schedule interview"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

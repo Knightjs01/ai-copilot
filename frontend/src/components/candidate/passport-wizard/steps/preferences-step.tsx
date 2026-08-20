@@ -9,8 +9,10 @@ import {
   CAREER_INTENT_LABEL,
   NOTICE_PERIOD_LABEL,
   REMOTE_PREFERENCE_LABEL,
+  VISIBILITY_DESCRIPTION,
+  VISIBILITY_LABEL,
 } from "@/lib/status-display";
-import type { CareerIntent, NoticePeriod, RemotePreference } from "@/lib/types";
+import type { CareerIntent, NoticePeriod, PassportVisibility, RemotePreference } from "@/lib/types";
 
 const CAREER_INTENT_OPTIONS = (Object.keys(CAREER_INTENT_LABEL) as CareerIntent[]).map((value) => ({
   value,
@@ -22,6 +24,10 @@ const REMOTE_PREFERENCE_OPTIONS = (Object.keys(REMOTE_PREFERENCE_LABEL) as Remot
 const NOTICE_PERIOD_OPTIONS = (Object.keys(NOTICE_PERIOD_LABEL) as NoticePeriod[]).map((value) => ({
   value,
   label: NOTICE_PERIOD_LABEL[value],
+}));
+const VISIBILITY_OPTIONS = (Object.keys(VISIBILITY_LABEL) as PassportVisibility[]).map((value) => ({
+  value,
+  label: VISIBILITY_LABEL[value],
 }));
 
 // Bounds and step for the visual slider only — the numeric inputs beside it still accept any
@@ -45,6 +51,8 @@ interface PreferencesStepProps {
   onNoticePeriodChange: (value: NoticePeriod) => void;
   careerIntent: CareerIntent;
   onCareerIntentChange: (value: CareerIntent) => void;
+  visibility: PassportVisibility;
+  onVisibilityChange: (value: PassportVisibility) => void;
 }
 
 export function PreferencesStep({
@@ -58,6 +66,8 @@ export function PreferencesStep({
   onNoticePeriodChange,
   careerIntent,
   onCareerIntentChange,
+  visibility,
+  onVisibilityChange,
 }: PreferencesStepProps) {
   const minValue = Math.min(
     Math.max(Number(salaryMin) || SALARY_SLIDER_MIN, SALARY_SLIDER_MIN),
@@ -135,6 +145,22 @@ export function PreferencesStep({
             value={careerIntent}
             onChange={onCareerIntentChange}
           />
+        </Field>
+        <Field label="Visibility to companies">
+          <div className="flex flex-col gap-2">
+            <PillToggleGroup
+              options={VISIBILITY_OPTIONS}
+              value={visibility}
+              onChange={onVisibilityChange}
+            />
+            <p className="text-xs text-muted-foreground">{VISIBILITY_DESCRIPTION[visibility]}</p>
+            {careerIntent === "not_looking" && visibility !== "private" && (
+              <p className="text-xs text-warning">
+                You won&apos;t be surfaced in company search while marked Not looking, regardless
+                of this setting.
+              </p>
+            )}
+          </div>
         </Field>
       </CardContent>
     </Card>

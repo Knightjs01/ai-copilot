@@ -4,9 +4,11 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 
+import { useShadowCommandPalette } from "@/components/shadow/shadow-command-palette-provider";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import { useMyMessageThreads } from "@/lib/queries/messages";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -18,6 +20,9 @@ function initials(name: string): string {
 export function ShadowTopNav() {
   const { candidate, logout } = useCandidateAuth();
   const router = useRouter();
+  const { openPalette } = useShadowCommandPalette();
+  const { data: threads } = useMyMessageThreads({ enabled: !!candidate });
+  const unreadCount = threads?.reduce((sum, t) => sum + t.unread_count, 0) ?? 0;
 
   const handleLogout = async () => {
     await logout();
@@ -38,26 +43,63 @@ export function ShadowTopNav() {
               priority
             />
           </Link>
-          <nav className="flex items-center gap-4">
+          <nav className="hidden items-center gap-4 md:flex">
+            {candidate && (
+              <Link
+                href="/shadow/home"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Home
+              </Link>
+            )}
             <Link
               href="/shadow"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Job board
+              Discover
             </Link>
             {candidate && (
               <>
                 <Link
-                  href="/shadow/passport"
+                  href="/shadow/for-you"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Phantom Passport
+                  For You
                 </Link>
                 <Link
                   href="/shadow/applications"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Applications
+                </Link>
+                <Link
+                  href="/shadow/messages"
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Messages
+                  {unreadCount > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-info px-1 text-[10px] font-semibold text-info-foreground">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+                <Link
+                  href="/shadow/interviews"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Interviews
+                </Link>
+                <Link
+                  href="/shadow/passport"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  My Passport
+                </Link>
+                <Link
+                  href="/shadow/saved-jobs"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Saved Jobs
                 </Link>
               </>
             )}
@@ -76,8 +118,21 @@ export function ShadowTopNav() {
         </Link>
 
         {candidate ? (
-          <div className="flex items-center gap-4 justify-self-end">
-            <span className="text-sm text-muted-foreground">{candidate.full_name}</span>
+          <div className="flex items-center gap-3 justify-self-end">
+            <button
+              type="button"
+              onClick={openPalette}
+              className="hidden items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:flex"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Search
+              <kbd className="rounded border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                ⌘K
+              </kbd>
+            </button>
+            <span className="hidden text-sm text-muted-foreground lg:inline">
+              {candidate.full_name}
+            </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
               {initials(candidate.full_name)}
             </div>

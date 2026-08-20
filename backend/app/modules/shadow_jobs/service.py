@@ -1,5 +1,6 @@
 import secrets
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +9,9 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.models import Company
+from app.modules.interviews.repository import InterviewRepository
+from app.modules.messages.models import Message
+from app.modules.messages.repository import MessageRepository, MessageThreadRepository
 from app.modules.phantom_passport.exceptions import PassportNotApprovedError, PassportNotFoundError
 from app.modules.phantom_passport.repository import (
     PassportCareerEntryRepository,
@@ -61,6 +65,12 @@ class ShadowJobService:
         self._career_entries = PassportCareerEntryRepository(session)
         self._versions = PassportVersionRepository(session)
         self._audit = AuditService(session)
+        # Repositories, not MessageService/InterviewService -- importing either service here
+        # would create a circular import (both modules' service.py import from shadow_jobs for
+        # the application lookup helpers). The repositories have no such dependency.
+        self._message_threads = MessageThreadRepository(session)
+        self._messages_repo = MessageRepository(session)
+        self._interviews = InterviewRepository(session)
 
     # --- Company-side job management --------------------------------------------------------
 
@@ -152,9 +162,58 @@ class ShadowJobService:
     ) -> list[ShadowProfile]:
         await self.get_job_for_company(company_id=company_id, job_id=job_id)
         applications = await self._applications.list_by_job(job_id)
-        return [await self._to_shadow_profile(a) for a in applications]
+        application_ids = [a.id for a in applications]
+        unread_counts = await self._unread_counts_for_applications(application_ids)
+        upcoming_interview_ids = {
+            i.shadow_application_id
+            for i in await self._interviews.list_upcoming_by_application_ids(application_ids)
+        }
+        return [
+            await self._to_shadow_profile(
+                a,
+                unread_count=unread_counts.get(a.id, 0),
+                has_upcoming_interview=a.id in upcoming_interview_ids,
+            )
+            for a in applications
+        ]
 
-    async def _to_shadow_profile(self, application: ShadowApplication) -> ShadowProfile:
+    async def _unread_counts_for_applications(
+        self, application_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, int]:
+        """One bulk lookup for the whole applicant list, not one per card -- see
+        messages/service.py's MessageService.unread_counts_for_applications for the identical
+        shape (duplicated here rather than imported to avoid a circular import, see __init__)."""
+        if not application_ids:
+            return {}
+        threads = await self._message_threads.list_by_application_ids(application_ids)
+        thread_by_app = {t.shadow_application_id: t for t in threads}
+        thread_ids = [t.id for t in threads]
+        candidate_messages = await self._messages_repo.list_candidate_messages_for_threads(
+            thread_ids
+        )
+        by_thread: dict[uuid.UUID, list[Message]] = defaultdict(list)
+        for message in candidate_messages:
+            by_thread[message.thread_id].append(message)
+
+        counts: dict[uuid.UUID, int] = {}
+        for app_id in application_ids:
+            thread = thread_by_app.get(app_id)
+            if thread is None:
+                counts[app_id] = 0
+                continue
+            cutoff = thread.company_last_read_at
+            counts[app_id] = sum(
+                1 for m in by_thread.get(thread.id, []) if cutoff is None or m.created_at > cutoff
+            )
+        return counts
+
+    async def _to_shadow_profile(
+        self,
+        application: ShadowApplication,
+        *,
+        unread_count: int = 0,
+        has_upcoming_interview: bool = False,
+    ) -> ShadowProfile:
         # An application with a recorded passport_version_id is frozen to exactly what the
         # candidate had approved at apply time — a later Passport edit/re-approval must not
         # retroactively change what a recruiter sees here. Only applications submitted before
@@ -184,6 +243,8 @@ class ShadowJobService:
                     career_entries=[
                         ShadowCareerEntrySummary(**entry) for entry in snapshot.career_entries
                     ],
+                    unread_message_count=unread_count,
+                    has_upcoming_interview=has_upcoming_interview,
                 )
 
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
@@ -219,6 +280,8 @@ class ShadowJobService:
                 )
                 for entry in career_entries
             ],
+            unread_message_count=unread_count,
+            has_upcoming_interview=has_upcoming_interview,
         )
 
     # --- Public job board ---------------------------------------------------------------------
@@ -258,6 +321,7 @@ class ShadowJobService:
         return ShadowJobBoardListing(
             id=job.id,
             company_name=company.name if company else "Unknown company",
+            company_slug=company.slug if company and company.is_profile_public else None,
             title=job.title,
             department=job.department,
             seniority=job.seniority,

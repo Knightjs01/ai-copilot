@@ -16,6 +16,7 @@ from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.shadow_reveal.schemas import (
+    CandidateRevealHistoryItem,
     CandidateRevealRequestRead,
     RevealDecision,
     RevealedIdentity,
@@ -62,6 +63,14 @@ async def get_revealed_identity(
 
 
 # --- Candidate side ----------------------------------------------------------------------------
+
+
+@router.get("/my-history", response_model=list[CandidateRevealHistoryItem])
+async def list_my_reveal_history(
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
+    session: AsyncSession = Depends(get_db),
+) -> list[CandidateRevealHistoryItem]:
+    return await ShadowRevealService(session).list_my_reveal_history(candidate=candidate)
 
 
 @router.get("/applications/me/{application_id}", response_model=CandidateRevealRequestRead)

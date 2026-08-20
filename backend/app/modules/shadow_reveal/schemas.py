@@ -34,6 +34,27 @@ class CandidateRevealRequestRead(BaseModel):
     requested_at: datetime
 
 
+class CandidateRevealHistoryItem(BaseModel):
+    """One row in the candidate-wide 'Identity Activity' timeline -- same job/company context
+    as CandidateRevealRequestRead, plus the full lifecycle (responded_at, and exactly which
+    fields were disclosed when approved) since this view spans every application, not just the
+    one currently being decided."""
+
+    id: uuid.UUID
+    shadow_application_id: uuid.UUID
+    job_title: str
+    company_name: str
+    reason: str | None
+    status: RevealRequestStatus
+    requested_at: datetime
+    responded_at: datetime | None
+    # Null while pending/declined. Populated on approval; disclosed_fields is only ever set when
+    # the candidate explicitly narrowed disclosure (disclosure_level="custom") -- a routine full
+    # approval stores the level but leaves disclosed_fields null, see respond_to_reveal_request.
+    disclosure_level: DisclosureLevel | None
+    disclosed_fields: list[ShadowField] | None
+
+
 class RevealDecision(BaseModel):
     approve: bool
     # The candidate's own choice of how much to disclose — only meaningful when approve=True.

@@ -31,6 +31,7 @@ from app.modules.shadow_reveal.exceptions import (
 from app.modules.shadow_reveal.models import RevealRequestStatus, ShadowRevealRequest
 from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 from app.modules.shadow_reveal.schemas import (
+    CandidateRevealHistoryItem,
     CandidateRevealRequestRead,
     RevealDecision,
     RevealedCareerEntry,
@@ -126,6 +127,44 @@ class ShadowRevealService:
             status=RevealRequestStatus(request.status),
             requested_at=request.created_at,
         )
+
+    async def list_my_reveal_history(
+        self, *, candidate: CandidateUser
+    ) -> list[CandidateRevealHistoryItem]:
+        """Every reveal request/response across every application this candidate has ever
+        submitted -- the candidate-wide 'Identity Activity' timeline, distinct from
+        get_my_reveal_request which is scoped to one application's currently-pending decision."""
+        requests = await self._requests.list_by_candidate_id(candidate.id)
+        items: list[CandidateRevealHistoryItem] = []
+        for request in requests:
+            application = await self._applications.get_by_id(request.shadow_application_id)
+            if application is None:
+                continue
+            job = await self._jobs.get_by_id(application.shadow_job_id)
+            company = await self._session.get(Company, job.company_id) if job else None
+            items.append(
+                CandidateRevealHistoryItem(
+                    id=request.id,
+                    shadow_application_id=application.id,
+                    job_title=job.title if job else "Unknown role",
+                    company_name=company.name if company else "Unknown company",
+                    reason=request.reason,
+                    status=RevealRequestStatus(request.status),
+                    requested_at=request.created_at,
+                    responded_at=request.responded_at,
+                    disclosure_level=(
+                        DisclosureLevel(request.disclosure_level)
+                        if request.disclosure_level
+                        else None
+                    ),
+                    disclosed_fields=(
+                        [ShadowField(f) for f in request.disclosed_fields]
+                        if request.disclosed_fields
+                        else None
+                    ),
+                )
+            )
+        return items
 
     async def respond_to_reveal_request(
         self, *, candidate: CandidateUser, application_id: uuid.UUID, body: RevealDecision

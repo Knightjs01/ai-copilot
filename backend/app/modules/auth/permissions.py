@@ -17,6 +17,11 @@ class Permissions:
     SHADOW_JOBS_CREATE = "shadow_jobs.create"
     SHADOW_JOBS_VIEW = "shadow_jobs.view"
     SHADOW_JOBS_UPDATE = "shadow_jobs.update"
+    MESSAGES_VIEW = "messages.view"
+    MESSAGES_SEND = "messages.send"
+    INTERVIEWS_VIEW = "interviews.view"
+    INTERVIEWS_SCHEDULE = "interviews.schedule"
+    SHADOW_CANDIDATES_SEARCH = "shadow_candidates.search"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -38,6 +43,11 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.SHADOW_JOBS_CREATE: "Post jobs to the Shadow job board",
     Permissions.SHADOW_JOBS_VIEW: "View Shadow job postings and their anonymized applicants",
     Permissions.SHADOW_JOBS_UPDATE: "Edit, publish, or close Shadow job postings",
+    Permissions.MESSAGES_VIEW: "View candidate/company message threads on Shadow applications",
+    Permissions.MESSAGES_SEND: "Send messages to a Shadow applicant",
+    Permissions.INTERVIEWS_VIEW: "View scheduled interviews for Shadow applicants",
+    Permissions.INTERVIEWS_SCHEDULE: "Schedule, reschedule, or cancel interviews with a Shadow applicant",
+    Permissions.SHADOW_CANDIDATES_SEARCH: "Search discoverable Shadow candidates ranked by AI match",
 }
 
 
@@ -74,11 +84,19 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.SHADOW_JOBS_CREATE,
         Permissions.SHADOW_JOBS_VIEW,
         Permissions.SHADOW_JOBS_UPDATE,
+        Permissions.MESSAGES_VIEW,
+        Permissions.MESSAGES_SEND,
+        Permissions.INTERVIEWS_VIEW,
+        Permissions.INTERVIEWS_SCHEDULE,
+        Permissions.SHADOW_CANDIDATES_SEARCH,
     ],
     RoleName.MEMBER: [
         Permissions.USERS_VIEW,
         Permissions.PROJECTS_VIEW,
         Permissions.CANDIDATES_VIEW,
         Permissions.SHADOW_JOBS_VIEW,
+        Permissions.MESSAGES_VIEW,
+        Permissions.INTERVIEWS_VIEW,
+        Permissions.SHADOW_CANDIDATES_SEARCH,
     ],
 }

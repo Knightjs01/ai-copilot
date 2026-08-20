@@ -26,6 +26,8 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
   const router = useRouter();
   const canViewHistoricVault = hasPermission("historic_vault.view");
   const canViewShadowJobs = hasPermission("shadow_jobs.view");
+  const canSearchCandidates = hasPermission("shadow_candidates.search");
+  const canManageCompany = hasPermission("company.manage_settings");
 
   const handleLogout = async () => {
     await logout();
@@ -74,6 +76,22 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Historic Vault
+                </Link>
+              )}
+              {canSearchCandidates && (
+                <Link
+                  href="/search-candidates"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Search Candidates
+                </Link>
+              )}
+              {canManageCompany && (
+                <Link
+                  href="/company"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Company Profile
                 </Link>
               )}
               <Link

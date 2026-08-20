@@ -309,3 +309,74 @@ async def test_reveal_request_scoped_to_owning_candidate(client: AsyncClient) ->
         f"/api/v1/shadow-reveal/applications/me/{application['id']}", headers=other_headers
     )
     assert response.status_code == 404
+
+
+async def test_my_history_spans_every_application_and_is_isolated_per_candidate(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@shadowreveal-history.com")
+    headers = auth_headers(owner["access_token"])
+    job_a = await _create_and_publish_job(client, headers=headers)
+    job_b = await _create_and_publish_job(client, headers=headers)
+
+    application_a, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job_a["id"], email="applicant@shadowreveal-history.com"
+    )
+    apply_b = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_b['id']}/apply", headers=candidate_headers
+    )
+    assert apply_b.status_code == 201, apply_b.text
+    application_b = apply_b.json()
+
+    # No history yet -- nothing requested.
+    empty_history = await client.get("/api/v1/shadow-reveal/my-history", headers=candidate_headers)
+    assert empty_history.status_code == 200, empty_history.text
+    assert empty_history.json() == []
+
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job_a['id']}/applicants/{application_a['id']}/request",
+        json={"reason": "Ready to move forward"},
+        headers=headers,
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job_b['id']}/applicants/{application_b['id']}/request",
+        json={"reason": "Client submission"},
+        headers=headers,
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application_a['id']}/respond",
+        json={"approve": True},
+        headers=candidate_headers,
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application_b['id']}/respond",
+        json={"approve": False},
+        headers=candidate_headers,
+    )
+
+    history = await client.get("/api/v1/shadow-reveal/my-history", headers=candidate_headers)
+    assert history.status_code == 200, history.text
+    items = history.json()
+    assert len(items) == 2
+    by_application = {item["shadow_application_id"]: item for item in items}
+
+    approved_item = by_application[application_a["id"]]
+    assert approved_item["status"] == "approved"
+    assert approved_item["reason"] == "Ready to move forward"
+    assert approved_item["responded_at"] is not None
+    # Approving at the default (full) level stores the level but leaves disclosed_fields null --
+    # that field is only populated when the candidate explicitly narrows disclosure.
+    assert approved_item["disclosure_level"] == "full"
+    assert approved_item["disclosed_fields"] is None
+
+    declined_item = by_application[application_b["id"]]
+    assert declined_item["status"] == "declined"
+    assert declined_item["disclosure_level"] is None
+    assert declined_item["disclosed_fields"] is None
+
+    # A different candidate's history is completely empty -- no cross-candidate leakage.
+    other_tokens = await candidate_signup(client, email="bystander@shadowreveal-history.com")
+    other_history = await client.get(
+        "/api/v1/shadow-reveal/my-history", headers=auth_headers(other_tokens["access_token"])
+    )
+    assert other_history.json() == []

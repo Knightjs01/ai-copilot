@@ -6,6 +6,8 @@ import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
 import type {
+  Interview,
+  MessageThread,
   ShadowApplication,
   ShadowJob,
   ShadowJobBoardListing,
@@ -80,6 +82,108 @@ export function useShadowJobApplicants(jobId: string | undefined) {
     queryKey: ["shadow-jobs", "applicants", jobId],
     queryFn: () => apiClient.get<ShadowProfile[]>(`/shadow-jobs/mine/${jobId}/applicants`),
     enabled: !!jobId,
+  });
+}
+
+export function useApplicantMessages(jobId: string | undefined, applicationId: string | undefined) {
+  return useQuery({
+    queryKey: ["messages", "applicant-thread", jobId, applicationId],
+    queryFn: () =>
+      apiClient.get<MessageThread>(`/messages/mine/${jobId}/applicants/${applicationId}`),
+    enabled: !!jobId && !!applicationId,
+    refetchInterval: 20000,
+  });
+}
+
+export function useSendCompanyMessage(jobId: string, applicationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) =>
+      apiClient.post<MessageThread>(`/messages/mine/${jobId}/applicants/${applicationId}`, {
+        body,
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["messages", "applicant-thread", jobId, applicationId], data);
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
+  });
+}
+
+export function useApplicantInterviews(jobId: string | undefined, applicationId: string | undefined) {
+  return useQuery({
+    queryKey: ["interviews", "applicant", jobId, applicationId],
+    queryFn: () =>
+      apiClient.get<Interview[]>(`/interviews/mine/${jobId}/applicants/${applicationId}`),
+    enabled: !!jobId && !!applicationId,
+  });
+}
+
+interface ScheduleInterviewInput {
+  scheduled_at: string;
+  location?: string | null;
+  meeting_link?: string | null;
+}
+
+export function useScheduleInterview(jobId: string, applicationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ScheduleInterviewInput) =>
+      apiClient.post<Interview>(`/interviews/mine/${jobId}/applicants/${applicationId}`, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews", "applicant", jobId, applicationId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
+  });
+}
+
+export function useUpdateInterview(jobId: string, applicationId: string, interviewId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ScheduleInterviewInput) =>
+      apiClient.patch<Interview>(
+        `/interviews/mine/${jobId}/applicants/${applicationId}/${interviewId}`,
+        input
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews", "applicant", jobId, applicationId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
+  });
+}
+
+export function useCancelInterview(jobId: string, applicationId: string, interviewId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<Interview>(
+        `/interviews/mine/${jobId}/applicants/${applicationId}/${interviewId}/cancel`
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews", "applicant", jobId, applicationId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
+  });
+}
+
+export function useCompleteInterview(jobId: string, applicationId: string, interviewId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<Interview>(
+        `/interviews/mine/${jobId}/applicants/${applicationId}/${interviewId}/complete`
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews", "applicant", jobId, applicationId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
   });
 }
 

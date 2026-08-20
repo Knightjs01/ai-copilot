@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.shadow_jobs.models import ShadowApplication
 from app.modules.shadow_reveal.models import RevealRequestStatus, ShadowRevealRequest
 
 
@@ -58,6 +59,22 @@ class ShadowRevealRequestRepository:
         request.responded_at = datetime.now(timezone.utc)
         await self._session.flush()
         return request
+
+    async def list_by_candidate_id(self, candidate_user_id: uuid.UUID) -> list[ShadowRevealRequest]:
+        """Every reveal request/response across every application this candidate has ever
+        submitted, newest first -- powers the candidate-wide Identity Activity view. Joins
+        through ShadowApplication since ShadowRevealRequest has no candidate_user_id column of
+        its own (a request is scoped to one application, not one candidate directly)."""
+        result = await self._session.execute(
+            select(ShadowRevealRequest)
+            .join(
+                ShadowApplication,
+                ShadowRevealRequest.shadow_application_id == ShadowApplication.id,
+            )
+            .where(ShadowApplication.candidate_user_id == candidate_user_id)
+            .order_by(ShadowRevealRequest.created_at.desc())
+        )
+        return list(result.scalars().all())
 
     async def delete_by_application_ids(self, application_ids: list[uuid.UUID]) -> None:
         if not application_ids:

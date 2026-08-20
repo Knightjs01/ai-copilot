@@ -2,12 +2,12 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import { PartyPopper, ShieldCheck, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMotionVariant } from "@/lib/motion";
-import { generateQrPattern } from "@/lib/qr-pattern";
 import { VERIFICATION_STATUS_LABEL, VERIFICATION_STATUS_VARIANT } from "@/lib/status-display";
 import type { VerificationStatus } from "@/lib/types";
 
@@ -34,7 +34,10 @@ export function PassportSuccessOverlay({
     hidden: { opacity: 0, scale: 0.92, y: 12 },
     visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
   });
-  const grid = generateQrPattern(callsign ?? "phantom-passport");
+  const verifyUrl =
+    callsign && typeof window !== "undefined"
+      ? `${window.location.origin}/shadow/verify/${callsign}`
+      : null;
 
   return (
     <AnimatePresence>
@@ -82,28 +85,11 @@ export function PassportSuccessOverlay({
                   {headline && <p className="text-sm text-muted-foreground">{headline}</p>}
                 </div>
 
-                <svg
-                  viewBox="0 0 21 21"
-                  className="h-32 w-32 shrink-0 rounded-lg border border-border bg-card p-1.5"
-                  role="img"
-                  aria-label="Decorative Passport credential pattern"
-                >
-                  {grid.map((row, rowIndex) =>
-                    row.map(
-                      (filled, colIndex) =>
-                        filled && (
-                          <rect
-                            key={`${rowIndex}-${colIndex}`}
-                            x={colIndex}
-                            y={rowIndex}
-                            width={1}
-                            height={1}
-                            className="fill-foreground"
-                          />
-                        )
-                    )
-                  )}
-                </svg>
+                {verifyUrl && (
+                  <div className="h-32 w-32 shrink-0 rounded-lg border border-border bg-card p-1.5">
+                    <QRCodeSVG value={verifyUrl} size={116} className="h-full w-full" />
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <Badge variant={VERIFICATION_STATUS_VARIANT[verificationStatus]}>

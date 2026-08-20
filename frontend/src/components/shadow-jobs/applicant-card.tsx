@@ -1,18 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Eye } from "lucide-react";
+import Link from "next/link";
+import { Eye, MessageCircle } from "lucide-react";
 
 import { RequestRevealDialog } from "@/components/shadow-jobs/request-reveal-dialog";
+import { ScheduleInterviewDialog } from "@/components/shadow-jobs/schedule-interview-dialog";
 import { StepUpDialog } from "@/components/step-up-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
 import { useFetchRevealedIdentity } from "@/lib/queries/shadow-reveal";
 import { SHADOW_APPLICATION_STATUS_LABEL, SHADOW_APPLICATION_STATUS_VARIANT } from "@/lib/status-display";
 import type { RevealedIdentity, ShadowProfile } from "@/lib/types";
 
 export function ApplicantCard({ jobId, profile }: { jobId: string; profile: ShadowProfile }) {
+  const { hasPermission } = useAuth();
   const isRevealable = profile.status === "revealed";
   const [identity, setIdentity] = React.useState<RevealedIdentity | null>(null);
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
@@ -110,6 +114,34 @@ export function ApplicantCard({ jobId, profile }: { jobId: string; profile: Shad
                 {profile.callsign} declined this reveal request.
               </p>
             ) : null}
+          </div>
+        )}
+
+        {(hasPermission("messages.view") || hasPermission("interviews.view")) && (
+          <div className="flex justify-end gap-2 border-t border-border pt-3">
+            {hasPermission("interviews.view") && (
+              <div className="flex items-center gap-1.5">
+                {profile.has_upcoming_interview && <Badge variant="info">Upcoming</Badge>}
+                <ScheduleInterviewDialog
+                  jobId={jobId}
+                  applicationId={profile.application_id}
+                  callsign={profile.callsign}
+                />
+              </div>
+            )}
+            {hasPermission("messages.view") && (
+              <Button variant="secondary" size="sm" asChild>
+                <Link href={`/shadow-jobs/${jobId}/applicants/${profile.application_id}/messages`}>
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Message
+                  {profile.unread_message_count > 0 && (
+                    <Badge variant="info" className="ml-1">
+                      {profile.unread_message_count}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

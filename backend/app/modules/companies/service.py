@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.companies.domain_verification import extract_email_domain, is_verified_domain
 from app.modules.companies.models import Company
 from app.modules.companies.repository import CompanyRepository
+from app.modules.companies.schemas import CompanyUpdate
 
 _SLUG_INVALID_CHARS = re.compile(r"[^a-z0-9]+")
 
@@ -38,3 +39,25 @@ class CompanyService:
 
     async def get_company(self, company_id: uuid.UUID) -> Company | None:
         return await self._repository.get_by_id(company_id)
+
+    async def update_company(
+        self, *, actor_company_id: uuid.UUID, body: CompanyUpdate
+    ) -> Company | None:
+        company = await self._repository.get_by_id(actor_company_id)
+        if company is None:
+            return None
+        return await self._repository.update(
+            company,
+            description=body.description,
+            culture=body.culture,
+            benefits=list(body.benefits),
+            size=body.size,
+            industry=list(body.industry),
+            is_profile_public=body.is_profile_public,
+        )
+
+    async def get_public_profile(self, slug: str) -> Company | None:
+        company = await self._repository.get_by_slug(slug)
+        if company is None or not company.is_profile_public or company.deleted_at is not None:
+            return None
+        return company

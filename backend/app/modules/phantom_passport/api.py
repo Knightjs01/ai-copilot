@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -18,6 +18,7 @@ from app.modules.phantom_passport.schemas import (
     IndustriesSuggestionResponse,
     PassportRead,
     PassportUpdate,
+    PassportVerificationRead,
     PassportVersionRead,
     SkillsSuggestionRequest,
     SkillsSuggestionResponse,
@@ -31,6 +32,18 @@ router = APIRouter(
     tags=["phantom-passport"],
     dependencies=[Depends(require_candidate_mfa_enrolled)],
 )
+
+public_router = APIRouter(prefix="/phantom-passport", tags=["phantom-passport"])
+
+
+@public_router.get("/verify/{callsign}", response_model=PassportVerificationRead)
+async def verify_passport(
+    callsign: str, session: AsyncSession = Depends(get_db)
+) -> PassportVerificationRead:
+    result = await PhantomPassportService(session).get_verification_by_callsign(callsign)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Passport not found")
+    return result
 
 
 @router.get("/me", response_model=PassportRead)

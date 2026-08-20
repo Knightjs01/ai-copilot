@@ -4,6 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { SecuringCvOverlay } from "@/components/candidate/securing-cv-overlay";
+import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
 import { PassportProgressRing } from "@/components/candidate/passport-wizard/passport-progress-ring";
 import { PassportStepRail, type PassportWizardStep } from "@/components/candidate/passport-wizard/passport-step-rail";
 import { PassportSuccessOverlay } from "@/components/candidate/passport-wizard/passport-success-overlay";
@@ -28,7 +29,13 @@ import {
   useSuggestSkills,
   useSuggestSummary,
 } from "@/lib/queries/phantom-passport";
-import type { CareerEntryInput, CareerIntent, NoticePeriod, RemotePreference } from "@/lib/types";
+import type {
+  CareerEntryInput,
+  CareerIntent,
+  NoticePeriod,
+  PassportVisibility,
+  RemotePreference,
+} from "@/lib/types";
 
 const STEPS: PassportWizardStep[] = [
   { id: "upload", label: "Upload CV" },
@@ -75,6 +82,12 @@ export function PassportWizard() {
   const suggestSummary = useSuggestSummary();
   const suggestSkills = useSuggestSkills();
   const suggestIndustries = useSuggestIndustries();
+  const { setContext } = useShadowCopilot();
+
+  React.useEffect(() => {
+    setContext({ type: "passport" });
+    return () => setContext({ type: "none" });
+  }, [setContext]);
 
   const [headline, setHeadline] = React.useState("");
   const [seniority, setSeniority] = React.useState("");
@@ -88,6 +101,7 @@ export function PassportWizard() {
   const [salaryMax, setSalaryMax] = React.useState("");
   const [noticePeriod, setNoticePeriod] = React.useState<NoticePeriod | null>(null);
   const [careerIntent, setCareerIntent] = React.useState<CareerIntent>("just_exploring");
+  const [visibility, setVisibility] = React.useState<PassportVisibility>("private");
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
   const [phone, setPhone] = React.useState("");
@@ -134,6 +148,7 @@ export function PassportWizard() {
       setSalaryMax(passport.salary_max != null ? String(passport.salary_max) : "");
       setNoticePeriod(passport.notice_period);
       setCareerIntent(passport.career_intent);
+      setVisibility(passport.visibility);
       setFirstName(first);
       setLastName(last);
       setPhone(passport.personal_info.phone ?? "");
@@ -246,6 +261,7 @@ export function PassportWizard() {
         salary_max: salaryMax ? Number(salaryMax) : null,
         notice_period: noticePeriod,
         career_intent: careerIntent,
+        visibility,
         personal_info: {
           legal_name: legalName,
           phone: phone || null,
@@ -505,6 +521,8 @@ export function PassportWizard() {
                 onNoticePeriodChange={setNoticePeriod}
                 careerIntent={careerIntent}
                 onCareerIntentChange={setCareerIntent}
+                visibility={visibility}
+                onVisibilityChange={setVisibility}
               />
             )}
 

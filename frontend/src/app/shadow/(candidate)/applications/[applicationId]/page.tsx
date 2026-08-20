@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 
+import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,12 @@ export default function ApplicationDetailPage() {
   const respond = useRespondToRevealRequest(params.applicationId);
   const [respondError, setRespondError] = React.useState<string | null>(null);
   const [fields, setFields] = React.useState<Set<ShadowField>>(new Set(ALL_FIELDS));
+  const { setContext } = useShadowCopilot();
+
+  React.useEffect(() => {
+    setContext({ type: "application", id: params.applicationId });
+    return () => setContext({ type: "none" });
+  }, [params.applicationId, setContext]);
 
   const toggleField = (field: ShadowField) => {
     setFields((prev) => {

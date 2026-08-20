@@ -3,14 +3,19 @@ import type {
   CandidateSource,
   CandidateStatus,
   CareerIntent,
+  CompanySizeBand,
   EmploymentType,
   FitRating,
+  InterviewStatus,
+  MatchTier,
   NoticePeriod,
+  PassportVisibility,
   PrescreenOutcome,
   ProjectStatus,
   RemotePreference,
   RoleName,
   ShadowApplicationStatus,
+  ShadowField,
   ShadowJobStatus,
   VerificationStatus,
 } from "@/lib/types";
@@ -112,6 +117,16 @@ export const FIT_RATING_VARIANT: Record<FitRating, Variant> = {
   "Weak Fit": "danger",
 };
 
+// Mirrors FIT_RATING_VARIANT's exact tier-to-variant mapping — the Shadow side's own qualitative
+// match tier, kept as a parallel enum rather than reusing FitRating since the two are computed by
+// different modules for different audiences (recruiter fit assessment vs. candidate job match).
+export const MATCH_TIER_VARIANT: Record<MatchTier, Variant> = {
+  "Excellent Match": "success",
+  "Strong Match": "info",
+  "Potential Match": "warning",
+  "Weak Match": "danger",
+};
+
 export const SHADOW_JOB_STATUS_LABEL: Record<ShadowJobStatus, string> = {
   draft: "Draft",
   published: "Published",
@@ -142,6 +157,18 @@ export const SHADOW_APPLICATION_STATUS_VARIANT: Record<ShadowApplicationStatus, 
   withdrawn: "outline",
 };
 
+export const INTERVIEW_STATUS_LABEL: Record<InterviewStatus, string> = {
+  scheduled: "Scheduled",
+  cancelled: "Cancelled",
+  completed: "Completed",
+};
+
+export const INTERVIEW_STATUS_VARIANT: Record<InterviewStatus, Variant> = {
+  scheduled: "info",
+  cancelled: "outline",
+  completed: "success",
+};
+
 export const REMOTE_PREFERENCE_LABEL: Record<RemotePreference, string> = {
   remote: "Remote",
   hybrid: "Hybrid",
@@ -169,8 +196,41 @@ export const VERIFICATION_STATUS_LABEL: Record<VerificationStatus, string> = {
   verified: "Verified",
 };
 
+export const VISIBILITY_LABEL: Record<PassportVisibility, string> = {
+  private: "Private",
+  match_only: "Match-only",
+  discoverable: "Discoverable",
+};
+
+// One honest line per state for dynamic helper copy under the visibility toggle -- match_only
+// and discoverable read identically today since both are only found via job-anchored AI-matched
+// search; discoverable's copy says so rather than promising a general-browse feature that isn't
+// built yet, mirroring the Talent Memory beat's own honest-Preview framing.
+export const VISIBILITY_DESCRIPTION: Record<PassportVisibility, string> = {
+  private: "Companies never see your Passport unless you apply directly.",
+  match_only:
+    "Companies can find you through AI-matched search for roles you're a strong fit for — even before you apply.",
+  discoverable:
+    "Same as Match-only today. You'll also appear in general candidate search once that's built.",
+};
+
+export const COMPANY_SIZE_LABEL: Record<CompanySizeBand, string> = {
+  "1-10": "1–10 employees",
+  "11-50": "11–50 employees",
+  "51-200": "51–200 employees",
+  "201-500": "201–500 employees",
+  "500+": "500+ employees",
+};
+
+export const SHADOW_FIELD_LABEL: Record<ShadowField, string> = {
+  full_name: "Name",
+  email: "Email",
+  phone: "Phone",
+  career_history: "Career history",
+};
+
 export const VERIFICATION_STATUS_VARIANT: Record<VerificationStatus, Variant> = {
   unverified: "neutral",
   pending: "info",
-  verified: "success",
+  verified: "gold",
 };
