@@ -3,6 +3,7 @@ import type {
   CandidateSource,
   CandidateStatus,
   CareerIntent,
+  CompanyProfileStatus,
   CompanySizeBand,
   EmploymentType,
   FitRating,
@@ -24,14 +25,18 @@ type Variant = NonNullable<BadgeProps["variant"]>;
 
 export const ROLE_LABEL: Record<RoleName, string> = {
   Owner: "Owner",
-  Admin: "Admin",
-  Member: "Member",
+  "TA Admin": "TA Admin",
+  Recruiter: "Recruiter",
+  "Hiring Manager": "Hiring Manager",
+  Interviewer: "Interviewer",
 };
 
 export const ROLE_VARIANT: Record<RoleName, Variant> = {
   Owner: "success",
-  Admin: "info",
-  Member: "neutral",
+  "TA Admin": "info",
+  Recruiter: "neutral",
+  "Hiring Manager": "warning",
+  Interviewer: "outline",
 };
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
@@ -220,6 +225,25 @@ export const COMPANY_SIZE_LABEL: Record<CompanySizeBand, string> = {
   "51-200": "51–200 employees",
   "201-500": "201–500 employees",
   "500+": "500+ employees",
+};
+
+export const COMPANY_PROFILE_STATUS_LABEL: Record<CompanyProfileStatus, string> = {
+  draft: "Draft",
+  pending_review: "Under review",
+  live: "Live",
+  paused: "Paused",
+  suspended: "Suspended",
+};
+
+export const COMPANY_PROFILE_STATUS_VARIANT: Record<
+  CompanyProfileStatus,
+  NonNullable<BadgeProps["variant"]>
+> = {
+  draft: "neutral",
+  pending_review: "info",
+  live: "success",
+  paused: "warning",
+  suspended: "danger",
 };
 
 export const SHADOW_FIELD_LABEL: Record<ShadowField, string> = {

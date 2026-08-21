@@ -31,7 +31,7 @@ from tests.integration.helpers import auth_headers, create_project, signup
 
 async def test_cross_tenant_candidate_read_via_real_api_is_not_found(client: AsyncClient) -> None:
     owner_a = await signup(client, email="tenant-depth-api-a@acme.com")
-    owner_b = await signup(client, email="tenant-depth-api-b@acme.com")
+    owner_b = await signup(client, email="tenant-depth-api-b@acme-b.com")
 
     project_b = await create_project(client, headers=auth_headers(owner_b["access_token"]))
     create_response = await client.post(
@@ -49,7 +49,7 @@ async def test_cross_tenant_candidate_read_via_real_api_is_not_found(client: Asy
 
 async def test_cross_tenant_project_read_via_real_api_is_not_found(client: AsyncClient) -> None:
     owner_a = await signup(client, email="tenant-depth-api-proj-a@acme.com")
-    owner_b = await signup(client, email="tenant-depth-api-proj-b@acme.com")
+    owner_b = await signup(client, email="tenant-depth-api-proj-b@acme-b.com")
 
     project_b = await create_project(client, headers=auth_headers(owner_b["access_token"]))
 

@@ -3,7 +3,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.dependencies import get_tenant_db, require_mfa_enrolled
 from app.modules.auth.models import User
+from app.modules.candidates.storage import FileStorage, LocalFileStorage
 from app.modules.companies.repository import CompanyRepository
+
+# Deliberately NOT wrapped in EncryptingFileStorage (unlike candidates.dependencies.get_file_storage)
+# -- a company logo/cover image is public-facing, served back to unauthenticated candidates on the
+# profile page, so Fernet-encrypting it at rest would make it unservable.
+_default_media_storage = LocalFileStorage()
+
+
+def get_media_storage() -> FileStorage:
+    """Overridable via app.dependency_overrides — tests inject a temp-directory-backed storage,
+    same pattern as candidates.dependencies.get_file_storage."""
+
+    return _default_media_storage
 
 
 async def require_verified_domain(

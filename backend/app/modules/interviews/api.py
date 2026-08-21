@@ -44,11 +44,14 @@ async def list_applicant_interviews(
     job_id: uuid.UUID,
     application_id: uuid.UUID,
     actor: User = Depends(require_mfa_enrolled),
-    _: CurrentUser = Depends(require_permission(Permissions.INTERVIEWS_VIEW)),
+    current_user: CurrentUser = Depends(require_permission(Permissions.INTERVIEWS_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> list[InterviewRead]:
     return await InterviewService(session).list_for_company(
-        actor=actor, job_id=job_id, application_id=application_id
+        actor=actor,
+        permissions=current_user.permissions,
+        job_id=job_id,
+        application_id=application_id,
     )
 
 

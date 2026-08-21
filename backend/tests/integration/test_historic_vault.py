@@ -68,7 +68,7 @@ async def test_historic_vault_requires_admin_or_owner(
         client,
         inviter_headers=owner_headers,
         email="member@histvault-perms.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])
@@ -79,7 +79,7 @@ async def test_historic_vault_requires_admin_or_owner(
         client,
         inviter_headers=owner_headers,
         email="admin@histvault-perms.com",
-        role="Admin",
+        role="TA Admin",
         sent_emails=sent_emails,
     )
     admin_headers = auth_headers(admin["access_token"])

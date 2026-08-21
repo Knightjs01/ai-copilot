@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.interviews.models import Interview
+from app.modules.interviews.models import Interview, InterviewParticipant
 
 
 class InterviewRepository:
@@ -78,3 +78,51 @@ class InterviewRepository:
         await self._session.execute(
             delete(Interview).where(Interview.shadow_application_id.in_(shadow_application_ids))
         )
+
+
+class InterviewParticipantRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def set_participants(
+        self, *, interview_id: uuid.UUID, company_id: uuid.UUID, user_ids: list[uuid.UUID]
+    ) -> None:
+        """Replace-all semantics -- simplest correct approach at the scale of a handful of
+        interviewers per interview, mirrors how InterviewUpdate already replaces location/
+        meeting_link wholesale rather than diffing."""
+
+        await self._session.execute(
+            delete(InterviewParticipant).where(InterviewParticipant.interview_id == interview_id)
+        )
+        for user_id in user_ids:
+            self._session.add(
+                InterviewParticipant(
+                    company_id=company_id, interview_id=interview_id, user_id=user_id
+                )
+            )
+        await self._session.flush()
+
+    async def list_user_ids_for_interview(self, interview_id: uuid.UUID) -> list[uuid.UUID]:
+        result = await self._session.execute(
+            select(InterviewParticipant.user_id).where(
+                InterviewParticipant.interview_id == interview_id
+            )
+        )
+        return list(result.scalars().all())
+
+    async def is_participant(self, *, interview_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        result = await self._session.execute(
+            select(
+                exists().where(
+                    InterviewParticipant.interview_id == interview_id,
+                    InterviewParticipant.user_id == user_id,
+                )
+            )
+        )
+        return bool(result.scalar())
+
+    async def list_interview_ids_for_user(self, user_id: uuid.UUID) -> list[uuid.UUID]:
+        result = await self._session.execute(
+            select(InterviewParticipant.interview_id).where(InterviewParticipant.user_id == user_id)
+        )
+        return list(result.scalars().all())

@@ -4,43 +4,43 @@ from tests.conftest import CapturingEmailSender
 from tests.integration.helpers import auth_headers, invite_and_accept, signup, step_up_headers
 
 
-async def test_member_cannot_invite_but_admin_can(
+async def test_recruiter_cannot_invite_but_ta_admin_can(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
     owner = await signup(client, email="owner@perms.com", company_name="Perms Co")
     owner_headers = auth_headers(owner["access_token"])
 
-    member = await invite_and_accept(
+    recruiter = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
-        email="member@perms.com",
-        role="Member",
+        email="recruiter@perms.com",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
-    member_headers = auth_headers(member["access_token"])
+    recruiter_headers = auth_headers(recruiter["access_token"])
 
     denied = await client.post(
         "/api/v1/users/invite",
-        json={"email": "x@perms.com", "full_name": "X", "role": "Member"},
-        headers=member_headers,
+        json={"email": "x@perms.com", "full_name": "X", "role": "Recruiter"},
+        headers=recruiter_headers,
     )
     assert denied.status_code == 403
 
-    can_view = await client.get("/api/v1/users", headers=member_headers)
+    can_view = await client.get("/api/v1/users", headers=recruiter_headers)
     assert can_view.status_code == 200
 
     admin = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
         email="admin@perms.com",
-        role="Admin",
+        role="TA Admin",
         sent_emails=sent_emails,
     )
     admin_headers = auth_headers(admin["access_token"])
 
     allowed = await client.post(
         "/api/v1/users/invite",
-        json={"email": "y@perms.com", "full_name": "Y", "role": "Member"},
+        json={"email": "y@perms.com", "full_name": "Y", "role": "Recruiter"},
         headers=await step_up_headers(
             client, headers=admin_headers, password="a secure password 123"
         ),
@@ -80,7 +80,7 @@ async def test_removed_user_loses_access(
         client,
         inviter_headers=owner_headers,
         email="removeme@perms.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])

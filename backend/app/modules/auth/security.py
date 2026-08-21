@@ -65,6 +65,24 @@ def create_candidate_access_token(*, candidate_id: uuid.UUID) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
 
 
+def create_platform_admin_access_token(*, admin_id: uuid.UUID) -> str:
+    """Phantom staff are a third, separate principal from company Users and candidates — no
+    company_id (a platform admin belongs to no tenant) and scope="platform_admin" so this token
+    can never be replayed against a company or candidate route, and vice versa. Mirrors
+    create_candidate_access_token's exact shape/reasoning."""
+
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(admin_id),
+        "scope": "platform_admin",
+        "jti": str(uuid.uuid4()),
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
 def decode_access_token(token: str) -> dict[str, Any]:
     settings = get_settings()
     try:

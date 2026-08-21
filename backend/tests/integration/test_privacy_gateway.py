@@ -127,9 +127,12 @@ async def test_sanitize_rejects_legacy_doc_format(client: AsyncClient) -> None:
     assert sanitize_response.status_code == 400
 
 
-async def test_member_can_view_but_not_trigger_sanitize(
+async def test_hiring_manager_can_view_but_not_trigger_sanitize(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Hiring Manager has candidates.view but not candidates.update -- Recruiter (the old
+    Member's successor) now has both, so it's Hiring Manager that exercises this view-only
+    floor post-Phase-3."""
     owner = await signup(client, email="owner@gwperms.com", company_name="GW Perms Co")
     owner_headers = auth_headers(owner["access_token"])
     candidate_id = await _create_candidate_with_resume(
@@ -140,24 +143,24 @@ async def test_member_can_view_but_not_trigger_sanitize(
         phone="123-456-7890",
     )
 
-    member = await invite_and_accept(
+    hiring_manager = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
-        email="member@gwperms.com",
-        role="Member",
+        email="hiringmanager@gwperms.com",
+        role="Hiring Manager",
         sent_emails=sent_emails,
     )
-    member_headers = auth_headers(member["access_token"])
+    hiring_manager_headers = auth_headers(hiring_manager["access_token"])
 
     sanitize_denied = await client.post(
-        f"/api/v1/candidates/{candidate_id}/sanitize", headers=member_headers
+        f"/api/v1/candidates/{candidate_id}/sanitize", headers=hiring_manager_headers
     )
     assert sanitize_denied.status_code == 403
 
     await client.post(f"/api/v1/candidates/{candidate_id}/sanitize", headers=owner_headers)
 
     view_allowed = await client.get(
-        f"/api/v1/candidates/{candidate_id}/sanitized-profile", headers=member_headers
+        f"/api/v1/candidates/{candidate_id}/sanitized-profile", headers=hiring_manager_headers
     )
     assert view_allowed.status_code == 200
 

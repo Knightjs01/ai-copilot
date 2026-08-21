@@ -3,26 +3,72 @@ import uuid
 
 from httpx import AsyncClient
 
+from app.db.base import auth_session_factory
 from app.modules.auth import security
+from app.modules.company_access.service import CompanyAccessRequestService
+from app.modules.platform_admin.repository import PlatformAdminRepository
 from tests.conftest import CapturingEmailSender
+
+_BOOTSTRAP_PLATFORM_ADMIN_EMAIL = "samuel@stormtalent.co.uk"
+# Must match migration 0040_employer_access_gate.py's seeded bootstrap credential.
+_BOOTSTRAP_PLATFORM_ADMIN_PASSWORD = "UFk-sS0NltqqNZK2oZs_kheB"
 
 
 async def signup(client: AsyncClient, *, email: str, company_name: str = "Acme Inc") -> dict:
-    response = await client.post(
-        "/api/v1/auth/signup",
+    """No public self-service company signup exists anymore -- this drives the real
+    request -> approve -> login sequence (see company_access/__init__.py) and returns the exact
+    same shape the old direct-signup endpoint used to, so none of this helper's ~300 existing
+    call sites need to change. Approval goes through the service layer directly (not a full
+    admin-HTTP round trip) purely for test-setup speed -- the admin HTTP flow itself gets its own
+    dedicated coverage in test_company_access.py, so this shortcut doesn't leave the real gate
+    untested."""
+
+    password = "correct horse battery staple"
+    request_response = await client.post(
+        "/api/v1/company-access/requests",
         json={
-            "company_name": company_name,
-            "email": email,
-            "password": "correct horse battery staple",
             "full_name": "Ada Lovelace",
+            "company_name": company_name,
+            "work_email": email,
+            "password": password,
         },
     )
-    assert response.status_code == 201, response.text
-    return response.json()
+    assert request_response.status_code == 201, request_response.text
+    request_id = uuid.UUID(request_response.json()["id"])
+
+    async with auth_session_factory() as session:
+        admin = await PlatformAdminRepository(session).get_by_email(_BOOTSTRAP_PLATFORM_ADMIN_EMAIL)
+        assert admin is not None, "bootstrap platform admin not seeded — check migration 0040"
+        await CompanyAccessRequestService(session).approve_request(
+            admin_id=admin.id, request_id=request_id
+        )
+        await session.commit()
+
+    login_response = await client.post(
+        "/api/v1/auth/login", json={"email": email, "password": password}
+    )
+    assert login_response.status_code == 200, login_response.text
+    return login_response.json()
 
 
 def auth_headers(access_token: str) -> dict:
     return {"Authorization": f"Bearer {access_token}"}
+
+
+async def platform_admin_headers(client: AsyncClient) -> dict:
+    """Real HTTP login as the seeded bootstrap platform admin -- for tests that specifically
+    need the admin-authenticated HTTP flow itself (e.g. to exercise get_email_sender's real
+    dependency injection), as opposed to signup()'s service-layer shortcut."""
+
+    response = await client.post(
+        "/api/v1/platform-admin/login",
+        json={
+            "email": _BOOTSTRAP_PLATFORM_ADMIN_EMAIL,
+            "password": _BOOTSTRAP_PLATFORM_ADMIN_PASSWORD,
+        },
+    )
+    assert response.status_code == 200, response.text
+    return auth_headers(response.json()["access_token"])
 
 
 async def step_up_headers(

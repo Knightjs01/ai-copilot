@@ -16,6 +16,8 @@ from app.modules.auth.models import User
 from app.modules.auth.repository.roles import RoleRepository
 from app.modules.auth.repository.users import UserRepository
 from app.modules.auth.repository.webauthn import WebAuthnCredentialRepository
+from app.modules.companies.models import CompanyStatus
+from app.modules.companies.repository import CompanyRepository
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 _default_email_sender: EmailSender | None = None
@@ -110,6 +112,17 @@ async def get_current_user_model(
     if str(user.company_id) != payload["company_id"]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token/company mismatch"
+        )
+
+    # Single choke point every authenticated company request already passes through — a
+    # suspended workspace is blocked everywhere in one place, not swept per-route (matches how
+    # require_verified_domain demonstrates the "gate via a shared dependency" pattern elsewhere,
+    # just applied globally instead of to a handful of high-impact actions).
+    company = await CompanyRepository(session).get_by_id(user.company_id)
+    if company is None or company.status == CompanyStatus.SUSPENDED.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This workspace has been suspended. Contact Phantom support.",
         )
     return user
 

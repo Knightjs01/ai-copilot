@@ -84,6 +84,54 @@ def build_invite_email(*, company_name: str, accept_url: str) -> tuple[str, str]
     return subject, body
 
 
+def build_workspace_approved_email(*, company_name: str) -> tuple[str, str]:
+    subject = "Your Phantom workspace is ready"
+    body = (
+        f"Good news — Phantom has approved {company_name}'s workspace request.\n\n"
+        "You can now log in with the email and password you used to request access."
+    )
+    return subject, body
+
+
+def build_workspace_rejected_email(*, company_name: str, reason: str | None) -> tuple[str, str]:
+    subject = "Your Phantom access request"
+    reason_line = f"\n\nReason: {reason}" if reason else ""
+    body = (
+        f"We're unable to approve a Phantom workspace for {company_name} at this time."
+        f"{reason_line}\n\nIf you believe this is a mistake, please contact Phantom support."
+    )
+    return subject, body
+
+
+def build_info_requested_email(*, company_name: str, message: str) -> tuple[str, str]:
+    subject = "Phantom needs more information about your access request"
+    body = (
+        f"We're reviewing your access request for {company_name} and need a bit more "
+        f"information before we can proceed:\n\n{message}\n\n"
+        "Reply to this email with the requested details."
+    )
+    return subject, body
+
+
+def build_profile_approved_email(*, company_name: str, profile_url: str) -> tuple[str, str]:
+    subject = "Your Phantom company profile is live"
+    body = (
+        f"Good news — Phantom has approved {company_name}'s public profile. "
+        f"It's now visible to candidates:\n\n{profile_url}"
+    )
+    return subject, body
+
+
+def build_profile_rejected_email(*, company_name: str, reason: str | None) -> tuple[str, str]:
+    subject = "Your Phantom company profile needs changes"
+    reason_line = f"\n\nReason: {reason}" if reason else ""
+    body = (
+        f"We're unable to approve {company_name}'s public profile as submitted."
+        f"{reason_line}\n\nMake the requested changes and submit it for review again."
+    )
+    return subject, body
+
+
 def build_job_alert_email(*, job_title: str, alert_names: list[str]) -> tuple[str, str]:
     subject = f"New match for your job alert: {job_title}"
     matched = ", ".join(alert_names)

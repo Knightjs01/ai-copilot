@@ -17,6 +17,7 @@ from app.modules.hiring_manager_alignment.schemas import (
     HiringManagerAlignmentRead,
 )
 from app.modules.hiring_manager_alignment.service import HiringManagerAlignmentService
+from app.modules.projects.dependencies import require_project_access
 
 router = APIRouter(
     prefix="/projects",
@@ -30,7 +31,8 @@ async def submit_hiring_manager_alignment(
     project_id: uuid.UUID,
     body: HiringManagerAlignmentCreate,
     actor: User = Depends(get_current_user_model),
-    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    _: CurrentUser = Depends(require_permission(Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> HiringManagerAlignmentRead:
     alignment = await HiringManagerAlignmentService(session).submit_alignment(
@@ -44,6 +46,7 @@ async def get_hiring_manager_alignment(
     project_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_VIEW)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> HiringManagerAlignmentRead:
     alignment = await HiringManagerAlignmentService(session).get_alignment(

@@ -17,6 +17,7 @@ import {
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
+import { useTeam } from "@/lib/queries/team";
 import {
   useApplicantInterviews,
   useCancelInterview,
@@ -25,22 +26,27 @@ import {
 } from "@/lib/queries/shadow-jobs";
 import { INTERVIEW_STATUS_LABEL, INTERVIEW_STATUS_VARIANT } from "@/lib/status-display";
 import { useToast } from "@/lib/toast-context";
-import type { Interview } from "@/lib/types";
+import type { Interview, UserRead } from "@/lib/types";
 
 function InterviewRow({
   interview,
   jobId,
   applicationId,
   canSchedule,
+  team,
 }: {
   interview: Interview;
   jobId: string;
   applicationId: string;
   canSchedule: boolean;
+  team: UserRead[] | undefined;
 }) {
   const cancelInterview = useCancelInterview(jobId, applicationId, interview.id);
   const completeInterview = useCompleteInterview(jobId, applicationId, interview.id);
   const toast = useToast();
+  const interviewerNames = (team ?? [])
+    .filter((member) => interview.interviewer_user_ids.includes(member.id))
+    .map((member) => member.full_name);
 
   const handleCancel = () => {
     cancelInterview.mutate(undefined, {
@@ -74,6 +80,11 @@ function InterviewRow({
           >
             {interview.meeting_link}
           </a>
+        )}
+        {interviewerNames.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Interviewer{interviewerNames.length > 1 ? "s" : ""}: {interviewerNames.join(", ")}
+          </p>
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -122,13 +133,23 @@ export function ScheduleInterviewDialog({
   const [scheduledAt, setScheduledAt] = React.useState("");
   const [location, setLocation] = React.useState("");
   const [meetingLink, setMeetingLink] = React.useState("");
+  const [interviewerIds, setInterviewerIds] = React.useState<string[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
+  const { data: team } = useTeam();
   const { data: interviews, isLoading } = useApplicantInterviews(
     open ? jobId : undefined,
     open ? applicationId : undefined
   );
   const scheduleInterview = useScheduleInterview(jobId, applicationId);
+
+  const toggleInterviewer = (userId: string) => {
+    setInterviewerIds((current) =>
+      current.includes(userId)
+        ? current.filter((id) => id !== userId)
+        : [...current, userId]
+    );
+  };
 
   const handleSchedule = async () => {
     if (!scheduledAt) return;
@@ -138,10 +159,12 @@ export function ScheduleInterviewDialog({
         scheduled_at: new Date(scheduledAt).toISOString(),
         location: location || undefined,
         meeting_link: meetingLink || undefined,
+        interviewer_user_ids: interviewerIds,
       });
       setScheduledAt("");
       setLocation("");
       setMeetingLink("");
+      setInterviewerIds([]);
     } catch {
       setError("Couldn't schedule interview. Check the date is in the future and try again.");
     }
@@ -172,6 +195,7 @@ export function ScheduleInterviewDialog({
                 jobId={jobId}
                 applicationId={applicationId}
                 canSchedule={canSchedule}
+                team={team}
               />
             ))}
           </div>
@@ -203,6 +227,26 @@ export function ScheduleInterviewDialog({
                 onChange={(e) => setMeetingLink(e.target.value)}
               />
             </Field>
+            {team && team.length > 0 && (
+              <Field label="Interviewer(s) (optional)">
+                <div className="flex flex-col gap-1.5">
+                  {team.map((member) => (
+                    <label
+                      key={member.id}
+                      className="flex items-center gap-2 text-sm text-foreground"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={interviewerIds.includes(member.id)}
+                        onChange={() => toggleInterviewer(member.id)}
+                        className="accent-brand"
+                      />
+                      {member.full_name}
+                    </label>
+                  ))}
+                </div>
+              </Field>
+            )}
             {error && <p className="text-sm font-medium text-danger">{error}</p>}
             <div className="flex justify-end">
               <Button

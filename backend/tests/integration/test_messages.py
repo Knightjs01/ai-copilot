@@ -170,9 +170,14 @@ async def test_unread_counts_and_mark_read_on_open(client: AsyncClient) -> None:
     assert applicants_after.json()[0]["unread_message_count"] == 0
 
 
-async def test_member_can_view_but_not_send(
+async def test_recruiter_can_view_and_send(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Recruiter (renamed + permission-expanded from the old Member) now has both messages.view
+    and messages.send -- unlike old Member, which was view-only. No other Phase 3 role has any
+    messages permission at all, so the "view but not send" boundary this test used to check no
+    longer has a real counterpart; test_hiring_manager_has_no_message_access below covers the
+    real new floor (zero access) instead."""
     owner = await signup(client, email="owner@messages-memberperm.com")
     owner_headers = auth_headers(owner["access_token"])
     job = await _create_and_publish_job(client, headers=owner_headers)
@@ -185,24 +190,58 @@ async def test_member_can_view_but_not_send(
         headers=candidate_headers,
     )
 
-    member = await invite_and_accept(
+    recruiter = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
-        email="member@messages-memberperm.com",
-        role="Member",
+        email="recruiter@messages-memberperm.com",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
-    member_headers = auth_headers(member["access_token"])
+    recruiter_headers = auth_headers(recruiter["access_token"])
 
     view_response = await client.get(
-        f"/api/v1/messages/mine/{job['id']}/applicants/{application['id']}", headers=member_headers
+        f"/api/v1/messages/mine/{job['id']}/applicants/{application['id']}",
+        headers=recruiter_headers,
     )
     assert view_response.status_code == 200, view_response.text
 
+    send_allowed = await client.post(
+        f"/api/v1/messages/mine/{job['id']}/applicants/{application['id']}",
+        json={"body": "Replying as a Recruiter"},
+        headers=recruiter_headers,
+    )
+    assert send_allowed.status_code == 201, send_allowed.text
+
+
+async def test_hiring_manager_has_no_message_access(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@messages-hmperm.com")
+    owner_headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=owner_headers)
+    application, _candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="candidate@messages-hmperm.com"
+    )
+
+    hiring_manager = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="hiringmanager@messages-hmperm.com",
+        role="Hiring Manager",
+        sent_emails=sent_emails,
+    )
+    hiring_manager_headers = auth_headers(hiring_manager["access_token"])
+
+    view_denied = await client.get(
+        f"/api/v1/messages/mine/{job['id']}/applicants/{application['id']}",
+        headers=hiring_manager_headers,
+    )
+    assert view_denied.status_code == 403
+
     send_denied = await client.post(
         f"/api/v1/messages/mine/{job['id']}/applicants/{application['id']}",
-        json={"body": "Trying to send as a Member"},
-        headers=member_headers,
+        json={"body": "Should fail"},
+        headers=hiring_manager_headers,
     )
     assert send_denied.status_code == 403
 
@@ -215,7 +254,7 @@ async def test_cross_tenant_and_cross_candidate_isolation(client: AsyncClient) -
         client, job_id=job_a["id"], email="candidate-a@messages-isolation.com"
     )
 
-    owner_b = await signup(client, email="owner-b@messages-isolation.com")
+    owner_b = await signup(client, email="owner-b@messages-isolation-b.com")
     headers_b = auth_headers(owner_b["access_token"])
 
     # Company B has no such job/application -- 404, not leaked data.

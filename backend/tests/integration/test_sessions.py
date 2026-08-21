@@ -48,7 +48,7 @@ async def test_company_can_revoke_a_specific_session(client: AsyncClient) -> Non
 async def test_company_cannot_revoke_another_users_session(client: AsyncClient) -> None:
     owner_a = await signup(client, email="sessions-cross-a@acme.com")
     headers_a = auth_headers(owner_a["access_token"])
-    owner_b = await signup(client, email="sessions-cross-b@acme.com")
+    owner_b = await signup(client, email="sessions-cross-b@acme-b.com")
     headers_b = auth_headers(owner_b["access_token"])
 
     sessions_b = (await client.get("/api/v1/auth/sessions", headers=headers_b)).json()

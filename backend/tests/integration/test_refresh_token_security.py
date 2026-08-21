@@ -70,7 +70,7 @@ async def test_company_user_cannot_revoke_a_same_company_colleagues_session(
         client,
         inviter_headers=owner_headers,
         email="colleague-isolation-member@acme.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member_tokens["access_token"])

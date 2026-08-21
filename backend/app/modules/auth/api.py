@@ -39,7 +39,6 @@ from app.modules.auth.schemas import (
     ResendVerificationRequest,
     ResetPasswordRequest,
     SessionRead,
-    SignupRequest,
     StepUpRequest,
     StepUpResponse,
     TokenResponse,
@@ -97,28 +96,6 @@ def _user_read(user: User, role_names: list[str]) -> UserRead:
         is_email_verified=user.is_email_verified,
         roles=role_names,
     )
-
-
-@router.post("/auth/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
-async def signup(
-    request: Request,
-    body: SignupRequest,
-    response: Response,
-    session: AsyncSession = Depends(get_db),
-    email_sender: EmailSender = Depends(get_email_sender),
-) -> TokenResponse:
-    user_agent, ip_address = _client_context(request)
-    _, tokens = await AuthService(session, email_sender=email_sender).signup(
-        company_name=body.company_name,
-        email=body.email,
-        password=body.password,
-        full_name=body.full_name,
-        user_agent=user_agent,
-        ip_address=ip_address,
-    )
-    _set_refresh_cookie(response, tokens.refresh_token)
-    return TokenResponse(access_token=tokens.access_token)
 
 
 @router.post("/auth/login", response_model=TokenResponse | MfaChallengeResponse)

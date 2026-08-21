@@ -8,8 +8,11 @@ import type { RoleName } from "@/lib/types";
 
 const ROLES: Array<{ role: RoleName; description: string }> = [
   { role: "Owner", description: "Full access, including revealing a candidate's real identity." },
-  { role: "Admin", description: "Runs projects and manages the team, without identity reveal." },
-  { role: "Member", description: "Scoped to the projects they've been added to." },
+  {
+    role: "TA Admin",
+    description: "Runs projects and manages the team, without identity reveal.",
+  },
+  { role: "Recruiter", description: "Scoped to the projects they've been added to." },
 ];
 
 export function AtsGovernanceSection() {

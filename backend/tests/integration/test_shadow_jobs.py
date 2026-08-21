@@ -67,34 +67,35 @@ async def test_owner_can_create_job(client: AsyncClient) -> None:
     assert job["applicant_count"] == 0
 
 
-async def test_member_cannot_create_or_publish_job(
+async def test_recruiter_can_create_and_publish_job(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Recruiter (renamed + permission-expanded from the old Member) now has shadow_jobs.create
+    and shadow_jobs.update -- unlike old Member, which was view-only for Shadow jobs."""
     owner = await signup(client, email="owner@shadowjobs-memberperm.com")
     owner_headers = auth_headers(owner["access_token"])
     job = await _create_job(client, headers=owner_headers)
 
-    member = await invite_and_accept(
+    recruiter = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
-        email="member@shadowjobs-memberperm.com",
-        role="Member",
+        email="recruiter@shadowjobs-memberperm.com",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
-    member_headers = auth_headers(member["access_token"])
+    recruiter_headers = auth_headers(recruiter["access_token"])
 
-    create_denied = await client.post(
-        "/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=member_headers
+    create_allowed = await client.post(
+        "/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=recruiter_headers
     )
-    assert create_denied.status_code == 403
+    assert create_allowed.status_code == 201, create_allowed.text
 
-    publish_denied = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=member_headers
+    publish_allowed = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=recruiter_headers
     )
-    assert publish_denied.status_code == 403
+    assert publish_allowed.status_code == 200, publish_allowed.text
 
-    # Member still has view access.
-    view_response = await client.get("/api/v1/shadow-jobs/mine", headers=member_headers)
+    view_response = await client.get("/api/v1/shadow-jobs/mine", headers=recruiter_headers)
     assert view_response.status_code == 200, view_response.text
 
 

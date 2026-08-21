@@ -49,6 +49,14 @@ class UserRepository:
         )
         return list(result.scalars().all())
 
+    async def count_by_company(self, company_id: uuid.UUID) -> int:
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(User)
+            .where(User.company_id == company_id, User.deleted_at.is_(None))
+        )
+        return int(result.scalar_one())
+
     async def count_users_with_role(self, company_id: uuid.UUID, role_name: str) -> int:
         result = await self._session.execute(
             select(func.count())

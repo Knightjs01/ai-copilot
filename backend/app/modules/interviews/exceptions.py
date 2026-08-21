@@ -19,3 +19,8 @@ class InterviewNotFoundError(InterviewsError):
 class InvalidScheduleTimeError(InterviewsError):
     status_code = 400
     detail = "Interview time must be in the future"
+
+
+class InvalidInterviewerError(InterviewsError):
+    status_code = 400
+    detail = "Interviewer must be an active member of this company"

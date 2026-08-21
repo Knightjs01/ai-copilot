@@ -20,7 +20,7 @@ async def test_step_up_token_grants_access_to_gated_action(client: AsyncClient) 
 
     invite_response = await client.post(
         "/api/v1/users/invite",
-        json={"email": "invitee@acme.com", "full_name": "Invitee", "role": "Member"},
+        json={"email": "invitee@acme.com", "full_name": "Invitee", "role": "Recruiter"},
         headers=await step_up_headers(client, headers=headers),
     )
     assert invite_response.status_code == 201, invite_response.text
@@ -32,7 +32,7 @@ async def test_gated_action_rejected_without_step_up_token(client: AsyncClient) 
 
     invite_response = await client.post(
         "/api/v1/users/invite",
-        json={"email": "invitee2@acme.com", "full_name": "Invitee", "role": "Member"},
+        json={"email": "invitee2@acme.com", "full_name": "Invitee", "role": "Recruiter"},
         headers=headers,
     )
     assert invite_response.status_code == 403
@@ -44,7 +44,7 @@ async def test_gated_action_rejected_with_malformed_step_up_token(client: AsyncC
 
     invite_response = await client.post(
         "/api/v1/users/invite",
-        json={"email": "invitee3@acme.com", "full_name": "Invitee", "role": "Member"},
+        json={"email": "invitee3@acme.com", "full_name": "Invitee", "role": "Recruiter"},
         headers={**headers, "X-Step-Up-Token": "not-a-real-token"},
     )
     assert invite_response.status_code == 403
@@ -53,7 +53,7 @@ async def test_gated_action_rejected_with_malformed_step_up_token(client: AsyncC
 async def test_step_up_token_scoped_to_the_user_it_was_issued_for(client: AsyncClient) -> None:
     owner_a = await signup(client, email="stepup-cross-a@acme.com")
     headers_a = auth_headers(owner_a["access_token"])
-    owner_b = await signup(client, email="stepup-cross-b@acme.com")
+    owner_b = await signup(client, email="stepup-cross-b@acme-b.com")
     headers_b = auth_headers(owner_b["access_token"])
 
     # A valid step-up token, but minted for owner A's identity.
@@ -61,7 +61,7 @@ async def test_step_up_token_scoped_to_the_user_it_was_issued_for(client: AsyncC
 
     invite_response = await client.post(
         "/api/v1/users/invite",
-        json={"email": "invitee4@acme.com", "full_name": "Invitee", "role": "Member"},
+        json={"email": "invitee4@acme.com", "full_name": "Invitee", "role": "Recruiter"},
         headers={**headers_b, "X-Step-Up-Token": token_for_a},
     )
     assert invite_response.status_code == 403

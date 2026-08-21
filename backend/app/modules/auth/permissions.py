@@ -22,6 +22,7 @@ class Permissions:
     INTERVIEWS_VIEW = "interviews.view"
     INTERVIEWS_SCHEDULE = "interviews.schedule"
     SHADOW_CANDIDATES_SEARCH = "shadow_candidates.search"
+    HIRING_MANAGER_ALIGNMENT_SUBMIT = "hiring_manager_alignment.submit"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -48,13 +49,16 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.INTERVIEWS_VIEW: "View scheduled interviews for Shadow applicants",
     Permissions.INTERVIEWS_SCHEDULE: "Schedule, reschedule, or cancel interviews with a Shadow applicant",
     Permissions.SHADOW_CANDIDATES_SEARCH: "Search discoverable Shadow candidates ranked by AI match",
+    Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT: "Submit hiring-manager top-requirements for a project",
 }
 
 
 class RoleName:
     OWNER = "Owner"
-    ADMIN = "Admin"
-    MEMBER = "Member"
+    TA_ADMIN = "TA Admin"
+    RECRUITER = "Recruiter"
+    HIRING_MANAGER = "Hiring Manager"
+    INTERVIEWER = "Interviewer"
 
 
 # Note: this mapping is the runtime source of truth used when seeding a new company's roles.
@@ -63,10 +67,10 @@ class RoleName:
 # historical record and shouldn't depend on code that will keep changing after they're written.
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     # Owner is the only role that gets every permission automatically — this is also currently
-    # the only place Owner and Admin diverge: IDENTITY_VAULT_REVEAL is deliberately absent from
-    # Admin's explicit list below, since candidate identity reveal is Owner-exclusive by design.
+    # the only place Owner and TA Admin diverge: IDENTITY_VAULT_REVEAL is deliberately absent from
+    # TA Admin's explicit list below, since candidate identity reveal is Owner-exclusive by design.
     RoleName.OWNER: list(ALL_PERMISSIONS.keys()),
-    RoleName.ADMIN: [
+    RoleName.TA_ADMIN: [
         Permissions.USERS_VIEW,
         Permissions.USERS_INVITE,
         Permissions.USERS_CHANGE_ROLE,
@@ -89,14 +93,39 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.INTERVIEWS_VIEW,
         Permissions.INTERVIEWS_SCHEDULE,
         Permissions.SHADOW_CANDIDATES_SEARCH,
+        Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT,
     ],
-    RoleName.MEMBER: [
+    # Recruiter is the day-to-day operational role -- real create/update rights across both the
+    # ATS pipeline and the Shadow marketplace, resource-scoped to assigned projects (like the old
+    # Member), but no team/company management, no project or candidate deletion, no identity
+    # reveal.
+    RoleName.RECRUITER: [
+        Permissions.USERS_VIEW,
+        Permissions.PROJECTS_VIEW,
+        Permissions.CANDIDATES_CREATE,
+        Permissions.CANDIDATES_VIEW,
+        Permissions.CANDIDATES_UPDATE,
+        Permissions.SHADOW_JOBS_CREATE,
+        Permissions.SHADOW_JOBS_VIEW,
+        Permissions.SHADOW_JOBS_UPDATE,
+        Permissions.MESSAGES_VIEW,
+        Permissions.MESSAGES_SEND,
+        Permissions.INTERVIEWS_VIEW,
+        Permissions.INTERVIEWS_SCHEDULE,
+        Permissions.SHADOW_CANDIDATES_SEARCH,
+    ],
+    # Resource-scoped to projects it's been added to (via ProjectMember, same mechanism Recruiter
+    # uses) -- reviews candidates and submits hiring-manager alignment for its own project(s) only.
+    RoleName.HIRING_MANAGER: [
         Permissions.USERS_VIEW,
         Permissions.PROJECTS_VIEW,
         Permissions.CANDIDATES_VIEW,
-        Permissions.SHADOW_JOBS_VIEW,
-        Permissions.MESSAGES_VIEW,
+        Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT,
+    ],
+    # Resource-scoped to specific interviews via interview_participants -- the narrowest role,
+    # sees only the interview(s) it's been assigned to conduct.
+    RoleName.INTERVIEWER: [
+        Permissions.USERS_VIEW,
         Permissions.INTERVIEWS_VIEW,
-        Permissions.SHADOW_CANDIDATES_SEARCH,
     ],
 }

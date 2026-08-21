@@ -313,7 +313,7 @@ async def test_burn_project_requires_projects_delete_permission(
         client,
         inviter_headers=owner_headers,
         email="member@burnperms.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])
@@ -327,7 +327,7 @@ async def test_burn_project_requires_projects_delete_permission(
         client,
         inviter_headers=owner_headers,
         email="admin@burnperms.com",
-        role="Admin",
+        role="TA Admin",
         sent_emails=sent_emails,
     )
     admin_headers = auth_headers(admin["access_token"])

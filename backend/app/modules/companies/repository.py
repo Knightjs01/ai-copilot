@@ -1,10 +1,10 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.companies.models import Company
+from app.modules.companies.models import Company, CompanyProfileVersion
 
 
 class CompanyRepository:
@@ -31,9 +31,33 @@ class CompanyRepository:
         result = await self._session.execute(select(Company).where(Company.slug == slug))
         return result.scalar_one_or_none()
 
+    async def get_by_email_domain(self, email_domain: str) -> Company | None:
+        result = await self._session.execute(
+            select(Company).where(
+                Company.email_domain == email_domain, Company.deleted_at.is_(None)
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def slug_exists(self, slug: str) -> bool:
         result = await self._session.execute(select(Company.id).where(Company.slug == slug))
         return result.scalar_one_or_none() is not None
+
+    async def list_all(self, *, profile_status: str | None = None) -> list[Company]:
+        query = select(Company).where(Company.deleted_at.is_(None))
+        if profile_status is not None:
+            query = query.where(Company.profile_status == profile_status)
+        query = query.order_by(Company.created_at.desc())
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_status_counts(self) -> dict[str, int]:
+        result = await self._session.execute(
+            select(Company.status, func.count())
+            .where(Company.deleted_at.is_(None))
+            .group_by(Company.status)
+        )
+        return {status: count for status, count in result.all()}
 
     async def update(
         self,
@@ -44,13 +68,47 @@ class CompanyRepository:
         benefits: list[Any],
         size: str | None,
         industry: list[Any],
-        is_profile_public: bool,
+        hiring_process_overview: str | None,
     ) -> Company:
         company.description = description
         company.culture = culture
         company.benefits = benefits
         company.size = size
         company.industry = industry
-        company.is_profile_public = is_profile_public
+        company.hiring_process_overview = hiring_process_overview
         await self._session.flush()
         return company
+
+
+class CompanyProfileVersionRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(
+        self,
+        *,
+        company_id: uuid.UUID,
+        version_number: int,
+        snapshot: dict[str, Any],
+        approved_by_admin_id: uuid.UUID | None,
+    ) -> CompanyProfileVersion:
+        version = CompanyProfileVersion(
+            company_id=company_id,
+            version_number=version_number,
+            snapshot=snapshot,
+            approved_by_admin_id=approved_by_admin_id,
+        )
+        self._session.add(version)
+        await self._session.flush()
+        return version
+
+    async def get_by_id(self, version_id: uuid.UUID) -> CompanyProfileVersion | None:
+        return await self._session.get(CompanyProfileVersion, version_id)
+
+    async def get_latest_version_number(self, company_id: uuid.UUID) -> int:
+        result = await self._session.execute(
+            select(func.max(CompanyProfileVersion.version_number)).where(
+                CompanyProfileVersion.company_id == company_id
+            )
+        )
+        return result.scalar() or 0

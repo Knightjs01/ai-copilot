@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,3 +32,26 @@ class Interview(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     scheduled_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+
+
+class InterviewParticipant(UUIDPrimaryKeyMixin, Base):
+    """Resource-level authorization for the Interviewer role: an Interviewer can only see an
+    interview if a row exists here for them. Owner/TA Admin/Recruiter (anyone with
+    interviews.schedule) bypass this entirely and keep unscoped company-wide visibility, matching
+    ProjectMember's exact "org-wide roles bypass, everyone else needs an explicit row" shape."""
+
+    __tablename__ = "interview_participants"
+    __table_args__ = (
+        UniqueConstraint("interview_id", "user_id", name="uq_interview_participants"),
+    )
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id"), index=True
+    )
+    interview_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("interviews.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -115,7 +115,7 @@ async def test_reveal_identity_requires_owner_role(
         client,
         inviter_headers=owner_headers,
         email="member@revealperms.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])
@@ -130,7 +130,7 @@ async def test_reveal_identity_requires_owner_role(
         client,
         inviter_headers=owner_headers,
         email="admin@revealperms.com",
-        role="Admin",
+        role="TA Admin",
         sent_emails=sent_emails,
     )
     admin_headers = auth_headers(admin["access_token"])
@@ -277,7 +277,7 @@ async def test_identity_vault_reveal_permission_owner_only_in_me_response(
         client,
         inviter_headers=owner_headers,
         email="admin@vaultmeperm.com",
-        role="Admin",
+        role="TA Admin",
         sent_emails=sent_emails,
     )
     admin_me = await client.get("/api/v1/auth/me", headers=auth_headers(admin["access_token"]))
@@ -287,7 +287,7 @@ async def test_identity_vault_reveal_permission_owner_only_in_me_response(
         client,
         inviter_headers=owner_headers,
         email="member@vaultmeperm.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_me = await client.get("/api/v1/auth/me", headers=auth_headers(member["access_token"]))

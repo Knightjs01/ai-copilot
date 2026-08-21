@@ -27,7 +27,9 @@ import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import { useToast } from "@/lib/toast-context";
 import type { RoleName, UserRead } from "@/lib/types";
 
-const ROLE_OPTIONS: RoleName[] = ["Member", "Admin", "Owner"];
+// Owner deliberately excluded -- the backend has always rejected promoting a user to Owner via
+// this endpoint (only Owner-to-Owner handoff exists, and that's not this control's job).
+const ROLE_OPTIONS: RoleName[] = ["Recruiter", "Hiring Manager", "Interviewer", "TA Admin"];
 
 function RoleSelect({ userId, role }: { userId: string; role: RoleName }) {
   const changeRole = useChangeRole(userId);
@@ -92,8 +94,11 @@ export default function TeamPage() {
         cell: (info) => {
           const member = info.row.original;
           const isSelf = member.id === user?.id;
-          const primaryRole = (member.roles[0] as RoleName) ?? "Member";
-          return canChangeRole && !isSelf ? (
+          const primaryRole = (member.roles[0] as RoleName) ?? "Recruiter";
+          // Owner can never be the target of a role change via this endpoint (self or anyone
+          // else's) -- and it's not in ROLE_OPTIONS, so an Owner's own row always renders as a
+          // plain badge, not a Select with no matching value.
+          return canChangeRole && !isSelf && primaryRole !== "Owner" ? (
             <RoleSelect userId={member.id} role={primaryRole} />
           ) : (
             <div className="flex gap-1.5">

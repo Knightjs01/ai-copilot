@@ -5,8 +5,10 @@ from app.modules.analytics.api import router as analytics_router
 from app.modules.auth.api import router as auth_router
 from app.modules.candidate_auth.api import router as candidate_auth_router
 from app.modules.candidates.api import router as candidates_router
+from app.modules.companies.api import admin_router as companies_admin_router
 from app.modules.companies.api import public_router as companies_public_router
 from app.modules.companies.api import router as companies_router
+from app.modules.company_access.api import router as company_access_router
 from app.modules.copilot.api import router as copilot_router
 from app.modules.dashboard.api import router as dashboard_router
 from app.modules.hiring_blueprint.api import router as hiring_blueprint_router
@@ -21,6 +23,7 @@ from app.modules.messages.api import router as messages_router
 from app.modules.passport_matching.api import router as passport_matching_router
 from app.modules.phantom_passport.api import public_router as phantom_passport_public_router
 from app.modules.phantom_passport.api import router as phantom_passport_router
+from app.modules.platform_admin.api import router as platform_admin_router
 from app.modules.prescreen_assessment.api import router as prescreen_assessment_router
 from app.modules.privacy_gateway.api import router as privacy_gateway_router
 from app.modules.project_deletion.api import router as project_deletion_router
@@ -34,6 +37,7 @@ api_router.include_router(health.router)
 api_router.include_router(auth_router)
 api_router.include_router(companies_router)
 api_router.include_router(companies_public_router)
+api_router.include_router(companies_admin_router)
 api_router.include_router(projects_router)
 api_router.include_router(candidates_router)
 api_router.include_router(privacy_gateway_router)
@@ -58,6 +62,8 @@ api_router.include_router(interviews_router)
 api_router.include_router(copilot_router)
 api_router.include_router(job_alerts_router)
 api_router.include_router(phantom_passport_public_router)
+api_router.include_router(company_access_router)
+api_router.include_router(platform_admin_router)
 
 # Everything past pre-screen (interview loops, scorecards, offer, decision) is handled in the
 # company's ATS (Greenhouse), not this platform — see README Roadmap.

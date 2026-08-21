@@ -239,40 +239,49 @@ async def test_applicant_list_shows_upcoming_interview_flag(client: AsyncClient)
     assert cancelled.json()[0]["has_upcoming_interview"] is False
 
 
-async def test_member_can_view_but_not_schedule(
+async def test_interviewer_can_view_assigned_interview_but_not_schedule(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Interviewer has interviews.view but not interviews.schedule -- Recruiter (the old
+    Member's successor) now has both, so it's Interviewer that exercises this view-only floor
+    post-Phase-3. Assigned as a participant at schedule time so the view call actually surfaces
+    the interview -- unassigned-Interviewer scoping gets its own dedicated coverage in
+    test_interview_participants.py."""
     owner = await signup(client, email="owner@interviews-memberperm.com")
     owner_headers = auth_headers(owner["access_token"])
     job = await _create_and_publish_job(client, headers=owner_headers)
     application, _candidate_headers = await _apply_with_new_candidate(
         client, job_id=job["id"], email="candidate@interviews-memberperm.com"
     )
+
+    interviewer = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="interviewer@interviews-memberperm.com",
+        role="Interviewer",
+        sent_emails=sent_emails,
+    )
+    interviewer_headers = auth_headers(interviewer["access_token"])
+    me_response = await client.get("/api/v1/auth/me", headers=interviewer_headers)
+    interviewer_id = me_response.json()["id"]
+
     await client.post(
         f"/api/v1/interviews/mine/{job['id']}/applicants/{application['id']}",
-        json={"scheduled_at": _future_iso()},
+        json={"scheduled_at": _future_iso(), "interviewer_user_ids": [interviewer_id]},
         headers=owner_headers,
     )
 
-    member = await invite_and_accept(
-        client,
-        inviter_headers=owner_headers,
-        email="member@interviews-memberperm.com",
-        role="Member",
-        sent_emails=sent_emails,
-    )
-    member_headers = auth_headers(member["access_token"])
-
     view_response = await client.get(
         f"/api/v1/interviews/mine/{job['id']}/applicants/{application['id']}",
-        headers=member_headers,
+        headers=interviewer_headers,
     )
     assert view_response.status_code == 200, view_response.text
+    assert len(view_response.json()) == 1
 
     schedule_denied = await client.post(
         f"/api/v1/interviews/mine/{job['id']}/applicants/{application['id']}",
         json={"scheduled_at": _future_iso(days=4)},
-        headers=member_headers,
+        headers=interviewer_headers,
     )
     assert schedule_denied.status_code == 403
 
@@ -291,7 +300,7 @@ async def test_cross_tenant_and_cross_candidate_isolation(client: AsyncClient) -
     )
     interview_id = schedule_response.json()["id"]
 
-    owner_b = await signup(client, email="owner-b@interviews-isolation.com")
+    owner_b = await signup(client, email="owner-b@interviews-isolation-b.com")
     headers_b = auth_headers(owner_b["access_token"])
 
     # Company B has no such job/application -- 404, not leaked data.

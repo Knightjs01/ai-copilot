@@ -24,10 +24,12 @@ import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import { useToast } from "@/lib/toast-context";
 import type { RoleName } from "@/lib/types";
 
+// Owner deliberately excluded -- the backend has always rejected direct-invite-as-Owner.
 const ROLE_OPTIONS: { value: RoleName; label: string }[] = [
-  { value: "Member", label: "Member" },
-  { value: "Admin", label: "Admin" },
-  { value: "Owner", label: "Owner" },
+  { value: "Recruiter", label: "Recruiter" },
+  { value: "Hiring Manager", label: "Hiring Manager" },
+  { value: "Interviewer", label: "Interviewer" },
+  { value: "TA Admin", label: "TA Admin" },
 ];
 
 const schema = z.object({
@@ -39,7 +41,7 @@ type FormValues = z.infer<typeof schema>;
 
 export function InviteTeammateDialog() {
   const [open, setOpen] = React.useState(false);
-  const [role, setRole] = React.useState<RoleName>("Member");
+  const [role, setRole] = React.useState<RoleName>("Recruiter");
   const [pendingValues, setPendingValues] = React.useState<FormValues | null>(null);
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const inviteUser = useInviteUser();
@@ -65,7 +67,7 @@ export function InviteTeammateDialog() {
       stepUpToken,
     });
     reset();
-    setRole("Member");
+    setRole("Recruiter");
     setPendingValues(null);
     setOpen(false);
     toast({

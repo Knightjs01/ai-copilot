@@ -122,6 +122,7 @@ interface ScheduleInterviewInput {
   scheduled_at: string;
   location?: string | null;
   meeting_link?: string | null;
+  interviewer_user_ids?: string[];
 }
 
 export function useScheduleInterview(jobId: string, applicationId: string) {

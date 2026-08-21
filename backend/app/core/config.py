@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     # S3-backed FileStorage implementation before deploying anywhere with more than one instance.
     storage_dir: str = "/app/storage"
     max_resume_size_mb: int = 10
+    max_media_size_mb: int = 5
 
     # No default on purpose, same as secret_key — must be set for real use. See
     # app/modules/intelligence/llm_client.py. Never populated by app code; the user sets it

@@ -52,9 +52,12 @@ async def test_candidate_crud_happy_path(client: AsyncClient) -> None:
     assert after_delete.status_code == 404
 
 
-async def test_member_can_view_but_not_create_update_delete_candidates(
+async def test_recruiter_can_create_update_but_not_delete_candidates(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Recruiter (renamed + permission-expanded from the old Member) gets real create/update
+    rights once added to the project -- unlike old Member, which was view-only. Deletion stays
+    Owner/TA Admin only regardless of project membership."""
     owner = await signup(client, email="owner@candperms.com", company_name="CandPerms Co")
     owner_headers = auth_headers(owner["access_token"])
     project = await create_project(client, headers=owner_headers)
@@ -66,32 +69,52 @@ async def test_member_can_view_but_not_create_update_delete_candidates(
     )
     candidate_id = create_response.json()["id"]
 
-    member = await invite_and_accept(
+    recruiter = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
-        email="member@candperms.com",
-        role="Member",
+        email="recruiter@candperms.com",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
-    member_headers = auth_headers(member["access_token"])
+    recruiter_headers = auth_headers(recruiter["access_token"])
+    me_response = await client.get("/api/v1/auth/me", headers=recruiter_headers)
+    recruiter_id = me_response.json()["id"]
 
-    view_response = await client.get("/api/v1/candidates", headers=member_headers)
+    # Not yet a project member -- create is permission-allowed but resource-scope blocks it.
+    create_before_membership = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": project["id"], "full_name": "Too Early"},
+        headers=recruiter_headers,
+    )
+    assert create_before_membership.status_code == 404
+
+    add_member_response = await client.post(
+        f"/api/v1/projects/{project['id']}/members",
+        json={"user_id": recruiter_id},
+        headers=owner_headers,
+    )
+    assert add_member_response.status_code == 201, add_member_response.text
+
+    view_response = await client.get("/api/v1/candidates", headers=recruiter_headers)
     assert view_response.status_code == 200
 
-    create_denied = await client.post(
+    create_allowed = await client.post(
         "/api/v1/candidates",
-        json={"project_id": project["id"], "full_name": "Should Fail"},
-        headers=member_headers,
+        json={"project_id": project["id"], "full_name": "New Candidate"},
+        headers=recruiter_headers,
     )
-    assert create_denied.status_code == 403
+    assert create_allowed.status_code == 201, create_allowed.text
 
-    update_denied = await client.patch(
-        f"/api/v1/candidates/{candidate_id}", json={"status": "screening"}, headers=member_headers
+    update_allowed = await client.patch(
+        f"/api/v1/candidates/{candidate_id}",
+        json={"status": "screening"},
+        headers=recruiter_headers,
     )
-    assert update_denied.status_code == 403
+    assert update_allowed.status_code == 200, update_allowed.text
+    assert update_allowed.json()["status"] == "screening"
 
     delete_denied = await client.delete(
-        f"/api/v1/candidates/{candidate_id}", headers=member_headers
+        f"/api/v1/candidates/{candidate_id}", headers=recruiter_headers
     )
     assert delete_denied.status_code == 403
 
@@ -267,3 +290,64 @@ async def test_app_auth_role_has_no_grants_on_candidates() -> None:
             assert raised, "app_auth should not have SELECT privilege on candidates"
     finally:
         await auth_engine.dispose()
+
+
+async def test_list_candidates_across_projects(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    """Phantom ATS UX redesign, Phase 1 (Pipeline view): GET /candidates with no project_id
+    already returns candidates across every accessible project, not just one -- this pins that
+    behavior down explicitly at a higher limit, and confirms org-wide vs. project-scoped actors
+    still see the correct, different slices."""
+    owner = await signup(client, email="owner@pipeline.com", company_name="Pipeline Co")
+    owner_headers = auth_headers(owner["access_token"])
+    project_a = await create_project(client, headers=owner_headers, title="Role A")
+    project_b = await create_project(client, headers=owner_headers, title="Role B")
+
+    candidate_a = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": project_a["id"], "full_name": "Candidate A"},
+        headers=owner_headers,
+    )
+    assert candidate_a.status_code == 201, candidate_a.text
+    candidate_b = await client.post(
+        "/api/v1/candidates",
+        json={"project_id": project_b["id"], "full_name": "Candidate B"},
+        headers=owner_headers,
+    )
+    assert candidate_b.status_code == 201, candidate_b.text
+
+    # Org-wide actor (Owner): sees both, across both projects, in one call.
+    owner_list = await client.get(
+        "/api/v1/candidates", params={"limit": 500}, headers=owner_headers
+    )
+    assert owner_list.status_code == 200
+    owner_ids = {c["id"] for c in owner_list.json()}
+    assert candidate_a.json()["id"] in owner_ids
+    assert candidate_b.json()["id"] in owner_ids
+
+    # Scoped Recruiter, added only to project A: sees only project A's candidate.
+    recruiter = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="recruiter@pipeline.com",
+        role="Recruiter",
+        sent_emails=sent_emails,
+    )
+    recruiter_headers = auth_headers(recruiter["access_token"])
+    me_response = await client.get("/api/v1/auth/me", headers=recruiter_headers)
+    recruiter_id = me_response.json()["id"]
+    add_member_response = await client.post(
+        f"/api/v1/projects/{project_a['id']}/members",
+        json={"user_id": recruiter_id},
+        headers=owner_headers,
+    )
+    assert add_member_response.status_code == 201, add_member_response.text
+
+    recruiter_list = await client.get(
+        "/api/v1/candidates", params={"limit": 500}, headers=recruiter_headers
+    )
+    assert recruiter_list.status_code == 200
+    recruiter_ids = {c["id"] for c in recruiter_list.json()}
+    assert candidate_a.json()["id"] in recruiter_ids
+    assert candidate_b.json()["id"] not in recruiter_ids

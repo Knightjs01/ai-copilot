@@ -15,7 +15,7 @@ async def test_rls_blocks_cross_tenant_reads_even_without_app_level_filter(
     from app.db.base import engine
 
     company_a = await signup(client, email="a-owner@rls.com", company_name="RLS Co A")
-    company_b = await signup(client, email="b-owner@rls.com", company_name="RLS Co B")
+    company_b = await signup(client, email="b-owner@rls-b.com", company_name="RLS Co B")
 
     me_a = await client.get("/api/v1/auth/me", headers=auth_headers(company_a["access_token"]))
     me_b = await client.get("/api/v1/auth/me", headers=auth_headers(company_b["access_token"]))

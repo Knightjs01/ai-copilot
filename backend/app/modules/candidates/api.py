@@ -56,7 +56,7 @@ async def list_candidates(
     _: CurrentUser = Depends(require_permission(Permissions.CANDIDATES_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
     project_id: uuid.UUID | None = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
 ) -> list[CandidateRead]:
     accessible_project_ids: list[uuid.UUID] | None = None

@@ -12,12 +12,13 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
   verifyMfa: (challengeToken: string, code: string) => Promise<void>;
-  signup: (
-    companyName: string,
-    email: string,
-    password: string,
-    fullName: string
-  ) => Promise<void>;
+  requestCompanyAccess: (input: {
+    companyName: string;
+    fullName: string;
+    jobTitle?: string;
+    workEmail: string;
+    password: string;
+  }) => Promise<void>;
   acceptInvite: (token: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -83,18 +84,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [loadMe]
   );
 
-  const signup = React.useCallback(
-    async (companyName: string, email: string, password: string, fullName: string) => {
-      const res = await apiClient.post<TokenResponse>("/auth/signup", {
-        company_name: companyName,
-        email,
-        password,
-        full_name: fullName,
+  // No public self-service company signup exists anymore -- this only submits a request for
+  // Phantom staff to review. Never logs the caller in; there's nothing to log into yet.
+  const requestCompanyAccess = React.useCallback(
+    async (input: {
+      companyName: string;
+      fullName: string;
+      jobTitle?: string;
+      workEmail: string;
+      password: string;
+    }) => {
+      await apiClient.post("/company-access/requests", {
+        company_name: input.companyName,
+        full_name: input.fullName,
+        job_title: input.jobTitle || undefined,
+        work_email: input.workEmail,
+        password: input.password,
       });
-      setAccessToken(res.access_token);
-      await loadMe();
     },
-    [loadMe]
+    []
   );
 
   const acceptInvite = React.useCallback(
@@ -130,13 +138,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       login,
       verifyMfa,
-      signup,
+      requestCompanyAccess,
       acceptInvite,
       logout,
       hasPermission,
       refreshUser: loadMe,
     }),
-    [user, isLoading, login, verifyMfa, signup, acceptInvite, logout, hasPermission, loadMe]
+    [
+      user,
+      isLoading,
+      login,
+      verifyMfa,
+      requestCompanyAccess,
+      acceptInvite,
+      logout,
+      hasPermission,
+      loadMe,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

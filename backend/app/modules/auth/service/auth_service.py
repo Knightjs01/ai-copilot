@@ -15,7 +15,6 @@ from app.modules.auth.email import (
     build_verification_email,
 )
 from app.modules.auth.exceptions import (
-    EmailAlreadyRegisteredError,
     InvalidCredentialsError,
     InvalidMfaCodeError,
     InvalidOrExpiredTokenError,
@@ -66,27 +65,29 @@ class AuthService:
         self._webauthn_challenges = WebAuthnChallengeStore(realm="company")
         self._email_sender = email_sender or ConsoleEmailSender()
 
-    async def signup(
+    async def provision_company_and_owner(
         self,
         *,
         company_name: str,
-        email: str,
-        password: str,
-        full_name: str,
-        user_agent: str | None = None,
-        ip_address: str | None = None,
-    ) -> tuple[User, IssuedTokens]:
-        if await self._users.get_by_email(email) is not None:
-            raise EmailAlreadyRegisteredError()
+        owner_email: str,
+        owner_full_name: str,
+        owner_hashed_password: str,
+    ) -> User:
+        """Creates a Company + its Owner in one shot — the moment a Phantom-staff approval
+        (company_access.service.CompanyAccessRequestService.approve_request) actually provisions
+        a workspace. There is no public route that reaches this directly anymore; self-service
+        company creation was removed. Deliberately does not issue tokens — logging in is now a
+        separate step the new Owner takes themselves, at the normal /auth/login route, once
+        approved."""
 
-        company = await self._companies.create_company(name=company_name, owner_email=email)
+        company = await self._companies.create_company(name=company_name, owner_email=owner_email)
         roles = await seed_system_roles(self._roles, company.id)
 
         user = await self._users.create(
             company_id=company.id,
-            email=email,
-            hashed_password=security.hash_password(password),
-            full_name=full_name,
+            email=owner_email,
+            hashed_password=owner_hashed_password,
+            full_name=owner_full_name,
         )
         await self._roles.assign_role_to_user(user_id=user.id, role_id=roles[RoleName.OWNER].id)
 
@@ -94,13 +95,11 @@ class AuthService:
         await self._audit.record(
             company_id=company.id,
             actor_user_id=user.id,
-            action="user.signup",
+            action="company.provisioned",
             target_type="user",
             target_id=user.id,
         )
-
-        tokens = await self.issue_tokens(user, user_agent=user_agent, ip_address=ip_address)
-        return user, tokens
+        return user
 
     async def login(
         self,
