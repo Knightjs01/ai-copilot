@@ -78,9 +78,14 @@ async def test_submit_alignment_rejects_empty_and_oversized_lists(client: AsyncC
     assert oversized_response.status_code == 422
 
 
-async def test_member_can_view_but_not_submit_alignment(
+async def test_recruiter_can_view_but_not_submit_alignment(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Both routes are now resource-scoped via require_project_access (a real, pre-existing gap
+    closed in Phase 3 -- previously PROJECTS_VIEW/PROJECTS_UPDATE alone let any role read/write
+    any project's alignment), so Recruiter must be a project member to reach either route at
+    all. Recruiter has PROJECTS_VIEW but not the new hiring_manager_alignment.submit permission
+    -- that's Hiring Manager's headline capability, not Recruiter's."""
     owner = await signup(client, email="owner@alignmentperms.com", company_name="Align Perms Co")
     owner_headers = auth_headers(owner["access_token"])
     project = await create_project(client, headers=owner_headers)
@@ -94,10 +99,16 @@ async def test_member_can_view_but_not_submit_alignment(
         client,
         inviter_headers=owner_headers,
         email="member@alignmentperms.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])
+    member_id = (await client.get("/api/v1/auth/me", headers=member_headers)).json()["id"]
+    await client.post(
+        f"/api/v1/projects/{project['id']}/members",
+        json={"user_id": member_id},
+        headers=owner_headers,
+    )
 
     submit_denied = await client.put(
         f"/api/v1/projects/{project['id']}/hiring-manager-alignment",
@@ -110,6 +121,55 @@ async def test_member_can_view_but_not_submit_alignment(
         f"/api/v1/projects/{project['id']}/hiring-manager-alignment", headers=member_headers
     )
     assert view_allowed.status_code == 200
+
+
+async def test_hiring_manager_can_submit_only_for_own_project(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@hmsubmit.com", company_name="HM Submit Co")
+    owner_headers = auth_headers(owner["access_token"])
+    own_project = await create_project(client, headers=owner_headers, title="Own Project")
+    other_project = await create_project(client, headers=owner_headers, title="Other Project")
+
+    hiring_manager = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="hiringmanager@hmsubmit.com",
+        role="Hiring Manager",
+        sent_emails=sent_emails,
+    )
+    hiring_manager_headers = auth_headers(hiring_manager["access_token"])
+    hiring_manager_id = (
+        await client.get("/api/v1/auth/me", headers=hiring_manager_headers)
+    ).json()["id"]
+
+    # Not a member yet -- 404, not 403.
+    too_early = await client.put(
+        f"/api/v1/projects/{own_project['id']}/hiring-manager-alignment",
+        json={"top_requirements": _TOP_REQUIREMENTS},
+        headers=hiring_manager_headers,
+    )
+    assert too_early.status_code == 404
+
+    await client.post(
+        f"/api/v1/projects/{own_project['id']}/members",
+        json={"user_id": hiring_manager_id},
+        headers=owner_headers,
+    )
+
+    submit_allowed = await client.put(
+        f"/api/v1/projects/{own_project['id']}/hiring-manager-alignment",
+        json={"top_requirements": _TOP_REQUIREMENTS},
+        headers=hiring_manager_headers,
+    )
+    assert submit_allowed.status_code == 200, submit_allowed.text
+
+    other_project_denied = await client.put(
+        f"/api/v1/projects/{other_project['id']}/hiring-manager-alignment",
+        json={"top_requirements": _TOP_REQUIREMENTS},
+        headers=hiring_manager_headers,
+    )
+    assert other_project_denied.status_code == 404
 
 
 async def test_rls_blocks_cross_tenant_alignment_reads(client: AsyncClient) -> None:

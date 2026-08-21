@@ -76,7 +76,7 @@ async def test_member_can_view_but_not_trigger_generation(
         client,
         inviter_headers=owner_headers,
         email="member@blueprintperms.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])

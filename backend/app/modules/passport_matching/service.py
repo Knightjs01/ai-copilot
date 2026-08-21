@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.hiring_blueprint.models import HiringBlueprint
+from app.modules.hiring_blueprint.repository import HiringBlueprintRepository
+from app.modules.hiring_manager_alignment.models import HiringManagerAlignment
+from app.modules.hiring_manager_alignment.repository import HiringManagerAlignmentRepository
 from app.modules.passport_matching.exceptions import (
     PassportMatchGenerationError,
     PassportNotApprovedError,
@@ -41,8 +45,13 @@ _MAX_SEARCH_RESULTS = 24
 _COMPUTE_CONCURRENCY = 5
 
 
-def _job_facts(job: ShadowJob) -> dict[str, object]:
-    return {
+def _job_facts(
+    job: ShadowJob,
+    *,
+    blueprint: HiringBlueprint | None = None,
+    alignment: HiringManagerAlignment | None = None,
+) -> dict[str, object]:
+    facts: dict[str, object] = {
         "title": job.title,
         "department": job.department,
         "seniority": job.seniority,
@@ -55,6 +64,16 @@ def _job_facts(job: ShadowJob) -> dict[str, object]:
         "description": job.description,
         "requirements": job.requirements,
     }
+    # Only populated when this Shadow job is linked to an ATS project that has a real Hiring
+    # Blueprint/Hiring Manager Alignment -- the common case (an unlinked job) behaves exactly as
+    # before. Mirrors prescreen_assessment's real, already-shipped "smart fit" signal, extended
+    # to the Shadow-side matching pool.
+    if blueprint is not None:
+        facts["role_summary"] = blueprint.role_summary
+        facts["must_have_qualifications"] = blueprint.must_have_qualifications
+    if alignment is not None:
+        facts["top_requirements"] = alignment.top_requirements
+    return facts
 
 
 class PassportMatchingService:
@@ -67,6 +86,8 @@ class PassportMatchingService:
         self._versions = PassportVersionRepository(session)
         self._career_entries = PassportCareerEntryRepository(session)
         self._jobs = ShadowJobRepository(session)
+        self._blueprints = HiringBlueprintRepository(session)
+        self._alignments = HiringManagerAlignmentRepository(session)
         self._llm_client = llm_client
 
     async def _resolve_approved_passport_version_id(self, candidate: CandidateUser) -> uuid.UUID:
@@ -76,18 +97,35 @@ class PassportMatchingService:
         return passport.current_version_id
 
     async def _score_via_llm(
-        self, *, passport_snapshot: dict[str, Any], job: ShadowJob
+        self,
+        *,
+        passport_snapshot: dict[str, Any],
+        job: ShadowJob,
+        blueprint: HiringBlueprint | None = None,
+        alignment: HiringManagerAlignment | None = None,
     ) -> PassportMatchDraft:
         # Deliberately no DB access here — AsyncSession isn't safe for concurrent use across
         # coroutines, so every call that touches self._matches (an INSERT/UPDATE + flush) must
         # run sequentially. This method is the only part of a compute that batch_get_or_compute_
         # matches is allowed to run concurrently (see there); get_or_compute_match's single-job
         # path calls it directly since there's only ever one in flight.
+        #
+        # blueprint/alignment are pre-resolved by the caller, never looked up in here: this
+        # method is shared by both the candidate-facing paths (get_or_compute_match,
+        # batch_get_or_compute_matches — running on the RLS-bypass app_auth role via get_db) and
+        # the company-facing search_candidates_for_job (app_runtime via get_tenant_db).
+        # hiring_blueprints/hiring_manager_alignments are deliberately GRANTed to app_runtime
+        # only (confirmed in 0006_hiring_blueprints.py/0007_hiring_manager_alignments.py) — a
+        # candidate-facing session genuinely cannot read them, by design, unlike shadow_jobs
+        # (explicitly GRANTed to both roles since job postings are meant to be public). Only
+        # search_candidates_for_job resolves and passes these; the candidate-facing callers pass
+        # neither, so their behavior is byte-for-byte unchanged.
         if self._llm_client is None:
             raise ValueError("compute requires an llm_client")
         try:
             return await self._llm_client.score_match(
-                passport_snapshot=passport_snapshot, job_facts=_job_facts(job)
+                passport_snapshot=passport_snapshot,
+                job_facts=_job_facts(job, blueprint=blueprint, alignment=alignment),
             )
         except LLMRequestError as exc:
             raise PassportMatchGenerationError(str(exc)) from exc
@@ -215,6 +253,16 @@ class PassportMatchingService:
         if not candidates:
             return []
 
+        # Resolved once per job (not per candidate) -- this method runs on app_runtime
+        # (get_tenant_db), the one passport_matching call path actually permitted to read these
+        # tenant-scoped tables. See _score_via_llm's docstring for why this can't also happen on
+        # the candidate-facing paths.
+        blueprint: HiringBlueprint | None = None
+        alignment: HiringManagerAlignment | None = None
+        if job.project_id is not None:
+            blueprint = await self._blueprints.get_by_project_id(job.project_id)
+            alignment = await self._alignments.get_by_project_id(job.project_id)
+
         semaphore = asyncio.Semaphore(_COMPUTE_CONCURRENCY)
 
         async def _score_one(
@@ -229,7 +277,10 @@ class PassportMatchingService:
             async with semaphore:
                 try:
                     return passport, await self._score_via_llm(
-                        passport_snapshot=version.snapshot, job=job
+                        passport_snapshot=version.snapshot,
+                        job=job,
+                        blueprint=blueprint,
+                        alignment=alignment,
                     )
                 except PassportMatchGenerationError:
                     # One candidate's score failing shouldn't blank out the whole search --

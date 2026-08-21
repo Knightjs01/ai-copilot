@@ -66,8 +66,8 @@ class ShadowJobBoardListing(BaseModel):
 
     id: uuid.UUID
     company_name: str
-    # None unless the company has opted in to a public profile page (Company.is_profile_public)
-    # -- fails open, no link shown, when a company hasn't opted in.
+    # None unless the company's profile page is currently live (Company.profile_status == "live")
+    # -- fails open, no link shown, otherwise.
     company_slug: str | None
     title: str
     department: str | None

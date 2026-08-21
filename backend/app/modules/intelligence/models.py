@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,5 +24,7 @@ class IntelligencePack(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Bas
     education: Mapped[list[Any]] = mapped_column(JSONB, default=list)
     narrative_summary: Mapped[str] = mapped_column(Text)
     highlights: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    industry: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    years_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
     model_used: Mapped[str] = mapped_column(String(100))
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

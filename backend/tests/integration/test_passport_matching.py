@@ -1,7 +1,7 @@
 from httpx import AsyncClient
 
 from tests.conftest import FakePassportMatchingLLMClient
-from tests.integration.helpers import auth_headers, candidate_signup, signup
+from tests.integration.helpers import auth_headers, candidate_signup, create_project, signup
 
 _JOB_PAYLOAD = {
     "title": "Staff Product Designer",
@@ -211,3 +211,68 @@ async def test_search_query_is_parsed_into_board_filters(
     filters = response.json()
     assert filters["remote_preference"] == "remote"
     assert fake_passport_matching_llm_client.search_calls == ["remote senior roles"]
+
+
+async def test_candidate_facing_match_never_reads_blueprint_or_alignment(
+    client: AsyncClient,
+    fake_passport_matching_llm_client: FakePassportMatchingLLMClient,
+    fake_hiring_blueprint_llm_client,
+) -> None:
+    """hiring_blueprints/hiring_manager_alignments are GRANTed to app_runtime only (see
+    0006_hiring_blueprints.py/0007_hiring_manager_alignments.py) -- the candidate-facing match
+    path (GET /matches/{job_id}) runs on the RLS-bypass app_auth role via get_db, which has no
+    privilege on those tables. This pins down that a Shadow job linked to a project with a real
+    blueprint + alignment still resolves cleanly for a candidate, with job_facts unenriched --
+    the enrichment only ever happens on the company-side search path (see
+    test_candidate_search.py::test_search_enriches_job_facts_with_linked_project_blueprint)."""
+    owner_headers = auth_headers(
+        (await signup(client, email="owner@matching-linked.com"))["access_token"]
+    )
+    project = await create_project(client, headers=owner_headers, title="Staff Product Designer")
+    patch_response = await client.patch(
+        f"/api/v1/projects/{project['id']}",
+        json={"role_brief": "Looking for a staff product designer."},
+        headers=owner_headers,
+    )
+    assert patch_response.status_code == 200, patch_response.text
+    blueprint_response = await client.post(
+        f"/api/v1/projects/{project['id']}/hiring-blueprint", headers=owner_headers
+    )
+    assert blueprint_response.status_code == 200, blueprint_response.text
+    alignment_response = await client.put(
+        f"/api/v1/projects/{project['id']}/hiring-manager-alignment",
+        json={"top_requirements": ["Portfolio of shipped 0-to-1 products"]},
+        headers=owner_headers,
+    )
+    assert alignment_response.status_code == 200, alignment_response.text
+
+    job_payload = {**_JOB_PAYLOAD, "project_id": project["id"]}
+    create_response = await client.post(
+        "/api/v1/shadow-jobs", json=job_payload, headers=owner_headers
+    )
+    assert create_response.status_code == 201, create_response.text
+    job = create_response.json()
+    assert job["project_id"] == project["id"]
+    publish_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=owner_headers
+    )
+    assert publish_response.status_code == 200, publish_response.text
+
+    candidate_headers = auth_headers(
+        (await candidate_signup(client, email="candidate@matching-linked.com"))["access_token"]
+    )
+    await _build_and_approve_passport(client, headers=candidate_headers)
+
+    response = await client.get(f"/api/v1/matches/{job['id']}", headers=candidate_headers)
+    assert response.status_code == 200, response.text
+
+    assert len(fake_passport_matching_llm_client.score_calls) == 1
+    _, job_facts = fake_passport_matching_llm_client.score_calls[0]
+    assert "role_summary" not in job_facts
+    assert "must_have_qualifications" not in job_facts
+    assert "top_requirements" not in job_facts
+
+    _, job_facts = fake_passport_matching_llm_client.score_calls[0]
+    assert "role_summary" not in job_facts
+    assert "must_have_qualifications" not in job_facts
+    assert "top_requirements" not in job_facts

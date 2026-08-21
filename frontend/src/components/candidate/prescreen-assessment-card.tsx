@@ -99,7 +99,7 @@ export function PrescreenAssessmentCard({ candidate }: { candidate: Candidate })
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Pre-screen fit assessment</CardTitle>
+        <CardTitle>Fit Intelligence</CardTitle>
         <Button
           size="sm"
           variant="secondary"
@@ -107,7 +107,7 @@ export function PrescreenAssessmentCard({ candidate }: { candidate: Candidate })
           disabled={!canGenerate || generate.isPending}
         >
           <Sparkles className="h-3.5 w-3.5" />
-          {generate.isPending ? "Assessing…" : assessment ? "Regenerate" : "Generate assessment"}
+          {generate.isPending ? "Assessing…" : assessment ? "Regenerate" : "Generate Fit Intelligence"}
         </Button>
       </CardHeader>
       <CardContent>

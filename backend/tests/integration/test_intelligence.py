@@ -76,6 +76,8 @@ async def test_generate_intelligence_pack_happy_path(
     assert pack["education"] == [{"institution": "Fake University", "degree": "BSc", "field": "CS"}]
     assert pack["narrative_summary"] == "A fake but deterministic summary for testing."
     assert pack["highlights"] == ["Fake highlight matching a hiring manager requirement."]
+    assert pack["industry"] == "Fintech"
+    assert pack["years_experience"] == 8
     assert pack["model_used"] == "claude-sonnet-5"
 
     # The fake client should only ever have seen the redacted text, never the candidate's name
@@ -132,9 +134,12 @@ async def test_generate_without_sanitizing_first_fails(client: AsyncClient) -> N
     assert response.status_code == 404  # SanitizedProfileNotFoundError
 
 
-async def test_member_can_view_but_not_trigger_generation(
+async def test_hiring_manager_can_view_but_not_trigger_generation(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Hiring Manager has candidates.view but not candidates.update -- Recruiter (the old
+    Member's successor) now has both, so it's Hiring Manager that exercises this view-only
+    floor post-Phase-3."""
     owner = await signup(client, email="owner@intelperms.com", company_name="Intel Perms Co")
     owner_headers = auth_headers(owner["access_token"])
     candidate_id = await _create_sanitized_candidate(
@@ -145,22 +150,22 @@ async def test_member_can_view_but_not_trigger_generation(
     )
     await client.post(f"/api/v1/candidates/{candidate_id}/intelligence-pack", headers=owner_headers)
 
-    member = await invite_and_accept(
+    hiring_manager = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
-        email="member@intelperms.com",
-        role="Member",
+        email="hiringmanager@intelperms.com",
+        role="Hiring Manager",
         sent_emails=sent_emails,
     )
-    member_headers = auth_headers(member["access_token"])
+    hiring_manager_headers = auth_headers(hiring_manager["access_token"])
 
     generate_denied = await client.post(
-        f"/api/v1/candidates/{candidate_id}/intelligence-pack", headers=member_headers
+        f"/api/v1/candidates/{candidate_id}/intelligence-pack", headers=hiring_manager_headers
     )
     assert generate_denied.status_code == 403
 
     view_allowed = await client.get(
-        f"/api/v1/candidates/{candidate_id}/intelligence-pack", headers=member_headers
+        f"/api/v1/candidates/{candidate_id}/intelligence-pack", headers=hiring_manager_headers
     )
     assert view_allowed.status_code == 200
 

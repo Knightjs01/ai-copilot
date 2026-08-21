@@ -42,11 +42,15 @@ async def test_generate_assessment_sends_forced_tool_use_request() -> None:
     result = await client.generate_assessment(
         role_summary="A senior backend role.",
         must_have_qualifications=["5+ years Python"],
+        nice_to_have_qualifications=["GraphQL experience"],
+        key_responsibilities=["Own the payments service"],
         evaluation_criteria=["Technical depth"],
         top_requirements=["Distributed systems experience"],
         candidate_skills=["Python", "Kubernetes"],
         candidate_experience_summary="Backend engineer with 6 years experience.",
         candidate_education=[{"institution": "Test U", "degree": "BSc", "field": "CS"}],
+        candidate_industry="Fintech",
+        candidate_years_experience=8,
     )
 
     mock_create.assert_awaited_once()
@@ -56,6 +60,10 @@ async def test_generate_assessment_sends_forced_tool_use_request() -> None:
     content = call_kwargs["messages"][0]["content"]
     assert "Distributed systems experience" in content
     assert "Backend engineer with 6 years experience." in content
+    assert "GraphQL experience" in content
+    assert "Own the payments service" in content
+    assert "Fintech" in content
+    assert "Candidate years of experience: 8" in content
 
     assert result.fit_rating == "Strong Fit"
     assert result.fit_summary == "Excellent match."
@@ -75,11 +83,15 @@ async def test_generate_assessment_missing_tool_use_block_raises() -> None:
         await client.generate_assessment(
             role_summary="role",
             must_have_qualifications=[],
+            nice_to_have_qualifications=[],
+            key_responsibilities=[],
             evaluation_criteria=[],
             top_requirements=[],
             candidate_skills=[],
             candidate_experience_summary="",
             candidate_education=[],
+            candidate_industry=None,
+            candidate_years_experience=None,
         )
 
 
@@ -131,11 +143,15 @@ async def test_generate_assessment_rejects_string_instead_of_list() -> None:
         await client.generate_assessment(
             role_summary="role",
             must_have_qualifications=[],
+            nice_to_have_qualifications=[],
+            key_responsibilities=[],
             evaluation_criteria=[],
             top_requirements=[],
             candidate_skills=[],
             candidate_experience_summary="",
             candidate_education=[],
+            candidate_industry=None,
+            candidate_years_experience=None,
         )
 
 

@@ -42,11 +42,15 @@ class PrescreenAssessmentLLMClient(Protocol):
         *,
         role_summary: str,
         must_have_qualifications: list[str],
+        nice_to_have_qualifications: list[str],
+        key_responsibilities: list[str],
         evaluation_criteria: list[str],
         top_requirements: list[str],
         candidate_skills: list[str],
         candidate_experience_summary: str,
         candidate_education: list[dict[str, str]],
+        candidate_industry: str | None,
+        candidate_years_experience: int | None,
     ) -> AssessmentExtraction: ...
 
     async def generate_handoff_recommendations(
@@ -148,11 +152,15 @@ class AnthropicPrescreenAssessmentLLMClient:
         *,
         role_summary: str,
         must_have_qualifications: list[str],
+        nice_to_have_qualifications: list[str],
+        key_responsibilities: list[str],
         evaluation_criteria: list[str],
         top_requirements: list[str],
         candidate_skills: list[str],
         candidate_experience_summary: str,
         candidate_education: list[dict[str, str]],
+        candidate_industry: str | None,
+        candidate_years_experience: int | None,
     ) -> AssessmentExtraction:
         education_lines = "\n".join(
             f"- {e.get('degree', '')} in {e.get('field', '')}, {e.get('institution', '')}"
@@ -162,12 +170,17 @@ class AnthropicPrescreenAssessmentLLMClient:
             "Assess this candidate's fit for the role below, and suggest how to run a "
             "productive pre-screen call with them.\n\n"
             f"Role summary:\n{role_summary}\n\n"
+            f"Key responsibilities:\n{', '.join(key_responsibilities)}\n\n"
             f"Must-have qualifications:\n{', '.join(must_have_qualifications)}\n\n"
+            f"Nice-to-have qualifications:\n{', '.join(nice_to_have_qualifications)}\n\n"
             f"Evaluation criteria:\n{', '.join(evaluation_criteria)}\n\n"
             f"Hiring manager's top requirements:\n{', '.join(top_requirements)}\n\n"
             f"Candidate skills:\n{', '.join(candidate_skills)}\n\n"
             f"Candidate experience summary:\n{candidate_experience_summary}\n\n"
-            f"Candidate education:\n{education_lines}"
+            f"Candidate education:\n{education_lines}\n\n"
+            f"Candidate industry background: {candidate_industry or 'not specified'}\n"
+            "Candidate years of experience: "
+            f"{candidate_years_experience if candidate_years_experience is not None else 'not specified'}"
         )
         try:
             # See app/modules/intelligence/llm_client.py for why this needs type: ignore under

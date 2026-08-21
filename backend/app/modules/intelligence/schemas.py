@@ -20,5 +20,7 @@ class IntelligencePackRead(BaseModel):
     education: list[EducationEntryRead]
     narrative_summary: str
     highlights: list[str]
+    industry: str | None
+    years_experience: int | None
     model_used: str
     generated_at: datetime

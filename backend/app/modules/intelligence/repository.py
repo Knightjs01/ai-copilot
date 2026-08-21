@@ -28,6 +28,8 @@ class IntelligencePackRepository:
         education: list[dict[str, Any]],
         narrative_summary: str,
         highlights: list[str],
+        industry: str | None,
+        years_experience: int | None,
         model_used: str,
         generated_at: datetime,
     ) -> IntelligencePack:
@@ -38,6 +40,8 @@ class IntelligencePackRepository:
             existing.education = education
             existing.narrative_summary = narrative_summary
             existing.highlights = highlights
+            existing.industry = industry
+            existing.years_experience = years_experience
             existing.model_used = model_used
             existing.generated_at = generated_at
             await self._session.flush()
@@ -51,6 +55,8 @@ class IntelligencePackRepository:
             education=education,
             narrative_summary=narrative_summary,
             highlights=highlights,
+            industry=industry,
+            years_experience=years_experience,
             model_used=model_used,
             generated_at=generated_at,
         )

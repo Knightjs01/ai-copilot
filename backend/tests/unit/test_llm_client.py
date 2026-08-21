@@ -106,3 +106,29 @@ async def test_missing_fields_in_tool_response_default_to_empty() -> None:
     assert result.education == []
     assert result.narrative_summary == ""
     assert result.highlights == []
+    assert result.industry is None
+    assert result.years_experience is None
+
+
+async def test_industry_and_years_experience_parse_when_present() -> None:
+    client = _make_client()
+    client._client.messages.create = AsyncMock(  # type: ignore[method-assign]
+        return_value=_fake_tool_response(
+            {
+                "skills": ["Python"],
+                "experience_summary": "Backend engineer.",
+                "education": [],
+                "narrative_summary": "A summary.",
+                "highlights": [],
+                "industry": "Fintech",
+                "years_experience": 8,
+            }
+        )
+    )
+
+    result = await client.extract_candidate_profile(
+        redacted_text="some text", hiring_manager_requirements=[]
+    )
+
+    assert result.industry == "Fintech"
+    assert result.years_experience == 8

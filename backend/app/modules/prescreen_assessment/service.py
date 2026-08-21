@@ -80,11 +80,15 @@ class PrescreenAssessmentService:
             extraction = await self._llm_client.generate_assessment(
                 role_summary=blueprint.role_summary,
                 must_have_qualifications=blueprint.must_have_qualifications,
+                nice_to_have_qualifications=blueprint.nice_to_have_qualifications,
+                key_responsibilities=blueprint.key_responsibilities,
                 evaluation_criteria=blueprint.evaluation_criteria,
                 top_requirements=alignment.top_requirements,
                 candidate_skills=pack.skills,
                 candidate_experience_summary=pack.experience_summary,
                 candidate_education=pack.education,
+                candidate_industry=pack.industry,
+                candidate_years_experience=pack.years_experience,
             )
         except LLMRequestError as exc:
             raise PrescreenAssessmentGenerationError(str(exc)) from exc

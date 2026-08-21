@@ -31,7 +31,16 @@ export function IntelligencePackCard({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Candidate intelligence</CardTitle>
+        <div>
+          <CardTitle>Candidate intelligence</CardTitle>
+          {pack && (pack.years_experience != null || pack.industry) && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {pack.years_experience != null ? `${pack.years_experience} yrs experience` : null}
+              {pack.years_experience != null && pack.industry ? " · " : ""}
+              {pack.industry}
+            </p>
+          )}
+        </div>
         <Button
           size="sm"
           variant="secondary"

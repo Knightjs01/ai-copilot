@@ -74,6 +74,8 @@ class IntelligenceService:
             education=[asdict(entry) for entry in extraction.education],
             narrative_summary=extraction.narrative_summary,
             highlights=extraction.highlights,
+            industry=extraction.industry,
+            years_experience=extraction.years_experience,
             model_used=self._settings.anthropic_model,
             generated_at=datetime.now(timezone.utc),
         )

@@ -38,6 +38,8 @@ class CandidateProfileExtraction:
     education: list[EducationEntry] = field(default_factory=list)
     narrative_summary: str = ""
     highlights: list[str] = field(default_factory=list)
+    industry: str | None = None
+    years_experience: int | None = None
 
 
 class LLMClient(Protocol):
@@ -52,8 +54,9 @@ _EXTRACTION_TOOL: dict[str, Any] = {
         "Records a structured professional profile extracted from an anonymized resume, plus "
         "a short set of smart highlights comparing that profile against what the hiring "
         "manager said matters most for this role. skills/experience_summary/education/"
-        "narrative_summary must stay strictly factual — only what's explicitly in the text, no "
-        "score, rating, or opinion. highlights is the one evaluative field: specific, "
+        "narrative_summary/industry/years_experience must stay strictly factual — only what's "
+        "explicitly in the text, no score, rating, or opinion. highlights is the one evaluative "
+        "field: specific, "
         "evidence-based observations connecting the candidate's actual background to the "
         "hiring manager's stated requirements — not a restatement of the CV."
     ),
@@ -107,6 +110,22 @@ _EXTRACTION_TOOL: dict[str, Any] = {
                     "the requirements. Every highlight must be grounded in specific evidence "
                     "from the resume text — never generic praise, never inferred beyond what's "
                     "written."
+                ),
+            },
+            "industry": {
+                "type": ["string", "null"],
+                "description": (
+                    "The candidate's primary industry background (e.g. 'Fintech', 'Healthcare "
+                    "SaaS'), only if clearly identifiable from the text. Use null rather than "
+                    "guess if the industry isn't evident."
+                ),
+            },
+            "years_experience": {
+                "type": ["integer", "null"],
+                "description": (
+                    "Total approximate years of professional experience, only if it can be "
+                    "reasonably inferred from the dates/roles in the text. Use null rather than "
+                    "guess."
                 ),
             },
         },
@@ -182,6 +201,8 @@ class AnthropicLLMClient:
                 )
                 for entry in _as_list(data.get("education", []), field_name="education")
             ]
+            raw_industry = data.get("industry")
+            raw_years_experience = data.get("years_experience")
             return CandidateProfileExtraction(
                 skills=[
                     str(skill) for skill in _as_list(data.get("skills", []), field_name="skills")
@@ -192,6 +213,10 @@ class AnthropicLLMClient:
                 highlights=[
                     str(h) for h in _as_list(data.get("highlights", []), field_name="highlights")
                 ],
+                industry=str(raw_industry) if raw_industry is not None else None,
+                years_experience=(
+                    int(raw_years_experience) if raw_years_experience is not None else None
+                ),
             )
         except (KeyError, TypeError, AttributeError) as exc:
             raise LLMRequestError(f"Malformed structured response from Claude: {exc}") from exc

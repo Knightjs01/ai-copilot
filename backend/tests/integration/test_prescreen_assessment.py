@@ -100,6 +100,15 @@ async def test_generate_assessment_happy_path(
     assert len(fake_prescreen_assessment_llm_client.assessment_calls) == 1
     assert "5+ years Python" in fake_prescreen_assessment_llm_client.assessment_calls[0]
 
+    # Fit Intelligence extension (ATS UX redesign, Phase 1): confirm the previously-unused
+    # blueprint fields and the new IntelligencePack industry/years_experience fields actually
+    # reach the LLM call, not just exist on the models.
+    call_kwargs = fake_prescreen_assessment_llm_client.assessment_call_kwargs[0]
+    assert call_kwargs["nice_to_have_qualifications"] == ["Fake bonus skill"]
+    assert call_kwargs["key_responsibilities"] == ["Build things", "Review code"]
+    assert call_kwargs["candidate_industry"] == "Fintech"
+    assert call_kwargs["candidate_years_experience"] == 8
+
     get_response = await client.get(
         f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=headers
     )
@@ -284,9 +293,12 @@ async def test_handoff_recommendations_without_notes_fails(client: AsyncClient) 
     assert response.status_code == 400  # PrescreenNotesRequiredError
 
 
-async def test_member_can_view_but_not_trigger_generation(
+async def test_hiring_manager_can_view_but_not_trigger_generation(
     client: AsyncClient, sent_emails: CapturingEmailSender
 ) -> None:
+    """Hiring Manager has candidates.view but not candidates.update -- Recruiter (the old
+    Member's successor) now has both, so it's Hiring Manager that exercises this view-only
+    floor post-Phase-3."""
     owner = await signup(client, email="owner@prescreenperms.com", company_name="Prescreen Perms")
     owner_headers = auth_headers(owner["access_token"])
     project_id = await _setup_project_with_blueprint_and_alignment(client, headers=owner_headers)
@@ -297,22 +309,22 @@ async def test_member_can_view_but_not_trigger_generation(
         f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=owner_headers
     )
 
-    member = await invite_and_accept(
+    hiring_manager = await invite_and_accept(
         client,
         inviter_headers=owner_headers,
-        email="member@prescreenperms.com",
-        role="Member",
+        email="hiringmanager@prescreenperms.com",
+        role="Hiring Manager",
         sent_emails=sent_emails,
     )
-    member_headers = auth_headers(member["access_token"])
+    hiring_manager_headers = auth_headers(hiring_manager["access_token"])
 
     generate_denied = await client.post(
-        f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=member_headers
+        f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=hiring_manager_headers
     )
     assert generate_denied.status_code == 403
 
     view_allowed = await client.get(
-        f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=member_headers
+        f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=hiring_manager_headers
     )
     assert view_allowed.status_code == 200
 
