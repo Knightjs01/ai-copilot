@@ -159,6 +159,31 @@ async def test_dashboard_flags_project_missing_hiring_manager_alignment(
     assert matches[0]["candidate_id"] is None
 
 
+async def test_dashboard_project_id_filter_scopes_to_one_role(client: AsyncClient) -> None:
+    """Powers Role Health: an optional project_id query param scopes the whole response to one
+    project, and -- unlike the company-wide call -- does not truncate action_items at
+    _MAX_ACTION_ITEMS, since a single role's real gap count should never be silently cut."""
+    owner = await signup(client, email="owner@dash-scoped.com", company_name="Dash Scoped Co")
+    headers = auth_headers(owner["access_token"])
+
+    role_a = await create_project(client, headers=headers, title="Role A")
+    role_b = await create_project(client, headers=headers, title="Role B")
+    # Neither role has a hiring manager alignment submitted -- both would show a real
+    # needs_alignment gap in the company-wide view.
+
+    scoped_response = await client.get(
+        "/api/v1/dashboard", params={"project_id": role_a["id"]}, headers=headers
+    )
+    assert scoped_response.status_code == 200, scoped_response.text
+    scoped = scoped_response.json()
+
+    assert scoped["live_projects"] == 1
+    assert all(item["project_id"] == role_a["id"] for item in scoped["action_items"])
+    assert any(item["type"] == "needs_alignment" for item in scoped["action_items"])
+    # Role B's own real gap must not leak into a request scoped to Role A.
+    assert not any(item["project_id"] == role_b["id"] for item in scoped["action_items"])
+
+
 async def test_dashboard_is_scoped_to_company(client: AsyncClient) -> None:
     owner_a = await signup(client, email="owner@dash-tenant-a.com", company_name="Dash Tenant A")
     headers_a = auth_headers(owner_a["access_token"])

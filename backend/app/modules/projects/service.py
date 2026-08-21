@@ -13,18 +13,24 @@ from app.modules.projects.exceptions import (
     InvalidProjectMemberError,
     JDExtractionFailedError,
     ProjectNotFoundError,
+    RoleFieldsExtractionFailedError,
     UnsupportedJDFileTypeError,
 )
+from app.modules.projects.llm_client import LLMRequestError, ProjectsLLMClient
 from app.modules.projects.models import Project, ProjectMember, ProjectStatus
 from app.modules.projects.repository import ProjectMemberRepository, ProjectRepository
+from app.modules.projects.schemas import JdUploadResult
 
 
 class ProjectService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, llm_client: ProjectsLLMClient | None = None) -> None:
+        # llm_client is only needed by upload_jd -- every other method here is a plain read/write
+        # and shouldn't need to inject/construct one.
         self._repository = ProjectRepository(session)
         self._members = ProjectMemberRepository(session)
         self._users = UserService(session)
         self._audit = AuditService(session)
+        self._llm_client = llm_client
 
     async def create_project(
         self,
@@ -132,6 +138,14 @@ class ProjectService:
         hiring_manager_id: uuid.UUID | None,
         hiring_manager_id_set: bool,
         role_brief: str | None = None,
+        seniority: str | None = None,
+        seniority_set: bool = False,
+        location: str | None = None,
+        location_set: bool = False,
+        salary_min: int | None = None,
+        salary_min_set: bool = False,
+        salary_max: int | None = None,
+        salary_max_set: bool = False,
     ) -> Project:
         project = await self.get_project(company_id=actor.company_id, project_id=project_id)
 
@@ -146,6 +160,17 @@ class ProjectService:
         if hiring_manager_id_set:
             await self._validate_hiring_manager(actor.company_id, hiring_manager_id)
             project.hiring_manager_id = hiring_manager_id
+        # Tri-state: these are LLM-suggested-then-user-edited values, where "clear a wrong AI
+        # guess" is a real, expected action -- so an explicit null in the request must clear the
+        # field, not just be ignored the way department/role_brief silently ignore a null.
+        if seniority_set:
+            project.seniority = seniority
+        if location_set:
+            project.location = location
+        if salary_min_set:
+            project.salary_min = salary_min
+        if salary_max_set:
+            project.salary_max = salary_max
 
         await self._audit.record(
             company_id=actor.company_id,
@@ -158,7 +183,9 @@ class ProjectService:
 
     async def upload_jd(
         self, *, actor: User, project_id: uuid.UUID, content: bytes, content_type: str
-    ) -> Project:
+    ) -> JdUploadResult:
+        if self._llm_client is None:
+            raise ValueError("upload_jd requires an llm_client")
         project = await self.get_project(company_id=actor.company_id, project_id=project_id)
 
         try:
@@ -168,16 +195,22 @@ class ProjectService:
         except ExtractionFailedError as exc:
             raise JDExtractionFailedError(str(exc)) from exc
 
-        project.role_brief = extracted_text
+        try:
+            extraction = await self._llm_client.extract_role_fields(
+                role_brief=extracted_text, title=project.title
+            )
+        except LLMRequestError as exc:
+            raise RoleFieldsExtractionFailedError(str(exc)) from exc
 
-        await self._audit.record(
-            company_id=actor.company_id,
-            actor_user_id=actor.id,
-            action="project.jd_uploaded",
-            target_type="project",
-            target_id=project.id,
+        # Preview only -- no project mutation, no commit, no audit record. Nothing has changed
+        # yet; the recruiter reviews/edits this and saves explicitly via PATCH /projects/{id}.
+        return JdUploadResult(
+            role_brief=extracted_text,
+            seniority=extraction.seniority,
+            location=extraction.location,
+            salary_min=extraction.salary_min,
+            salary_max=extraction.salary_max,
         )
-        return project
 
     async def delete_project(self, *, actor: User, project_id: uuid.UUID) -> None:
         project = await self.get_project(company_id=actor.company_id, project_id=project_id)

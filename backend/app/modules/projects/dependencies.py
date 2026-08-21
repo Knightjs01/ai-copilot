@@ -6,7 +6,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth.authorization import actor_has_org_wide_access
 from app.modules.auth.dependencies import get_current_user_model, get_tenant_db
 from app.modules.auth.models import User
+from app.modules.projects.llm_client import AnthropicProjectsLLMClient, ProjectsLLMClient
 from app.modules.projects.repository import ProjectMemberRepository
+
+_default_llm_client: ProjectsLLMClient | None = None
+
+
+def get_projects_llm_client() -> ProjectsLLMClient:
+    """Overridable via app.dependency_overrides — tests inject a FakeProjectsLLMClient instead
+    of calling the real Claude API. Constructed lazily (on first real call), not at module
+    import time — see app/modules/intelligence/dependencies.py for the full reasoning (an eager
+    module-level instance would crash every test's `from app.main import app` when
+    ANTHROPIC_API_KEY is unset, which it always is in CI/tests)."""
+
+    global _default_llm_client
+    if _default_llm_client is None:
+        _default_llm_client = AnthropicProjectsLLMClient()
+    return _default_llm_client
 
 
 async def require_project_access(

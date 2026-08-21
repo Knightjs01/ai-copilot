@@ -56,7 +56,7 @@ async def test_member_can_view_but_not_create_update_delete_projects(
         client,
         inviter_headers=owner_headers,
         email="member@projperms.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])
@@ -91,7 +91,7 @@ async def test_member_only_sees_projects_they_are_a_member_of(
         client,
         inviter_headers=owner_headers,
         email="member@resourcescope.com",
-        role="Member",
+        role="Recruiter",
         sent_emails=sent_emails,
     )
     member_headers = auth_headers(member["access_token"])
@@ -145,17 +145,17 @@ async def test_member_only_sees_projects_they_are_a_member_of(
     )
     assert other_candidate_get.status_code == 404
 
-    # Member has no candidates.create permission at all today (only Owner/Admin do, and both
-    # bypass membership scoping) — the role check in require_permission rejects this before the
-    # project-membership check in create_candidate is ever reached. That membership check exists
-    # for defense-in-depth against a future role that has candidates.create without org-wide
-    # access; it isn't exercisable by any role in the current three-role system.
+    # Recruiter (unlike the old Member) has real candidates.create permission but isn't
+    # org-wide, so the role check in require_permission passes and it's create_candidate's own
+    # project-membership check that actually blocks this — the exact defense-in-depth scenario
+    # this check exists for. 404, not 403: a Recruiter shouldn't be able to tell "doesn't exist"
+    # apart from "not assigned to me."
     create_in_unassigned = await client.post(
         "/api/v1/candidates",
         json={"project_id": unassigned["id"], "full_name": "Should Fail"},
         headers=member_headers,
     )
-    assert create_in_unassigned.status_code == 403
+    assert create_in_unassigned.status_code == 404
 
     remove_response = await client.delete(
         f"/api/v1/projects/{assigned['id']}/members/{member_id}", headers=owner_headers
@@ -179,7 +179,7 @@ async def test_owner_and_admin_bypass_project_membership_scoping(
         client,
         inviter_headers=owner_headers,
         email="admin@orgwide.com",
-        role="Admin",
+        role="TA Admin",
         sent_emails=sent_emails,
     )
     admin_headers = auth_headers(admin["access_token"])
@@ -254,3 +254,43 @@ async def test_app_auth_role_has_no_grants_on_projects() -> None:
             assert raised, "app_auth should not have SELECT privilege on projects"
     finally:
         await auth_engine.dispose()
+
+
+async def test_role_fields_round_trip_and_clear_to_null(client: AsyncClient) -> None:
+    """AI Role Intake: seniority/location/salary_min/salary_max round-trip through PATCH, and
+    -- unlike department/role_brief, which can only ever be set, never cleared -- these four
+    get real tri-state semantics (an explicit null in the request body clears the field), since
+    they're LLM-suggested-then-user-edited values where "clear a wrong AI guess" is a real,
+    expected action."""
+    owner = await signup(client, email="owner@rolefields.com", company_name="Role Fields Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+
+    set_response = await client.patch(
+        f"/api/v1/projects/{project['id']}",
+        json={
+            "seniority": "Senior",
+            "location": "Remote (UK)",
+            "salary_min": 90000,
+            "salary_max": 110000,
+        },
+        headers=headers,
+    )
+    assert set_response.status_code == 200, set_response.text
+    saved = set_response.json()
+    assert saved["seniority"] == "Senior"
+    assert saved["location"] == "Remote (UK)"
+    assert saved["salary_min"] == 90000
+    assert saved["salary_max"] == 110000
+
+    # Explicit null clears -- a wrong AI-suggested salary is a real thing to clear.
+    clear_response = await client.patch(
+        f"/api/v1/projects/{project['id']}", json={"salary_min": None}, headers=headers
+    )
+    assert clear_response.status_code == 200, clear_response.text
+    cleared = clear_response.json()
+    assert cleared["salary_min"] is None
+    # Fields not present in this PATCH's body are left alone, not silently cleared.
+    assert cleared["seniority"] == "Senior"
+    assert cleared["location"] == "Remote (UK)"
+    assert cleared["salary_max"] == 110000

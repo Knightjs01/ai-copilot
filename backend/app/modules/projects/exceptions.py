@@ -29,3 +29,8 @@ class UnsupportedJDFileTypeError(ProjectError):
 class JDExtractionFailedError(ProjectError):
     status_code = 422
     detail = "Could not extract text from this job description file"
+
+
+class RoleFieldsExtractionFailedError(ProjectError):
+    status_code = 502
+    detail = "Could not extract role fields — the AI provider request failed"

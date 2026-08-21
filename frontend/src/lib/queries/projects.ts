@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
-import type { Project, ProjectStatus } from "@/lib/types";
+import type { JdUploadResult, Project, ProjectStatus } from "@/lib/types";
 
 export function useProjects() {
   return useQuery({
@@ -41,6 +41,13 @@ interface UpdateProjectInput {
   status?: ProjectStatus;
   role_brief?: string;
   hiring_manager_id?: string | null;
+  // Tri-state: omit the key to leave the field alone, include it as `null` to explicitly clear
+  // it (e.g. the recruiter clears a wrong AI-suggested value) -- matches the backend's
+  // model_fields_set-driven handling for these four fields specifically.
+  seniority?: string | null;
+  location?: string | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
 }
 
 export function useUpdateProject(projectId: string) {
@@ -55,16 +62,15 @@ export function useUpdateProject(projectId: string) {
   });
 }
 
+// Returns a preview only -- nothing is saved server-side, so this deliberately does NOT touch
+// the ["projects", projectId] query cache. The caller holds the preview in local state until an
+// explicit useUpdateProject call persists it.
 export function useUploadJd(projectId: string) {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
-      return apiClient.postForm<Project>(`/projects/${projectId}/jd`, formData);
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(["projects", projectId], data);
+      return apiClient.postForm<JdUploadResult>(`/projects/${projectId}/jd`, formData);
     },
   });
 }

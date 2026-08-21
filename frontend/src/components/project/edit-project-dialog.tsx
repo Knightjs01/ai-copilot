@@ -31,6 +31,10 @@ export function EditProjectDialog({ project }: { project: Project }) {
   const [department, setDepartment] = React.useState(project.department ?? "");
   const [status, setStatus] = React.useState<ProjectStatus>(project.status);
   const [hiringManagerId, setHiringManagerId] = React.useState(project.hiring_manager_id ?? "");
+  const [seniority, setSeniority] = React.useState(project.seniority ?? "");
+  const [location, setLocation] = React.useState(project.location ?? "");
+  const [salaryMin, setSalaryMin] = React.useState(project.salary_min?.toString() ?? "");
+  const [salaryMax, setSalaryMax] = React.useState(project.salary_max?.toString() ?? "");
   const updateProject = useUpdateProject(project.id);
   const { data: team } = useTeam();
 
@@ -40,6 +44,10 @@ export function EditProjectDialog({ project }: { project: Project }) {
     setDepartment(project.department ?? "");
     setStatus(project.status);
     setHiringManagerId(project.hiring_manager_id ?? "");
+    setSeniority(project.seniority ?? "");
+    setLocation(project.location ?? "");
+    setSalaryMin(project.salary_min?.toString() ?? "");
+    setSalaryMax(project.salary_max?.toString() ?? "");
   }, [open, project]);
 
   const handleSave = () => {
@@ -49,6 +57,10 @@ export function EditProjectDialog({ project }: { project: Project }) {
         department: department || undefined,
         status,
         hiring_manager_id: hiringManagerId || null,
+        seniority: seniority.trim() || null,
+        location: location.trim() || null,
+        salary_min: salaryMin.trim() ? Number(salaryMin) : null,
+        salary_max: salaryMax.trim() ? Number(salaryMax) : null,
       },
       { onSuccess: () => setOpen(false) }
     );
@@ -85,6 +97,44 @@ export function EditProjectDialog({ project }: { project: Project }) {
           <Field label="Status">
             <PillToggleGroup options={STATUS_OPTIONS} value={status} onChange={setStatus} />
           </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Seniority" htmlFor="projectSeniority">
+              <Input
+                id="projectSeniority"
+                placeholder="Senior"
+                value={seniority}
+                onChange={(e) => setSeniority(e.target.value)}
+              />
+            </Field>
+            <Field label="Location" htmlFor="projectLocation">
+              <Input
+                id="projectLocation"
+                placeholder="Remote (UK)"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Salary min" htmlFor="projectSalaryMin">
+              <Input
+                id="projectSalaryMin"
+                type="number"
+                placeholder="90000"
+                value={salaryMin}
+                onChange={(e) => setSalaryMin(e.target.value)}
+              />
+            </Field>
+            <Field label="Salary max" htmlFor="projectSalaryMax">
+              <Input
+                id="projectSalaryMax"
+                type="number"
+                placeholder="110000"
+                value={salaryMax}
+                onChange={(e) => setSalaryMax(e.target.value)}
+              />
+            </Field>
+          </div>
           <Field label="Hiring manager" htmlFor="hiringManager">
             <select
               id="hiringManager"

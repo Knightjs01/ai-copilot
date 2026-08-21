@@ -13,9 +13,11 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
-from app.modules.projects.dependencies import require_project_access
+from app.modules.projects.dependencies import get_projects_llm_client, require_project_access
+from app.modules.projects.llm_client import ProjectsLLMClient
 from app.modules.projects.repository import ProjectMemberRepository
 from app.modules.projects.schemas import (
+    JdUploadResult,
     ProjectCreate,
     ProjectMemberCreate,
     ProjectMemberRead,
@@ -143,11 +145,19 @@ async def update_project(
         hiring_manager_id=body.hiring_manager_id,
         hiring_manager_id_set="hiring_manager_id" in fields_set,
         role_brief=body.role_brief,
+        seniority=body.seniority,
+        seniority_set="seniority" in fields_set,
+        location=body.location,
+        location_set="location" in fields_set,
+        salary_min=body.salary_min,
+        salary_min_set="salary_min" in fields_set,
+        salary_max=body.salary_max,
+        salary_max_set="salary_max" in fields_set,
     )
     return ProjectRead.model_validate(project)
 
 
-@router.post("/{project_id}/jd", response_model=ProjectRead)
+@router.post("/{project_id}/jd", response_model=JdUploadResult)
 async def upload_jd(
     project_id: uuid.UUID,
     file: UploadFile = File(...),
@@ -155,15 +165,15 @@ async def upload_jd(
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
     __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
-) -> ProjectRead:
+    llm_client: ProjectsLLMClient = Depends(get_projects_llm_client),
+) -> JdUploadResult:
     content = await file.read()
-    project = await ProjectService(session).upload_jd(
+    return await ProjectService(session, llm_client=llm_client).upload_jd(
         actor=actor,
         project_id=project_id,
         content=content,
         content_type=file.content_type or "application/octet-stream",
     )
-    return ProjectRead.model_validate(project)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

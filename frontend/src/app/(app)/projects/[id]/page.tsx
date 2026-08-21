@@ -11,6 +11,7 @@ import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-
 import { IdentityVaultTab } from "@/components/project/identity-vault-tab";
 import { InterviewKitCard } from "@/components/project/interview-kit-card";
 import { ProjectAnalyticsCard } from "@/components/project/project-analytics-card";
+import { RoleHealthCard } from "@/components/project/role-health-card";
 import { RoleInfoCard } from "@/components/project/role-info-card";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs } from "@/components/ui/tabs";
@@ -64,6 +65,7 @@ export default function ProjectDetailPage() {
           </div>
 
           <ProjectAnalyticsCard projectId={project.id} />
+          <RoleHealthCard projectId={project.id} />
         </>
       )}
 
