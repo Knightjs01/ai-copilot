@@ -48,9 +48,18 @@ class DashboardService:
         self._assessments = PrescreenAssessmentRepository(session)
         self._alignments = HiringManagerAlignmentRepository(session)
 
-    async def get_dashboard_stats(self, *, company_id: uuid.UUID) -> DashboardStats:
+    async def get_dashboard_stats(
+        self, *, company_id: uuid.UUID, project_id: uuid.UUID | None = None
+    ) -> DashboardStats:
         projects = await self._projects.list_by_company(company_id, limit=_MAX_ROWS)
         candidates = await self._candidates.list_by_company(company_id, limit=_MAX_ROWS)
+        if project_id is not None:
+            # Scoped call (e.g. a role's own Role Health view) -- every count below becomes
+            # this-project-only, and the _MAX_ACTION_ITEMS cap (sized for the company-wide
+            # panel's own readability) doesn't apply: a single project's real gap count is
+            # always small, and truncating it here would let Role Health silently under-report.
+            projects = [p for p in projects if p.id == project_id]
+            candidates = [c for c in candidates if c.project_id == project_id]
         project_by_id = {p.id: p for p in projects}
 
         prescreen_stage = [c for c in candidates if c.status == _PRESCREEN_STATUS]
@@ -69,13 +78,14 @@ class DashboardService:
             aligned_project_ids=aligned_project_ids,
         )
 
+        max_items = len(action_items) if project_id is not None else _MAX_ACTION_ITEMS
         return DashboardStats(
             live_projects=sum(1 for p in projects if p.status in _LIVE_PROJECT_STATUSES),
             candidates_in_process=sum(1 for c in candidates if c.status in _IN_PROCESS_STATUSES),
             prescreen_stage_count=len(prescreen_stage),
             hiring_manager_stage_count=len(hiring_manager_stage),
             action_item_count=len(action_items),
-            action_items=action_items[:_MAX_ACTION_ITEMS],
+            action_items=action_items[:max_items],
         )
 
     def _build_action_items(

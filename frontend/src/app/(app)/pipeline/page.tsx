@@ -1,20 +1,32 @@
 "use client";
 
 import * as React from "react";
-import { Users } from "lucide-react";
+import { ShieldAlert, Users } from "lucide-react";
 
-import { AddCandidateDialog } from "@/components/project/add-candidate-dialog";
 import { CandidatesKanban } from "@/components/project/candidates-kanban";
 import { CandidatesListTab } from "@/components/project/candidates-list-tab";
 import { CandidatesToolbar } from "@/components/project/candidates-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCandidates } from "@/lib/queries/candidates";
+import { useAuth } from "@/lib/auth-context";
+import { useAllCandidates } from "@/lib/queries/candidates";
+import { useProjects } from "@/lib/queries/projects";
 import type { CandidateSource } from "@/lib/types";
 
-export function CandidatesTabSection({ projectId }: { projectId: string }) {
-  const { data: candidates, isLoading } = useCandidates(projectId);
+export default function PipelinePage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission("candidates.view");
+  const { data: candidates, isLoading: candidatesLoading } = useAllCandidates();
+  const { data: projects, isLoading: projectsLoading } = useProjects();
   const [search, setSearch] = React.useState("");
   const [sourceFilter, setSourceFilter] = React.useState<CandidateSource | "all">("all");
+
+  const projectTitles = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const project of projects ?? []) {
+      map[project.id] = project.title;
+    }
+    return map;
+  }, [projects]);
 
   const filteredCandidates = React.useMemo(() => {
     if (!candidates) return [];
@@ -29,9 +41,24 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
     });
   }, [candidates, search, sourceFilter]);
 
+  if (!canView) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
+        <ShieldAlert className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm font-medium text-foreground">Pipeline is Admin-only</p>
+        <p className="max-w-xs text-sm text-muted-foreground">
+          Ask an Owner or Admin on your team for access.
+        </p>
+      </div>
+    );
+  }
+
+  const isLoading = candidatesLoading || projectsLoading;
+
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-8">
+        <Skeleton className="h-10 w-64" />
         <Skeleton className="h-10 w-full max-w-md" />
         <div className="flex gap-4 overflow-x-auto pb-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -48,19 +75,22 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
         <Users className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">No candidates yet</p>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Add your first candidate to start screening for this role.
+          Candidates across every role you can see will appear here once you add them from a role.
         </p>
-        <div className="mt-2">
-          <AddCandidateDialog projectId={projectId} />
-        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Pipeline</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Every candidate across every role, in one board.
+        </p>
+      </div>
+
       <CandidatesToolbar
-        projectId={projectId}
         search={search}
         onSearchChange={setSearch}
         sourceFilter={sourceFilter}
@@ -69,8 +99,9 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
         totalCount={candidates.length}
       />
       <CandidatesKanban
-        queryKey={["candidates", { projectId }]}
+        queryKey={["candidates", "all"]}
         candidates={filteredCandidates}
+        projectTitles={projectTitles}
       />
       <CandidatesListTab candidates={filteredCandidates} />
     </div>

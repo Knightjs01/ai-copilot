@@ -15,8 +15,18 @@ import type {
 export function useCandidates(projectId: string | undefined) {
   return useQuery({
     queryKey: ["candidates", { projectId }],
-    queryFn: () => apiClient.get<Candidate[]>(`/candidates?project_id=${projectId}`),
+    queryFn: () => apiClient.get<Candidate[]>(`/candidates?project_id=${projectId}&limit=500`),
     enabled: !!projectId,
+  });
+}
+
+// Cross-project — powers the Pipeline view. Same real GET /candidates endpoint with project_id
+// omitted; the backend already returns every candidate across accessible projects for both
+// org-wide and project-scoped actors (see backend/app/modules/candidates/repository.py).
+export function useAllCandidates() {
+  return useQuery({
+    queryKey: ["candidates", "all"],
+    queryFn: () => apiClient.get<Candidate[]>("/candidates?limit=500"),
   });
 }
 

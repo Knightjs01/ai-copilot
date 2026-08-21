@@ -1,27 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import {
-  AlertCircle,
-  Briefcase,
-  CalendarClock,
-  ClipboardCheck,
-  type LucideIcon,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import { Briefcase, ClipboardCheck, type LucideIcon, TrendingUp, Users } from "lucide-react";
 
+import { ActionItemRow } from "@/components/dashboard/action-item-row";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useDashboardStats } from "@/lib/queries/dashboard";
-import type { ActionItem, ActionItemType } from "@/lib/types";
-
-const ACTION_ITEM_ICON: Record<ActionItemType, LucideIcon> = {
-  ready_to_advance: TrendingUp,
-  needs_interview_scheduling: CalendarClock,
-  needs_prescreen: ClipboardCheck,
-  needs_alignment: AlertCircle,
-};
 
 function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
   return (
@@ -36,26 +20,6 @@ function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
         <span className="mt-1 text-xs text-muted-foreground">{label}</span>
       </div>
     </div>
-  );
-}
-
-function ActionItemRow({ item }: { item: ActionItem }) {
-  const Icon = ACTION_ITEM_ICON[item.type];
-  const href = item.candidate_id
-    ? `/projects/${item.project_id}/candidates/${item.candidate_id}`
-    : `/projects/${item.project_id}`;
-
-  return (
-    <Link
-      href={href}
-      className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors hover:bg-secondary"
-    >
-      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" />
-      <div className="flex flex-col">
-        <span className="text-foreground">{item.message}</span>
-        <span className="text-xs text-muted-foreground">{item.project_title}</span>
-      </div>
-    </Link>
   );
 }
 

@@ -21,11 +21,15 @@ import {
 } from "@/lib/status-display";
 
 export function CandidatesKanban({
-  projectId,
+  queryKey,
   candidates,
+  projectTitles,
 }: {
-  projectId: string;
+  queryKey: unknown[];
   candidates: Candidate[];
+  // Only needed for the cross-project Pipeline view, where which role a candidate belongs to
+  // isn't implicit from context the way it is inside a single role's own Candidates tab.
+  projectTitles?: Record<string, string>;
 }) {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -36,12 +40,12 @@ export function CandidatesKanban({
     const newStatus = event.over?.id as CandidateStatus | undefined;
     if (!newStatus) return;
 
-    const current = queryClient.getQueryData<Candidate[]>(["candidates", { projectId }]);
+    const current = queryClient.getQueryData<Candidate[]>(queryKey);
     const candidate = current?.find((c) => c.id === candidateId);
     if (!candidate || candidate.status === newStatus) return;
 
     // Optimistic move so the drag feels instant, then reconcile with the server.
-    queryClient.setQueryData<Candidate[]>(["candidates", { projectId }], (prev) =>
+    queryClient.setQueryData<Candidate[]>(queryKey, (prev) =>
       prev?.map((c) => (c.id === candidateId ? { ...c, status: newStatus } : c))
     );
     try {
@@ -53,7 +57,7 @@ export function CandidatesKanban({
         variant: "danger",
       });
     } finally {
-      void queryClient.invalidateQueries({ queryKey: ["candidates", { projectId }] });
+      void queryClient.invalidateQueries({ queryKey });
     }
   };
 
@@ -72,7 +76,10 @@ export function CandidatesKanban({
               count={byStatus(status).length}
             >
               {byStatus(status).map((candidate) => (
-                <Link key={candidate.id} href={`/projects/${projectId}/candidates/${candidate.id}`}>
+                <Link
+                  key={candidate.id}
+                  href={`/projects/${candidate.project_id}/candidates/${candidate.id}`}
+                >
                   <KanbanCard id={candidate.id}>
                     <div className="flex items-center gap-2.5">
                       <Avatar name={candidate.callsign} className="h-7 w-7 text-[10px]" />
@@ -83,6 +90,11 @@ export function CandidatesKanban({
                         <p className="truncate text-xs text-muted-foreground">
                           {candidate.candidate_ref}
                         </p>
+                        {projectTitles?.[candidate.project_id] && (
+                          <p className="truncate text-xs text-brand">
+                            {projectTitles[candidate.project_id]}
+                          </p>
+                        )}
                       </div>
                     </div>
 

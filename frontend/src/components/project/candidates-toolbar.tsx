@@ -20,7 +20,7 @@ export function CandidatesToolbar({
   matchCount,
   totalCount,
 }: {
-  projectId: string;
+  projectId?: string;
   search: string;
   onSearchChange: (value: string) => void;
   sourceFilter: CandidateSource | "all";
@@ -65,7 +65,7 @@ export function CandidatesToolbar({
         </span>
       </div>
 
-      <AddCandidateDialog projectId={projectId} />
+      {projectId && <AddCandidateDialog projectId={projectId} />}
     </div>
   );
 }

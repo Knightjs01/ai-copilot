@@ -28,6 +28,7 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
   const canViewShadowJobs = hasPermission("shadow_jobs.view");
   const canSearchCandidates = hasPermission("shadow_candidates.search");
   const canManageCompany = hasPermission("company.manage_settings");
+  const canViewPipeline = hasPermission("candidates.view");
 
   const handleLogout = async () => {
     await logout();
@@ -38,7 +39,7 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-3 items-center px-6">
         <div className="flex items-center gap-6 justify-self-start">
-          <Link href="/" aria-label="Phantom ATS home">
+          <Link href="/home" aria-label="Phantom ATS home">
             <Image
               src="/phantom-ats-wordmark.png"
               alt="Phantom ATS"
@@ -51,11 +52,25 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
           {user && (
             <nav className="flex items-center gap-4">
               <Link
+                href="/home"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Home
+              </Link>
+              <Link
                 href="/projects"
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                Projects
+                Roles
               </Link>
+              {canViewPipeline && (
+                <Link
+                  href="/pipeline"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Pipeline
+                </Link>
+              )}
               <Link
                 href="/team"
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"

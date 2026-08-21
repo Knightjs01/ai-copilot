@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+import uuid
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.dependencies import (
@@ -23,5 +25,8 @@ async def get_dashboard(
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
+    project_id: uuid.UUID | None = Query(default=None),
 ) -> DashboardStats:
-    return await DashboardService(session).get_dashboard_stats(company_id=actor.company_id)
+    return await DashboardService(session).get_dashboard_stats(
+        company_id=actor.company_id, project_id=project_id
+    )
