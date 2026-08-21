@@ -24,7 +24,7 @@ export type NoticePeriod =
   | "two_months"
   | "three_plus_months";
 
-export type RoleName = "Owner" | "Admin" | "Member";
+export type RoleName = "Owner" | "TA Admin" | "Recruiter" | "Hiring Manager" | "Interviewer";
 
 export interface UserRead {
   id: string;
@@ -87,6 +87,20 @@ export interface Project {
   hiring_manager_id: string | null;
   created_by_id: string;
   role_brief: string | null;
+  seniority: string | null;
+  location: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+}
+
+// A preview only -- nothing here is persisted until saved via PATCH /projects/{id}. See
+// CvParseResult for the identical convention this mirrors on the candidate side.
+export interface JdUploadResult {
+  role_brief: string;
+  seniority: string | null;
+  location: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
 }
 
 // Real name/email/phone/location/current_employer/current_title never appear on this type — they
@@ -185,6 +199,8 @@ export interface IntelligencePack {
   education: EducationEntry[];
   narrative_summary: string;
   highlights: string[];
+  industry: string | null;
+  years_experience: number | null;
   model_used: string;
   generated_at: string;
 }
@@ -665,6 +681,10 @@ export interface PassportVerification {
 
 export type CompanySizeBand = "1-10" | "11-50" | "51-200" | "201-500" | "500+";
 
+export type CompanyStatus = "approved" | "suspended";
+
+export type CompanyProfileStatus = "draft" | "pending_review" | "live" | "paused" | "suspended";
+
 export interface Company {
   id: string;
   name: string;
@@ -676,7 +696,11 @@ export interface Company {
   benefits: string[];
   size: CompanySizeBand | null;
   industry: string[];
-  is_profile_public: boolean;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  hiring_process_overview: string | null;
+  profile_status: CompanyProfileStatus;
+  status: CompanyStatus;
 }
 
 export interface CompanyUpdateInput {
@@ -685,10 +709,11 @@ export interface CompanyUpdateInput {
   benefits?: string[];
   size?: CompanySizeBand | null;
   industry?: string[];
-  is_profile_public?: boolean;
+  hiring_process_overview?: string | null;
 }
 
-// Public /companies/{slug} shape -- no id/email_domain/is_verified_domain.
+// Public /companies/{slug} shape (and the self-service preview shape) -- no id/email_domain/
+// is_verified_domain/profile_status.
 export interface CompanyProfile {
   name: string;
   slug: string;
@@ -697,6 +722,9 @@ export interface CompanyProfile {
   benefits: string[];
   size: CompanySizeBand | null;
   industry: string[];
+  logo_url: string | null;
+  cover_image_url: string | null;
+  hiring_process_overview: string | null;
 }
 
 export interface ShadowCareerEntrySummary {
@@ -850,6 +878,7 @@ export interface Interview {
   meeting_link: string | null;
   status: InterviewStatus;
   created_at: string;
+  interviewer_user_ids: string[];
 }
 
 // The candidate's flat "My Interviews" list embeds job/company/callsign context so the portal
@@ -920,4 +949,58 @@ export interface RevealedIdentity {
   phone: string | null;
   career_entries: RevealedCareerEntry[];
   revealed_at: string;
+}
+
+// Phantom internal staff -- a third, separate principal from company Users and candidates. See
+// backend platform_admin/__init__.py.
+export interface PlatformAdmin {
+  id: string;
+  email: string;
+  full_name: string;
+}
+
+export type AccessRequestStatus = "pending" | "approved" | "rejected";
+
+// The employer access-request queue -- the replacement for self-service company signup. See
+// backend company_access/__init__.py.
+export interface CompanyAccessRequest {
+  id: string;
+  full_name: string;
+  job_title: string | null;
+  company_name: string;
+  work_email: string;
+  status: AccessRequestStatus;
+  created_at: string;
+}
+
+export interface AccessRequestStats {
+  pending_requests: number;
+  approved_requests: number;
+  rejected_requests: number;
+  active_companies: number;
+  suspended_companies: number;
+}
+
+// The admin-facing company directory row -- leaner than the owning company's own Company shape,
+// includes admin-only fields (user_count) never returned to a company's own users.
+export interface AdminCompanySummary {
+  id: string;
+  name: string;
+  slug: string;
+  email_domain: string;
+  is_verified_domain: boolean;
+  status: CompanyStatus;
+  profile_status: CompanyProfileStatus;
+  user_count: number;
+  created_at: string;
+}
+
+export interface PlatformAdminAuditLogEntry {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  extra_data: Record<string, unknown>;
+  created_at: string;
 }

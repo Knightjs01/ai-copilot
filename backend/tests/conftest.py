@@ -56,6 +56,7 @@ from app.modules.phantom_passport.llm_client import (  # noqa: E402
     PassportExtraction,
 )
 from app.modules.prescreen_assessment.llm_client import AssessmentExtraction  # noqa: E402
+from app.modules.projects.llm_client import RoleFieldsExtraction  # noqa: E402
 
 
 def _admin_maintenance_dsn() -> str:
@@ -138,6 +139,8 @@ class FakeLLMClient:
             education=[EducationEntry(institution="Fake University", degree="BSc", field="CS")],
             narrative_summary="A fake but deterministic summary for testing.",
             highlights=["Fake highlight matching a hiring manager requirement."],
+            industry="Fintech",
+            years_experience=8,
         )
 
 
@@ -171,6 +174,30 @@ class FakeHiringBlueprintLLMClient:
 @pytest.fixture
 def fake_hiring_blueprint_llm_client() -> FakeHiringBlueprintLLMClient:
     return FakeHiringBlueprintLLMClient()
+
+
+class FakeProjectsLLMClient:
+    """Test double for app.modules.projects.llm_client.ProjectsLLMClient — returns a canned,
+    deterministic role-fields extraction instead of calling the real Claude API. Kept separate
+    from FakeHiringBlueprintLLMClient: different module, different domain (writes Project's own
+    fields, not HiringBlueprint's), different dependency override."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def extract_role_fields(self, *, role_brief: str, title: str) -> RoleFieldsExtraction:
+        self.calls.append(role_brief)
+        return RoleFieldsExtraction(
+            seniority="Senior",
+            location="Remote (UK)",
+            salary_min=90000,
+            salary_max=110000,
+        )
+
+
+@pytest.fixture
+def fake_projects_llm_client() -> FakeProjectsLLMClient:
+    return FakeProjectsLLMClient()
 
 
 class FakeInterviewKitLLMClient:
@@ -296,6 +323,7 @@ class FakePrescreenAssessmentLLMClient:
 
     def __init__(self) -> None:
         self.assessment_calls: list[list[str]] = []
+        self.assessment_call_kwargs: list[dict[str, object]] = []
         self.handoff_calls: list[str] = []
 
     async def generate_assessment(
@@ -303,13 +331,32 @@ class FakePrescreenAssessmentLLMClient:
         *,
         role_summary: str,
         must_have_qualifications: list[str],
+        nice_to_have_qualifications: list[str],
+        key_responsibilities: list[str],
         evaluation_criteria: list[str],
         top_requirements: list[str],
         candidate_skills: list[str],
         candidate_experience_summary: str,
         candidate_education: list[dict[str, str]],
+        candidate_industry: str | None,
+        candidate_years_experience: int | None,
     ) -> AssessmentExtraction:
         self.assessment_calls.append(top_requirements)
+        self.assessment_call_kwargs.append(
+            {
+                "role_summary": role_summary,
+                "must_have_qualifications": must_have_qualifications,
+                "nice_to_have_qualifications": nice_to_have_qualifications,
+                "key_responsibilities": key_responsibilities,
+                "evaluation_criteria": evaluation_criteria,
+                "top_requirements": top_requirements,
+                "candidate_skills": candidate_skills,
+                "candidate_experience_summary": candidate_experience_summary,
+                "candidate_education": candidate_education,
+                "candidate_industry": candidate_industry,
+                "candidate_years_experience": candidate_years_experience,
+            }
+        )
         return AssessmentExtraction(
             fit_rating="Good Fit",
             fit_summary="A fake but deterministic fit summary for testing.",
@@ -410,6 +457,7 @@ async def client(
     fake_passport_llm_client: FakePassportLLMClient,
     fake_passport_matching_llm_client: FakePassportMatchingLLMClient,
     fake_copilot_llm_client: FakeCopilotLLMClient,
+    fake_projects_llm_client: FakeProjectsLLMClient,
     test_storage: EncryptingFileStorage,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
@@ -426,6 +474,7 @@ async def client(
         get_llm_client as get_passport_llm_client,
     )
     from app.modules.prescreen_assessment.dependencies import get_prescreen_assessment_llm_client
+    from app.modules.projects.dependencies import get_projects_llm_client
 
     app.dependency_overrides[get_email_sender] = lambda: sent_emails
     app.dependency_overrides[get_file_storage] = lambda: test_storage
@@ -442,6 +491,7 @@ async def client(
         lambda: fake_passport_matching_llm_client
     )
     app.dependency_overrides[get_copilot_llm_client] = lambda: fake_copilot_llm_client
+    app.dependency_overrides[get_projects_llm_client] = lambda: fake_projects_llm_client
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -456,3 +506,4 @@ async def client(
         app.dependency_overrides.pop(get_passport_llm_client, None)
         app.dependency_overrides.pop(get_passport_matching_llm_client, None)
         app.dependency_overrides.pop(get_copilot_llm_client, None)
+        app.dependency_overrides.pop(get_projects_llm_client, None)
