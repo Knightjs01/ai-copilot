@@ -11,6 +11,7 @@ from app.modules.hiring_blueprint.service import HiringBlueprintService
 from app.modules.interview_kit.exceptions import (
     InterviewKitGenerationError,
     InterviewKitNotFoundError,
+    InterviewKitSelectionMismatchError,
     MissingHiringBlueprintError,
 )
 from app.modules.interview_kit.llm_client import InterviewKitLLMClient, LLMRequestError
@@ -69,6 +70,7 @@ class InterviewKitService:
                     "source_text": source_text,
                     "question_text": draft.question_text,
                     "follow_up_prompts": draft.follow_up_prompts,
+                    "included": False,
                 }
             )
 
@@ -94,4 +96,23 @@ class InterviewKitService:
         kit = await self._repository.get_by_project_id(project_id)
         if kit is None or kit.company_id != company_id or kit.deleted_at is not None:
             raise InterviewKitNotFoundError()
+        return kit
+
+    async def update_selected_questions(
+        self, *, actor: User, project_id: uuid.UUID, included_flags: list[bool]
+    ) -> InterviewKit:
+        kit = await self.get_kit(company_id=actor.company_id, project_id=project_id)
+        if len(included_flags) != len(kit.questions):
+            raise InterviewKitSelectionMismatchError()
+
+        kit = await self._repository.update_included_flags(kit, included_flags=included_flags)
+
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="project.interview_kit_selection_updated",
+            target_type="project",
+            target_id=project_id,
+            extra_data={"selected_count": sum(included_flags)},
+        )
         return kit

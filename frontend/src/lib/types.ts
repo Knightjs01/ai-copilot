@@ -167,6 +167,7 @@ export interface InterviewKitQuestion {
   source_text: string;
   question_text: string;
   follow_up_prompts: string[];
+  included: boolean;
 }
 
 export interface InterviewKit {

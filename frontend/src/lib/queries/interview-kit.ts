@@ -24,3 +24,16 @@ export function useGenerateInterviewKit(projectId: string) {
     },
   });
 }
+
+export function useUpdateInterviewKitSelection(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (includedFlags: boolean[]) =>
+      apiClient.patch<InterviewKit>(`/projects/${projectId}/interview-kit/selection`, {
+        included_flags: includedFlags,
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["interview-kit", projectId], data);
+    },
+  });
+}

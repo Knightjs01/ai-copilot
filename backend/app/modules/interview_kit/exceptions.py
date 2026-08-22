@@ -19,3 +19,8 @@ class MissingHiringBlueprintError(InterviewKitError):
 class InterviewKitGenerationError(InterviewKitError):
     status_code = 502
     detail = "Could not generate the interview kit — the AI provider request failed"
+
+
+class InterviewKitSelectionMismatchError(InterviewKitError):
+    status_code = 400
+    detail = "This selection doesn't match the current kit — reload and try again"

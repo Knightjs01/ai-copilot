@@ -46,6 +46,17 @@ class InterviewKitRepository:
         await self._session.flush()
         return kit
 
+    async def update_included_flags(
+        self, kit: InterviewKit, *, included_flags: list[bool]
+    ) -> InterviewKit:
+        updated = [
+            {**question, "included": flag}
+            for question, flag in zip(kit.questions, included_flags, strict=True)
+        ]
+        kit.questions = updated
+        await self._session.flush()
+        return kit
+
     async def delete_by_project_id(self, project_id: uuid.UUID) -> None:
         await self._session.execute(
             delete(InterviewKit).where(InterviewKit.project_id == project_id)

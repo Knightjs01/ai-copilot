@@ -14,7 +14,7 @@ from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.interview_kit.dependencies import get_interview_kit_llm_client
 from app.modules.interview_kit.llm_client import InterviewKitLLMClient
-from app.modules.interview_kit.schemas import InterviewKitRead
+from app.modules.interview_kit.schemas import InterviewKitRead, InterviewKitSelectionUpdate
 from app.modules.interview_kit.service import InterviewKitService
 
 router = APIRouter(
@@ -45,5 +45,19 @@ async def get_interview_kit(
 ) -> InterviewKitRead:
     kit = await InterviewKitService(session).get_kit(
         company_id=actor.company_id, project_id=project_id
+    )
+    return InterviewKitRead.model_validate(kit)
+
+
+@router.patch("/{project_id}/interview-kit/selection", response_model=InterviewKitRead)
+async def update_interview_kit_selection(
+    project_id: uuid.UUID,
+    body: InterviewKitSelectionUpdate,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> InterviewKitRead:
+    kit = await InterviewKitService(session).update_selected_questions(
+        actor=actor, project_id=project_id, included_flags=body.included_flags
     )
     return InterviewKitRead.model_validate(kit)

@@ -155,6 +155,83 @@ async def test_rls_blocks_cross_tenant_interview_kit_reads(client: AsyncClient) 
             assert cross_tenant_query.fetchall() == []
 
 
+async def test_update_interview_kit_selection_happy_path(
+    client: AsyncClient, fake_interview_kit_llm_client: FakeInterviewKitLLMClient
+) -> None:
+    owner = await signup(client, email="owner@kitselect.com", company_name="Kit Select Co")
+    headers = auth_headers(owner["access_token"])
+    project_id = await _create_project_with_blueprint(
+        client, headers=headers, role_brief="A role brief."
+    )
+    generate_response = await client.post(
+        f"/api/v1/projects/{project_id}/interview-kit", headers=headers
+    )
+    kit = generate_response.json()
+    assert all(q["included"] is False for q in kit["questions"])
+
+    select_response = await client.patch(
+        f"/api/v1/projects/{project_id}/interview-kit/selection",
+        json={"included_flags": [True, False, True]},
+        headers=headers,
+    )
+    assert select_response.status_code == 200, select_response.text
+    updated = select_response.json()["questions"]
+    assert [q["included"] for q in updated] == [True, False, True]
+    # Everything else about each question is untouched by a selection update.
+    assert [q["question_text"] for q in updated] == [q["question_text"] for q in kit["questions"]]
+
+    # Persisted -- a fresh GET reflects it.
+    get_response = await client.get(f"/api/v1/projects/{project_id}/interview-kit", headers=headers)
+    assert [q["included"] for q in get_response.json()["questions"]] == [True, False, True]
+
+
+async def test_update_interview_kit_selection_rejects_mismatched_length(
+    client: AsyncClient, fake_interview_kit_llm_client: FakeInterviewKitLLMClient
+) -> None:
+    owner = await signup(client, email="owner@kitmismatch.com", company_name="Kit Mismatch Co")
+    headers = auth_headers(owner["access_token"])
+    project_id = await _create_project_with_blueprint(
+        client, headers=headers, role_brief="A role brief."
+    )
+    await client.post(f"/api/v1/projects/{project_id}/interview-kit", headers=headers)
+
+    response = await client.patch(
+        f"/api/v1/projects/{project_id}/interview-kit/selection",
+        json={"included_flags": [True, False]},  # kit has 3 questions, not 2
+        headers=headers,
+    )
+    assert response.status_code == 400
+
+
+async def test_update_interview_kit_selection_requires_permission(
+    client: AsyncClient,
+    sent_emails: CapturingEmailSender,
+    fake_interview_kit_llm_client: FakeInterviewKitLLMClient,
+) -> None:
+    owner = await signup(client, email="owner@kitselectperm.com", company_name="Kit Select Perm")
+    owner_headers = auth_headers(owner["access_token"])
+    project_id = await _create_project_with_blueprint(
+        client, headers=owner_headers, role_brief="A role brief."
+    )
+    await client.post(f"/api/v1/projects/{project_id}/interview-kit", headers=owner_headers)
+
+    member = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="member@kitselectperm.com",
+        role="Recruiter",
+        sent_emails=sent_emails,
+    )
+    member_headers = auth_headers(member["access_token"])
+
+    response = await client.patch(
+        f"/api/v1/projects/{project_id}/interview-kit/selection",
+        json={"included_flags": [True, False, True]},
+        headers=member_headers,
+    )
+    assert response.status_code == 403
+
+
 async def test_app_auth_role_has_no_grants_on_interview_kits() -> None:
     from app.core.config import get_settings
     from sqlalchemy.ext.asyncio import create_async_engine
