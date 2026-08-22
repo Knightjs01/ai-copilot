@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Plus, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
 const MAX_REQUIREMENTS = 5;
 
 export function HiringManagerAlignmentCard({ projectId }: { projectId: string }) {
+  const router = useRouter();
   const { data: alignment, isLoading } = useHiringManagerAlignment(projectId);
   const submit = useSubmitHiringManagerAlignment(projectId);
 
@@ -97,6 +99,16 @@ export function HiringManagerAlignmentCard({ projectId }: { projectId: string })
             Last saved {formatDistanceToNow(new Date(alignment.submitted_at), { addSuffix: true })}
           </p>
         )}
+
+        <Button
+          type="button"
+          variant="secondary"
+          className="mt-1 self-start"
+          onClick={() => router.push(`/projects/${projectId}?tab=blueprint`)}
+        >
+          Create Hiring Blueprint
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
       </CardContent>
     </Card>
   );

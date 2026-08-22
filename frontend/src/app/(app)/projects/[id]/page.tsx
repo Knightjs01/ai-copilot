@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useProject } from "@/lib/queries/projects";
 
 type ProjectTab = "overview" | "blueprint" | "candidates" | "vault";
+const PROJECT_TABS: ProjectTab[] = ["overview", "blueprint", "candidates", "vault"];
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
@@ -32,7 +33,7 @@ export default function ProjectDetailPage() {
 
   React.useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "candidates") setActiveTab("candidates");
+    if (PROJECT_TABS.includes(tab as ProjectTab)) setActiveTab(tab as ProjectTab);
   }, [searchParams]);
 
   const tabOptions: { value: ProjectTab; label: string }[] = [
