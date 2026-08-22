@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
-import { LiveRolePreviewFrame } from "@/components/project/live-role-preview";
+import { LiveRoleLink } from "@/components/project/live-role-preview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -206,9 +206,14 @@ export function ApproveProjectDialog({
                 </DialogDescription>
               </DialogHeader>
               {shadowJob ? (
-                <LiveRolePreviewFrame jobId={shadowJob.id} />
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-3">
+                  <p className="text-sm text-muted-foreground">
+                    This is exactly what candidates see on the public job board.
+                  </p>
+                  <LiveRoleLink jobId={shadowJob.id} label="Open live role" />
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Loading preview…</p>
+                <p className="text-sm text-muted-foreground">Loading…</p>
               )}
               <DialogFooter>
                 <Button

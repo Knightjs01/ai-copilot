@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AlertTriangle, Bookmark, BookmarkCheck, Briefcase, CheckCircle2, MapPin } from "lucide-react";
@@ -13,8 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { ApiError } from "@/lib/api-client";
+import { API_URL, ApiError } from "@/lib/api-client";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import { useCompanyProfile } from "@/lib/queries/company";
 import { useJobMatch } from "@/lib/queries/passport-matching";
 import { useSaveJob, useSavedJobs, useUnsaveJob } from "@/lib/queries/saved-jobs";
 import { useApplyToShadowJob, useShadowBoardJob } from "@/lib/queries/shadow-jobs";
@@ -77,6 +79,7 @@ export default function ShadowJobDetailPage() {
   const router = useRouter();
   const { candidate, isLoading: authLoading } = useCandidateAuth();
   const { data: job, isLoading } = useShadowBoardJob(params.jobId);
+  const { data: companyProfile } = useCompanyProfile(job?.company_slug ?? undefined);
   const applyMutation = useApplyToShadowJob(params.jobId);
   const { data: savedJobs } = useSavedJobs({ enabled: !!candidate });
   const isSaved = !!savedJobs?.some((saved) => saved.job.id === params.jobId);
@@ -149,7 +152,38 @@ export default function ShadowJobDetailPage() {
 
         {job && (
           <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-card">
+                  {companyProfile?.logo_url ? (
+                    <Image
+                      src={`${API_URL}${companyProfile.logo_url}`}
+                      alt={`${job.company_name} logo`}
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-base font-semibold text-muted-foreground">
+                      {job.company_name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {job.company_name}
+                  </p>
+                  {job.company_slug && (
+                    <Link
+                      href={`/shadow/companies/${job.company_slug}`}
+                      className="text-xs text-brand underline-offset-2 hover:underline"
+                    >
+                      View company profile
+                    </Link>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                   {job.title}
@@ -177,20 +211,6 @@ export default function ShadowJobDetailPage() {
                   </Button>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">
-                {job.company_name}
-                {job.company_slug && (
-                  <>
-                    {" · "}
-                    <Link
-                      href={`/shadow/companies/${job.company_slug}`}
-                      className="text-brand underline-offset-2 hover:underline"
-                    >
-                      View company profile
-                    </Link>
-                  </>
-                )}
-              </p>
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 {job.location && (
                   <span className="flex items-center gap-1">

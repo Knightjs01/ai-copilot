@@ -12,7 +12,7 @@ import { HiringBlueprintCard } from "@/components/project/hiring-blueprint-card"
 import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-alignment-card";
 import { IdentityVaultTab } from "@/components/project/identity-vault-tab";
 import { InterviewKitCard } from "@/components/project/interview-kit-card";
-import { LiveRolePreviewDialog } from "@/components/project/live-role-preview";
+import { LiveRoleLink } from "@/components/project/live-role-preview";
 import { ProjectAnalyticsCard } from "@/components/project/project-analytics-card";
 import { RoleHealthCard } from "@/components/project/role-health-card";
 import { RoleInfoCard } from "@/components/project/role-info-card";
@@ -137,7 +137,7 @@ export default function ProjectDetailPage() {
           {project.title}
         </h1>
         <div className="flex items-center gap-2">
-          {shadowJob?.status === "published" && <LiveRolePreviewDialog jobId={shadowJob.id} />}
+          {shadowJob?.status === "published" && <LiveRoleLink jobId={shadowJob.id} />}
           {canEditProject && <EditProjectDialog project={project} />}
           {canEditProject && <ApproveProjectDialog project={project} />}
           <BurnProjectDialog projectId={project.id} projectTitle={project.title} />
