@@ -39,7 +39,7 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
     { label: "Jobs", href: "/projects", icon: Briefcase },
     { label: "Candidates", href: "/pipeline", icon: Users, permission: "candidates.view" },
     { label: "Interviews", href: "/interviews", icon: Video, permission: "interviews.view" },
-    { label: "Phantom AI", href: "/phantom-ai", icon: Sparkles },
+    { label: "Discover Talent", href: "/phantom-ai", icon: Sparkles },
     { label: "Analytics", href: "/analytics", icon: BarChart3 },
   ];
 

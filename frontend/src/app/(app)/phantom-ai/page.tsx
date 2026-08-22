@@ -19,7 +19,7 @@ const GROUPS: { heading: string; items: AiFeature[] }[] = [
     heading: "Matches",
     items: [
       {
-        title: "Search Candidates",
+        title: "Phantom Smart Talent",
         description: "AI-ranked candidates from the discoverable Shadow pool, matched to a role.",
         href: "/search-candidates",
         icon: Search,
@@ -60,7 +60,7 @@ export default function PhantomAiHubPage() {
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
           <Sparkles className="h-5 w-5 text-brand" />
-          Phantom AI
+          Discover Talent
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           A directory of the real AI-generation features already built into Phantom — every card

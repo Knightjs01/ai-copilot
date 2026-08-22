@@ -40,7 +40,7 @@ export default function SearchCandidatesPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Phantom Smart Matches
+          Phantom Smart Talent
         </h1>
         <p className="text-sm text-muted-foreground">
           Pick a role to see discoverable Shadow candidates ranked by AI match.
