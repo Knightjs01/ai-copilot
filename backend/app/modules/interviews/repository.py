@@ -80,6 +80,18 @@ class InterviewRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_application_ids(
+        self, shadow_application_ids: list[uuid.UUID]
+    ) -> list[Interview]:
+        """Bulk lookup, any status -- used by DashboardService to tell whether an interview has
+        ever been arranged for an application at all, not just whether one is upcoming."""
+        if not shadow_application_ids:
+            return []
+        result = await self._session.execute(
+            select(Interview).where(Interview.shadow_application_id.in_(shadow_application_ids))
+        )
+        return list(result.scalars().all())
+
     async def delete_by_shadow_application_ids(
         self, shadow_application_ids: list[uuid.UUID]
     ) -> None:

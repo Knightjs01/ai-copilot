@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   AlertCircle,
   CalendarClock,
+  CalendarPlus,
   ClipboardCheck,
   Eye,
   type LucideIcon,
@@ -12,6 +13,7 @@ import type { ActionItem, ActionItemType } from "@/lib/types";
 
 export const ACTION_ITEM_ICON: Record<ActionItemType, LucideIcon> = {
   reveal_response_needs_review: Eye,
+  needs_interview_arranged: CalendarPlus,
   ready_to_advance: TrendingUp,
   needs_interview_scheduling: CalendarClock,
   needs_prescreen: ClipboardCheck,

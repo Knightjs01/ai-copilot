@@ -306,6 +306,7 @@ export interface PurgeCertificate {
 
 export type ActionItemType =
   | "reveal_response_needs_review"
+  | "needs_interview_arranged"
   | "ready_to_advance"
   | "needs_interview_scheduling"
   | "needs_prescreen"
@@ -319,8 +320,8 @@ export interface ActionItem {
   project_title: string | null;
   candidate_id: string | null;
   candidate_callsign: string | null;
-  // Only set for reveal_response_needs_review items -- links straight to the real applicant
-  // card, which has no ATS Candidate/project route equivalent.
+  // Only set for Shadow-applicant items (reveal_response_needs_review, needs_interview_arranged)
+  // -- links straight to the real applicant card, which has no ATS Candidate/project equivalent.
   shadow_job_id: string | null;
   application_id: string | null;
 }

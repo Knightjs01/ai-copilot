@@ -331,3 +331,82 @@ async def test_dashboard_reveal_action_item_scoped_to_project(client: AsyncClien
     ]
     assert len(reveal_items) == 1
     assert reveal_items[0]["shadow_job_id"] == job_a["id"]
+
+
+async def test_dashboard_flags_revealed_applicant_needing_interview_arranged(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@dashboard-arrange.com", company_name="Arrange Co")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application = await _apply_and_get_reveal_response(
+        client,
+        headers=headers,
+        job_id=job["id"],
+        email="candidate@dashboard-arrange.com",
+        approve=True,
+    )
+
+    response = await client.get("/api/v1/dashboard", headers=headers)
+    assert response.status_code == 200, response.text
+    items = [
+        i for i in response.json()["action_items"] if i["type"] == "needs_interview_arranged"
+    ]
+    assert len(items) == 1
+    item = items[0]
+    assert item["shadow_job_id"] == job["id"]
+    assert item["application_id"] == application["id"]
+    assert application["callsign"] in item["message"]
+
+    schedule = await client.post(
+        f"/api/v1/interviews/mine/{job['id']}/applicants/{application['id']}",
+        json={"scheduled_at": "2099-01-01T10:00:00Z"},
+        headers=headers,
+    )
+    assert schedule.status_code == 201, schedule.text
+
+    after_scheduling = await client.get("/api/v1/dashboard", headers=headers)
+    remaining = [
+        i
+        for i in after_scheduling.json()["action_items"]
+        if i["type"] == "needs_interview_arranged"
+    ]
+    assert remaining == []
+
+
+async def test_dashboard_interview_arranged_item_excludes_declined_and_rejected(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@dashboard-arrange-excl.com")
+    headers = auth_headers(owner["access_token"])
+
+    declined_job = await _create_and_publish_job(client, headers=headers)
+    await _apply_and_get_reveal_response(
+        client,
+        headers=headers,
+        job_id=declined_job["id"],
+        email="candidate@dashboard-arrange-declined.com",
+        approve=False,
+    )
+
+    rejected_job = await _create_and_publish_job(client, headers=headers)
+    rejected_application = await _apply_and_get_reveal_response(
+        client,
+        headers=headers,
+        job_id=rejected_job["id"],
+        email="candidate@dashboard-arrange-rejected.com",
+        approve=True,
+    )
+    reject_response = await client.patch(
+        f"/api/v1/shadow-jobs/mine/{rejected_job['id']}/applicants/{rejected_application['id']}",
+        json={"pipeline_stage": "rejected"},
+        headers=headers,
+    )
+    assert reject_response.status_code == 200, reject_response.text
+
+    response = await client.get("/api/v1/dashboard", headers=headers)
+    assert response.status_code == 200, response.text
+    items = [
+        i for i in response.json()["action_items"] if i["type"] == "needs_interview_arranged"
+    ]
+    assert items == []

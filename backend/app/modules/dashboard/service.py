@@ -6,10 +6,16 @@ from app.modules.candidates.models import Candidate, CandidateStatus
 from app.modules.candidates.repository import CandidateRepository
 from app.modules.dashboard.schemas import ActionItem, DashboardStats
 from app.modules.hiring_manager_alignment.repository import HiringManagerAlignmentRepository
+from app.modules.interviews.repository import InterviewRepository
 from app.modules.prescreen_assessment.repository import PrescreenAssessmentRepository
 from app.modules.projects.models import Project, ProjectStatus
 from app.modules.projects.repository import ProjectRepository
-from app.modules.shadow_jobs.models import ShadowApplication, ShadowJob
+from app.modules.shadow_jobs.models import (
+    ShadowApplication,
+    ShadowApplicationStatus,
+    ShadowJob,
+    ShadowPipelineStage,
+)
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 from app.modules.shadow_reveal.models import RevealRequestStatus, ShadowRevealRequest
 from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
@@ -54,6 +60,7 @@ class DashboardService:
         self._shadow_applications = ShadowApplicationRepository(session)
         self._shadow_jobs = ShadowJobRepository(session)
         self._reveal_requests = ShadowRevealRequestRepository(session)
+        self._interviews = InterviewRepository(session)
 
     async def get_dashboard_stats(
         self, *, company_id: uuid.UUID, project_id: uuid.UUID | None = None
@@ -79,6 +86,9 @@ class DashboardService:
         unseen_reveals = await self._resolve_unseen_reveal_responses(
             company_id=company_id, project_id=project_id
         )
+        needs_interview_arranged = await self._resolve_needs_interview_arranged(
+            company_id=company_id, project_id=project_id
+        )
 
         action_items = self._build_action_items(
             projects=projects,
@@ -88,6 +98,7 @@ class DashboardService:
             assessed_candidate_ids=assessed_candidate_ids,
             aligned_project_ids=aligned_project_ids,
             unseen_reveals=unseen_reveals,
+            needs_interview_arranged=needs_interview_arranged,
         )
 
         max_items = len(action_items) if project_id is not None else _MAX_ACTION_ITEMS
@@ -120,6 +131,39 @@ class DashboardService:
             resolved.append((request, application, job))
         return resolved
 
+    async def _resolve_needs_interview_arranged(
+        self, *, company_id: uuid.UUID, project_id: uuid.UUID | None
+    ) -> list[tuple[ShadowApplication, ShadowJob]]:
+        """Applicants who revealed their identity (which only ever happens after the company
+        requested it -- "expressed interest") but have no interview arranged yet. Rejected
+        applicants are excluded -- a recruiter who's already passed on someone doesn't need to be
+        told to interview them. Any interview record at all (not just an upcoming one) counts as
+        "arranged", so this clears the moment one is scheduled even if it's later completed."""
+        applications = await self._shadow_applications.list_by_company_id(company_id)
+        revealed = [
+            a
+            for a in applications
+            if a.status == ShadowApplicationStatus.REVEALED.value
+            and a.pipeline_stage != ShadowPipelineStage.REJECTED.value
+        ]
+        if not revealed:
+            return []
+        arranged_ids = {
+            i.shadow_application_id
+            for i in await self._interviews.list_by_application_ids([a.id for a in revealed])
+        }
+        resolved: list[tuple[ShadowApplication, ShadowJob]] = []
+        for application in revealed:
+            if application.id in arranged_ids:
+                continue
+            job = await self._shadow_jobs.get_by_id(application.shadow_job_id)
+            if job is None:
+                continue
+            if project_id is not None and job.project_id != project_id:
+                continue
+            resolved.append((application, job))
+        return resolved
+
     def _build_action_items(
         self,
         *,
@@ -130,6 +174,7 @@ class DashboardService:
         assessed_candidate_ids: set[uuid.UUID],
         aligned_project_ids: set[uuid.UUID],
         unseen_reveals: list[tuple[ShadowRevealRequest, ShadowApplication, ShadowJob]],
+        needs_interview_arranged: list[tuple[ShadowApplication, ShadowJob]],
     ) -> list[ActionItem]:
         items: list[ActionItem] = []
 
@@ -142,6 +187,24 @@ class DashboardService:
                 ActionItem(
                     type="reveal_response_needs_review",
                     message=f"{application.callsign} {verb} your reveal request for {job.title}",
+                    project_id=job.project_id,
+                    project_title=job.title,
+                    candidate_id=None,
+                    candidate_callsign=application.callsign,
+                    shadow_job_id=job.id,
+                    application_id=application.id,
+                )
+            )
+
+        # Next priority — identity's revealed, the ball's in our court to set up time.
+        for application, job in needs_interview_arranged:
+            items.append(
+                ActionItem(
+                    type="needs_interview_arranged",
+                    message=(
+                        f"{application.callsign} revealed their identity — "
+                        f"arrange an interview for {job.title}"
+                    ),
                     project_id=job.project_id,
                     project_title=job.title,
                     candidate_id=None,

@@ -11,8 +11,9 @@ class ActionItem(BaseModel):
     project_title: str | None
     candidate_id: uuid.UUID | None
     candidate_callsign: str | None
-    # Only set for reveal-response items -- the shadow_job_id + application_id needed to link
-    # straight to the real applicant card, which has no ATS Candidate/project route equivalent.
+    # Only set for Shadow-applicant items (reveal-response review, arrange-interview) -- the
+    # shadow_job_id + application_id needed to link straight to the real applicant card, which
+    # has no ATS Candidate/project route equivalent.
     shadow_job_id: uuid.UUID | None = None
     application_id: uuid.UUID | None = None
 
