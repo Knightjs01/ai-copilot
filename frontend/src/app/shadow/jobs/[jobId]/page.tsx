@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { AlertTriangle, Bookmark, BookmarkCheck, Briefcase, CheckCircle2, MapPin } from "lucide-react";
 
 import { ApplyDisclosureDialog } from "@/components/candidate/apply-disclosure-dialog";
+import { FormattedText } from "@/components/formatted-text";
 import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
 import { ShadowTopNav } from "@/components/shadow/shadow-top-nav";
 import { Badge } from "@/components/ui/badge";
@@ -212,7 +213,7 @@ export default function ShadowJobDetailPage() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
               <Card>
                 <CardContent className="flex flex-col gap-4 py-6">
-                  <p className="whitespace-pre-line text-sm text-foreground">{job.description}</p>
+                  <FormattedText text={job.description} className="text-sm text-foreground" />
                   {job.requirements.length > 0 && (
                     <div className="flex flex-col gap-2">
                       <h3 className="text-sm font-semibold text-foreground">Requirements</h3>
