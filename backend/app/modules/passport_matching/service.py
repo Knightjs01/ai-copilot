@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -6,8 +7,11 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.modules.auth.email import EmailSender, build_talent_pool_match_email
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.candidate_auth.repository import CandidateUserRepository
+from app.modules.companies.models import Company
 from app.modules.hiring_blueprint.models import HiringBlueprint
 from app.modules.hiring_blueprint.repository import HiringBlueprintRepository
 from app.modules.hiring_manager_alignment.models import HiringManagerAlignment
@@ -32,6 +36,7 @@ from app.modules.passport_matching.schemas import (
     CandidateSearchResult,
     PassportJobMatchRead,
     TalentPoolMatchResult,
+    TalentPoolOpportunity,
 )
 from app.modules.phantom_passport.repository import (
     PassportCareerEntryRepository,
@@ -39,13 +44,16 @@ from app.modules.phantom_passport.repository import (
     PhantomPassportRepository,
 )
 from app.modules.shadow_jobs.models import ShadowJob, ShadowJobStatus
-from app.modules.shadow_jobs.repository import ShadowJobRepository
+from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 from app.modules.talent_pool.models import TalentPoolGrant, TalentPoolScope
 from app.modules.talent_pool.repository import TalentPoolGrantRepository
+
+logger = logging.getLogger("app.passport_matching.service")
 
 _MAX_BATCH_JOBS = 24
 _MAX_SEARCH_RESULTS = 24
 _COMPUTE_CONCURRENCY = 5
+_NOTIFY_MIN_TIER = {"Excellent Match", "Strong Match", "Potential Match"}
 
 
 def _job_facts(
@@ -81,18 +89,26 @@ def _job_facts(
 
 class PassportMatchingService:
     def __init__(
-        self, session: AsyncSession, llm_client: PassportMatchingLLMClient | None = None
+        self,
+        session: AsyncSession,
+        llm_client: PassportMatchingLLMClient | None = None,
+        *,
+        email_sender: EmailSender | None = None,
     ) -> None:
+        self._session = session
         self._settings = get_settings()
         self._matches = PassportJobMatchRepository(session)
         self._passports = PhantomPassportRepository(session)
         self._versions = PassportVersionRepository(session)
         self._career_entries = PassportCareerEntryRepository(session)
         self._jobs = ShadowJobRepository(session)
+        self._applications = ShadowApplicationRepository(session)
         self._blueprints = HiringBlueprintRepository(session)
         self._alignments = HiringManagerAlignmentRepository(session)
         self._talent_pool_grants = TalentPoolGrantRepository(session)
+        self._candidate_users = CandidateUserRepository(session)
         self._llm_client = llm_client
+        self._email_sender = email_sender
 
     async def _resolve_approved_passport_version_id(self, candidate: CandidateUser) -> uuid.UUID:
         passport = await self._passports.get_by_candidate_user_id(candidate.id)
@@ -390,6 +406,9 @@ class PassportMatchingService:
 
         scored = await asyncio.gather(*(_score_one(g) for g in grants))
 
+        company = await self._session.get(Company, job.company_id)
+        job_url = f"{self._settings.frontend_base_url}/shadow/jobs/{job.id}"
+
         results: list[TalentPoolMatchResult] = []
         for grant, passport, draft in scored:
             if draft is None or passport is None:
@@ -397,6 +416,7 @@ class PassportMatchingService:
             match = await self._persist_match(
                 passport_version_id=passport.current_version_id, job=job, draft=draft
             )
+            await self._maybe_notify_candidate_of_match(match, company=company, job_url=job_url)
             career_entries = await self._career_entries.list_by_passport_id(passport.id)
             results.append(
                 TalentPoolMatchResult(
@@ -434,6 +454,93 @@ class PassportMatchingService:
 
         results.sort(key=lambda r: r.match_score, reverse=True)
         return results[:_MAX_SEARCH_RESULTS]
+
+    async def _maybe_notify_candidate_of_match(
+        self, match: PassportJobMatch, *, company: Company | None, job_url: str
+    ) -> None:
+        """Emails the candidate once per (passport_version, shadow_job) match -- never twice, and
+        never for a Weak Match (still visible everywhere in-app, just not worth an inbox
+        interruption). Mirrors JobAlertService.notify_matching_alerts's exact discipline: a send
+        failure must never fail the recruiter's search request it's riding along with."""
+        if (
+            self._email_sender is None
+            or match.candidate_notified_at is not None
+            or match.match_tier not in _NOTIFY_MIN_TIER
+            or company is None
+        ):
+            return
+
+        passport_version = await self._versions.get_by_id(match.passport_version_id)
+        if passport_version is None:
+            return
+        passport = await self._passports.get_by_id(passport_version.passport_id)
+        if passport is None:
+            return
+        candidate = await self._candidate_users.get_by_id(passport.candidate_user_id)
+        if candidate is None:
+            return
+
+        subject, body = build_talent_pool_match_email(company_name=company.name, job_url=job_url)
+        try:
+            await self._email_sender.send(to=candidate.email, subject=subject, body=body)
+        except Exception:
+            logger.exception(
+                "Failed to send Talent Pool match email to candidate %s for match %s",
+                candidate.id,
+                match.id,
+            )
+            return
+        await self._matches.mark_candidate_notified(match.id)
+
+    async def list_talent_pool_opportunities(
+        self, *, candidate: CandidateUser
+    ) -> list[TalentPoolOpportunity]:
+        """The candidate's own view of real matches companies have computed against their Talent
+        Pool grants -- the other half of the opportunity workflow: search_talent_pool_for_job
+        computes and (optionally) emails about a match, this is what the candidate actually sees
+        when they follow up in the app."""
+        passport_version_id = await self._resolve_approved_passport_version_id(candidate)
+        company_ids = await self._talent_pool_grants.list_granted_company_ids_by_candidate(
+            candidate.id
+        )
+        if not company_ids:
+            return []
+
+        matches = await self._matches.list_by_candidate_version_and_companies(
+            passport_version_id=passport_version_id, company_ids=company_ids
+        )
+
+        opportunities: list[TalentPoolOpportunity] = []
+        for match in matches:
+            job = await self._jobs.get_by_id(match.shadow_job_id)
+            if job is None or job.deleted_at is not None:
+                continue
+            if job.status != ShadowJobStatus.PUBLISHED.value:
+                continue
+            existing_application = await self._applications.get_by_job_and_candidate(
+                shadow_job_id=job.id, candidate_user_id=candidate.id
+            )
+            if existing_application is not None:
+                # Already tracked on the candidate's own Applications page -- showing it again
+                # here as a fresh "opportunity" would just be a confusing duplicate.
+                continue
+            company = await self._session.get(Company, job.company_id)
+            opportunities.append(
+                TalentPoolOpportunity(
+                    job_id=job.id,
+                    job_title=job.title,
+                    company_name=company.name if company else "Unknown company",
+                    match_tier=match.match_tier,  # type: ignore[arg-type]
+                    match_score=match.match_score,
+                    match_summary=match.summary,
+                    strengths=match.strengths,
+                    gaps=match.gaps,
+                    generated_at=match.generated_at,
+                )
+            )
+
+        opportunities.sort(key=lambda o: o.match_score, reverse=True)
+        return opportunities
 
     async def parse_search_query(self, *, query: str) -> BoardFilters:
         if self._llm_client is None:

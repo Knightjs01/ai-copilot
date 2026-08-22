@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Archive } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Archive, CheckCircle2, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,17 +17,19 @@ import {
 } from "@/components/ui/dialog";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { Spinner } from "@/components/ui/spinner";
+import { useTalentPoolOpportunities } from "@/lib/queries/passport-matching";
 import {
   useMyTalentPoolRequests,
   useRespondToTalentPoolRequest,
   useWithdrawTalentPoolGrant,
 } from "@/lib/queries/talent-pool";
 import {
+  MATCH_TIER_VARIANT,
   TALENT_POOL_SCOPE_LABEL,
   TALENT_POOL_STATUS_LABEL,
   TALENT_POOL_STATUS_VARIANT,
 } from "@/lib/status-display";
-import type { CandidateTalentPoolRequest, TalentPoolScope } from "@/lib/types";
+import type { CandidateTalentPoolRequest, TalentPoolOpportunity, TalentPoolScope } from "@/lib/types";
 
 const SCOPE_OPTIONS = (Object.keys(TALENT_POOL_SCOPE_LABEL) as TalentPoolScope[]).map((value) => ({
   value,
@@ -139,6 +142,60 @@ function GrantedRequestCard({ request }: { request: CandidateTalentPoolRequest }
   );
 }
 
+function OpportunityCard({ opportunity }: { opportunity: TalentPoolOpportunity }) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3 py-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-sm font-semibold text-foreground">{opportunity.job_title}</h2>
+            <p className="text-xs text-muted-foreground">{opportunity.company_name}</p>
+          </div>
+          <Badge variant={MATCH_TIER_VARIANT[opportunity.match_tier]}>
+            {opportunity.match_tier}
+          </Badge>
+        </div>
+        <p className="text-sm text-foreground">{opportunity.match_summary}</p>
+        {opportunity.strengths.length > 0 && (
+          <div>
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Strengths
+            </h4>
+            <ul className="flex flex-col gap-1.5 rounded-xl border border-success/20 bg-success/5 p-3">
+              {opportunity.strengths.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {opportunity.gaps.length > 0 && (
+          <div>
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Gaps
+            </h4>
+            <ul className="flex flex-col gap-1.5 rounded-xl border border-warning/20 bg-warning/5 p-3">
+              {opportunity.gaps.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="flex justify-end">
+          <Button type="button" variant="brand" size="sm" asChild>
+            <Link href={`/shadow/jobs/${opportunity.job_id}`}>View &amp; apply</Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function DecidedRequestCard({ request }: { request: CandidateTalentPoolRequest }) {
   return (
     <Card>
@@ -162,6 +219,7 @@ function DecidedRequestCard({ request }: { request: CandidateTalentPoolRequest }
 // destination, same precedent as identity-activity/page.tsx one directory up.
 export default function TalentMemoryPage() {
   const { data: requests, isLoading } = useMyTalentPoolRequests();
+  const { data: opportunities, isLoading: opportunitiesLoading } = useTalentPoolOpportunities();
 
   return (
     <div className="flex flex-col gap-6">
@@ -171,6 +229,32 @@ export default function TalentMemoryPage() {
           Companies that have asked to keep your Passport available for future roles, and who
           you&apos;ve chosen to stay discoverable to.
         </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold tracking-tight text-foreground">
+            Potential opportunities
+          </h2>
+        </div>
+        {opportunitiesLoading ? (
+          <div className="flex justify-center py-8">
+            <Spinner className="h-5 w-5 text-muted-foreground" />
+          </div>
+        ) : opportunities && opportunities.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {opportunities.map((opportunity) => (
+              <OpportunityCard key={opportunity.job_id} opportunity={opportunity} />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-6 text-center">
+              <p className="text-sm text-muted-foreground">No potential opportunities right now.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {isLoading && (

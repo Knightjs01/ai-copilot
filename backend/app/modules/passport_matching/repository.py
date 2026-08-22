@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -80,6 +80,30 @@ class PassportJobMatchRepository:
         self._session.add(match)
         await self._session.flush()
         return match
+
+    async def list_by_candidate_version_and_companies(
+        self, *, passport_version_id: uuid.UUID, company_ids: list[uuid.UUID]
+    ) -> list[PassportJobMatch]:
+        """Powers the candidate's own 'Potential opportunities' list (Talent Memory Phase 3) --
+        scoped to the candidate's CURRENT Passport version only (a stale version's cached match
+        shouldn't surface, matches this module's existing 'never serve stale AI output silently'
+        discipline) and to companies the candidate currently holds a granted Talent Pool
+        relationship with."""
+        if not company_ids:
+            return []
+        result = await self._session.execute(
+            select(PassportJobMatch).where(
+                PassportJobMatch.passport_version_id == passport_version_id,
+                PassportJobMatch.company_id.in_(company_ids),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def mark_candidate_notified(self, match_id: uuid.UUID) -> None:
+        match = await self._session.get(PassportJobMatch, match_id)
+        if match is not None:
+            match.candidate_notified_at = datetime.now(timezone.utc)
+            await self._session.flush()
 
     async def delete_by_shadow_job_id(self, shadow_job_id: uuid.UUID) -> None:
         await self._session.execute(

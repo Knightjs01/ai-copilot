@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { candidateApiClient } from "@/lib/candidate-api-client";
-import type { BoardFilters, ShadowJobMatch } from "@/lib/types";
+import type { BoardFilters, ShadowJobMatch, TalentPoolOpportunity } from "@/lib/types";
 
 // `enabled` matters on every hook here for the same reason it does in saved-jobs.ts: the board
 // and job detail pages are reachable by logged-out visitors, and matching additionally requires
@@ -35,5 +35,16 @@ export function useNlJobSearch() {
   return useMutation({
     mutationFn: (query: string) =>
       candidateApiClient.post<BoardFilters>("/matches/search", { query }),
+  });
+}
+
+// Real matches companies have computed against the candidate's own Talent Pool grants -- the
+// candidate side of the opportunity workflow (see talent_pool/__init__.py).
+export function useTalentPoolOpportunities() {
+  return useQuery({
+    queryKey: ["passport-matching", "talent-pool-opportunities"],
+    queryFn: () =>
+      candidateApiClient.get<TalentPoolOpportunity[]>("/matches/my-talent-pool-opportunities"),
+    retry: false,
   });
 }

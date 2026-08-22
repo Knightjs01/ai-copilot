@@ -28,6 +28,9 @@ class PhantomPassportRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_id(self, passport_id: uuid.UUID) -> PhantomPassport | None:
+        return await self._session.get(PhantomPassport, passport_id)
+
     async def upsert(
         self,
         *,

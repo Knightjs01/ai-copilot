@@ -332,3 +332,229 @@ async def test_talent_pool_match_enriches_job_facts_with_linked_project_blueprin
     assert job_facts["role_summary"] == "A fake but deterministic role summary for testing."
     assert job_facts["must_have_qualifications"] == ["Fake required skill"]
     assert job_facts["top_requirements"] == ["Portfolio of shipped 0-to-1 products"]
+
+
+# --- Phase 3: candidate opportunity workflow --------------------------------------------------
+
+
+async def test_fresh_match_sends_exactly_one_notification_email(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@talentpoolmatch-notify.com")
+    owner_headers = auth_headers(owner["access_token"])
+    await _grant_talent_pool(
+        client,
+        owner_headers=owner_headers,
+        email="candidate@talentpoolmatch-notify.com",
+        scope="company_wide",
+    )
+    sent_emails.sent.clear()
+
+    new_job = await _create_and_publish_job(client, headers=owner_headers)
+    response = await client.get(
+        f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers
+    )
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == 1
+
+    matching_sends = [
+        e for e in sent_emails.sent if e["to"] == "candidate@talentpoolmatch-notify.com"
+    ]
+    assert len(matching_sends) == 1, sent_emails.sent
+    assert new_job["id"] in matching_sends[0]["body"]
+
+
+async def test_repeated_search_does_not_resend_notification(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@talentpoolmatch-noresend.com")
+    owner_headers = auth_headers(owner["access_token"])
+    await _grant_talent_pool(
+        client,
+        owner_headers=owner_headers,
+        email="candidate@talentpoolmatch-noresend.com",
+        scope="company_wide",
+    )
+    sent_emails.sent.clear()
+
+    new_job = await _create_and_publish_job(client, headers=owner_headers)
+    await client.get(f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers)
+    await client.get(f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers)
+
+    matching_sends = [
+        e for e in sent_emails.sent if e["to"] == "candidate@talentpoolmatch-noresend.com"
+    ]
+    assert len(matching_sends) == 1, sent_emails.sent
+
+
+async def test_weak_match_never_sends_email_but_still_appears_in_results(
+    client: AsyncClient,
+    sent_emails: CapturingEmailSender,
+    fake_passport_matching_llm_client: FakePassportMatchingLLMClient,
+) -> None:
+    from app.modules.passport_matching.llm_client import PassportMatchDraft
+
+    async def _weak_score(*, passport_snapshot: dict, job_facts: dict) -> PassportMatchDraft:
+        return PassportMatchDraft(
+            match_tier="Weak Match",
+            match_score=15,
+            strengths=[],
+            gaps=["No relevant overlap"],
+            summary="A weak fit.",
+        )
+
+    fake_passport_matching_llm_client.score_match = _weak_score  # type: ignore[method-assign]
+
+    owner = await signup(client, email="owner@talentpoolmatch-weak.com")
+    owner_headers = auth_headers(owner["access_token"])
+    await _grant_talent_pool(
+        client,
+        owner_headers=owner_headers,
+        email="candidate@talentpoolmatch-weak.com",
+        scope="company_wide",
+    )
+    sent_emails.sent.clear()
+
+    new_job = await _create_and_publish_job(client, headers=owner_headers)
+    response = await client.get(
+        f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers
+    )
+    assert response.status_code == 200, response.text
+    results = response.json()
+    assert len(results) == 1
+    assert results[0]["match_tier"] == "Weak Match"
+
+    matching_sends = [
+        e for e in sent_emails.sent if e["to"] == "candidate@talentpoolmatch-weak.com"
+    ]
+    assert matching_sends == []
+
+
+async def test_candidate_can_view_talent_pool_opportunities(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@talentpoolmatch-opportunities.com")
+    owner_headers = auth_headers(owner["access_token"])
+    await _grant_talent_pool(
+        client,
+        owner_headers=owner_headers,
+        email="candidate@talentpoolmatch-opportunities.com",
+        scope="company_wide",
+    )
+
+    new_job = await _create_and_publish_job(client, headers=owner_headers)
+    await client.get(f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers)
+
+    candidate_login = await client.post(
+        "/api/v1/candidate-auth/login",
+        json={
+            "email": "candidate@talentpoolmatch-opportunities.com",
+            "password": "correct horse battery staple",
+        },
+    )
+    assert candidate_login.status_code == 200, candidate_login.text
+    candidate_headers = auth_headers(candidate_login.json()["access_token"])
+
+    opportunities = await client.get(
+        "/api/v1/matches/my-talent-pool-opportunities", headers=candidate_headers
+    )
+    assert opportunities.status_code == 200, opportunities.text
+    items = opportunities.json()
+    assert len(items) == 1
+    assert items[0]["job_id"] == new_job["id"]
+    assert items[0]["job_title"] == new_job["title"]
+    assert items[0]["match_tier"] == "Strong Match"
+
+
+async def test_opportunity_hidden_once_job_closed(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@talentpoolmatch-closed.com")
+    owner_headers = auth_headers(owner["access_token"])
+    await _grant_talent_pool(
+        client,
+        owner_headers=owner_headers,
+        email="candidate@talentpoolmatch-closed.com",
+        scope="company_wide",
+    )
+
+    new_job = await _create_and_publish_job(client, headers=owner_headers)
+    await client.get(f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers)
+    await client.post(f"/api/v1/shadow-jobs/mine/{new_job['id']}/close", headers=owner_headers)
+
+    candidate_login = await client.post(
+        "/api/v1/candidate-auth/login",
+        json={
+            "email": "candidate@talentpoolmatch-closed.com",
+            "password": "correct horse battery staple",
+        },
+    )
+    candidate_headers = auth_headers(candidate_login.json()["access_token"])
+
+    opportunities = await client.get(
+        "/api/v1/matches/my-talent-pool-opportunities", headers=candidate_headers
+    )
+    assert opportunities.status_code == 200, opportunities.text
+    assert opportunities.json() == []
+
+
+async def test_opportunity_hidden_once_candidate_already_applied(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@talentpoolmatch-applied.com")
+    owner_headers = auth_headers(owner["access_token"])
+    await _grant_talent_pool(
+        client,
+        owner_headers=owner_headers,
+        email="candidate@talentpoolmatch-applied.com",
+        scope="company_wide",
+    )
+
+    new_job = await _create_and_publish_job(client, headers=owner_headers)
+    await client.get(f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers)
+
+    candidate_login = await client.post(
+        "/api/v1/candidate-auth/login",
+        json={
+            "email": "candidate@talentpoolmatch-applied.com",
+            "password": "correct horse battery staple",
+        },
+    )
+    candidate_headers = auth_headers(candidate_login.json()["access_token"])
+
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{new_job['id']}/apply", headers=candidate_headers
+    )
+    assert apply_response.status_code == 201, apply_response.text
+
+    opportunities = await client.get(
+        "/api/v1/matches/my-talent-pool-opportunities", headers=candidate_headers
+    )
+    assert opportunities.status_code == 200, opportunities.text
+    assert opportunities.json() == []
+
+
+async def test_talent_pool_opportunities_isolated_per_candidate(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@talentpoolmatch-isolation.com")
+    owner_headers = auth_headers(owner["access_token"])
+    await _grant_talent_pool(
+        client,
+        owner_headers=owner_headers,
+        email="candidate@talentpoolmatch-isolation.com",
+        scope="company_wide",
+    )
+    new_job = await _create_and_publish_job(client, headers=owner_headers)
+    await client.get(f"/api/v1/matches/mine/{new_job['id']}/talent-pool", headers=owner_headers)
+
+    other_tokens = await candidate_signup(client, email="bystander@talentpoolmatch-isolation.com")
+    other_headers = auth_headers(other_tokens["access_token"])
+    await client.put(
+        "/api/v1/phantom-passport/me",
+        json={
+            "headline": "Bystander Candidate",
+            "personal_info": {"legal_name": "Bystander Candidate"},
+            "career_entries": [],
+        },
+        headers=other_headers,
+    )
+    await client.post("/api/v1/phantom-passport/me/approve", headers=other_headers)
+
+    opportunities = await client.get(
+        "/api/v1/matches/my-talent-pool-opportunities", headers=other_headers
+    )
+    assert opportunities.status_code == 200, opportunities.text
+    assert opportunities.json() == []

@@ -80,3 +80,20 @@ class TalentPoolMatchResult(CandidateSearchResult):
     source_role_title: str
     scope: TalentPoolScope
     granted_at: datetime
+
+
+class TalentPoolOpportunity(BaseModel):
+    """The candidate's own view of a real match a company computed against their Talent Pool
+    grant — not anonymized (this is the candidate looking at their own data), and includes a
+    real, still-applyable job to view/apply to. See
+    PassportMatchingService.list_talent_pool_opportunities."""
+
+    job_id: uuid.UUID
+    job_title: str
+    company_name: str
+    match_tier: MatchTier
+    match_score: int
+    match_summary: str
+    strengths: list[str]
+    gaps: list[str]
+    generated_at: datetime

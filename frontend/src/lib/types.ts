@@ -783,6 +783,21 @@ export interface TalentPoolMatchResult extends CandidateSearchResult {
   granted_at: string;
 }
 
+// The candidate's own view of a real match a company computed against their Talent Pool grant --
+// not anonymized (this is the candidate looking at their own data), with a real, still-applyable
+// job to view/apply to. See backend passport_matching/schemas.py::TalentPoolOpportunity.
+export interface TalentPoolOpportunity {
+  job_id: string;
+  job_title: string;
+  company_name: string;
+  match_tier: MatchTier;
+  match_score: number;
+  match_summary: string;
+  strengths: string[];
+  gaps: string[];
+  generated_at: string;
+}
+
 export interface BoardFilters {
   seniority: string | null;
   remote_preference: string | null;

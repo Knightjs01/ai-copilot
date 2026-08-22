@@ -116,6 +116,19 @@ class TalentPoolGrantRepository:
         )
         return list(result.scalars().all())
 
+    async def list_granted_company_ids_by_candidate(
+        self, candidate_user_id: uuid.UUID
+    ) -> list[uuid.UUID]:
+        """Which companies this candidate currently holds a granted Talent Pool relationship
+        with -- powers PassportMatchingService.list_talent_pool_opportunities."""
+        result = await self._session.execute(
+            select(TalentPoolGrant.company_id).where(
+                TalentPoolGrant.candidate_user_id == candidate_user_id,
+                TalentPoolGrant.status == TalentPoolGrantStatus.GRANTED.value,
+            )
+        )
+        return list(result.scalars().all())
+
     async def list_by_candidate_id(self, candidate_user_id: uuid.UUID) -> list[TalentPoolGrant]:
         result = await self._session.execute(
             select(TalentPoolGrant)

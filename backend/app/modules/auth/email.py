@@ -140,3 +140,16 @@ def build_job_alert_email(*, job_title: str, alert_names: list[str]) -> tuple[st
         "Open the Shadow job board to view it and apply with your Phantom Passport."
     )
     return subject, body
+
+
+def build_talent_pool_match_email(*, company_name: str, job_url: str) -> tuple[str, str]:
+    # Deliberately no AI-generated content (tier/summary/strengths) in the email itself -- that
+    # stays behind login, same privacy-conscious choice as every other AI output in this
+    # codebase. This just says a match exists and links back into the app.
+    subject = "You've been matched to a potential opportunity"
+    body = (
+        f"{company_name}, a company you're in a Talent Pool relationship with, found you as a "
+        "potential match for a new role.\n\n"
+        f"Log in to see the details and decide whether to apply:\n{job_url}"
+    )
+    return subject, body

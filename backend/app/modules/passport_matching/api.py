@@ -6,10 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
+    get_email_sender,
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
 )
+from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
@@ -23,10 +25,23 @@ from app.modules.passport_matching.schemas import (
     PassportJobMatchRead,
     SearchQueryRequest,
     TalentPoolMatchResult,
+    TalentPoolOpportunity,
 )
 from app.modules.passport_matching.service import PassportMatchingService
 
 router = APIRouter(prefix="/matches", tags=["passport-matching"])
+
+
+# Registered before /{shadow_job_id} -- a literal path segment must out-rank a path-param route
+# registered after it, or FastAPI/Starlette greedily matches this as a (invalid) job UUID.
+@router.get("/my-talent-pool-opportunities", response_model=list[TalentPoolOpportunity])
+async def list_my_talent_pool_opportunities(
+    candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
+    session: AsyncSession = Depends(get_db),
+) -> list[TalentPoolOpportunity]:
+    return await PassportMatchingService(session).list_talent_pool_opportunities(
+        candidate=candidate
+    )
 
 
 @router.get("/{shadow_job_id}", response_model=PassportJobMatchRead)
@@ -88,7 +103,8 @@ async def search_talent_pool(
     _: CurrentUser = Depends(require_permission(Permissions.TALENT_POOL_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
     llm_client: PassportMatchingLLMClient = Depends(get_passport_matching_llm_client),
+    email_sender: EmailSender = Depends(get_email_sender),
 ) -> list[TalentPoolMatchResult]:
-    return await PassportMatchingService(session, llm_client=llm_client).search_talent_pool_for_job(
-        actor=actor, job_id=job_id
-    )
+    return await PassportMatchingService(
+        session, llm_client=llm_client, email_sender=email_sender
+    ).search_talent_pool_for_job(actor=actor, job_id=job_id)

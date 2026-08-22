@@ -46,3 +46,9 @@ class PassportJobMatch(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     shadow_job_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     model_used: Mapped[str] = mapped_column(String(100))
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Set once the candidate has been emailed about this specific match (Talent Memory Phase 3) --
+    # null means never notified, so a recruiter re-running a Talent Pool search doesn't re-email
+    # the same candidate about the same (passport_version, shadow_job) pair.
+    candidate_notified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
