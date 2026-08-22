@@ -1,12 +1,17 @@
+import logging
 import uuid
 from datetime import date, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.modules.audit.service import AuditService
+from app.modules.auth.email import EmailSender, build_talent_pool_request_email
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.candidate_auth.repository import CandidateUserRepository
 from app.modules.companies.models import Company
+from app.modules.phantom_passport.models import PhantomPassport
 from app.modules.phantom_passport.repository import PhantomPassportRepository
 from app.modules.shadow_jobs.exceptions import (
     ShadowApplicationNotFoundError,
@@ -29,11 +34,15 @@ from app.modules.talent_pool.models import TalentPoolGrant, TalentPoolGrantStatu
 from app.modules.talent_pool.repository import TalentPoolGrantRepository
 from app.modules.talent_pool.schemas import (
     CandidateTalentPoolRequestRead,
+    TalentPoolBulkRequestResult,
+    TalentPoolBulkSkip,
     TalentPoolDecision,
     TalentPoolGrantRead,
     TalentPoolPoolListItem,
     TalentPoolRequestCreate,
 )
+
+logger = logging.getLogger("app.talent_pool.service")
 
 _REVIEW_PERIOD_DAYS = 365
 
@@ -43,14 +52,29 @@ _ELIGIBLE_APPLICATION_STATUSES = {
 }
 
 
+def _is_discoverable(passport: PhantomPassport) -> bool:
+    """Same eligibility gate as PhantomPassportRepository.list_discoverable_candidates -- a
+    bulk-request re-checks this server-side (never trusts a client-held search result) since a
+    candidate may have gone private or "not looking" since the search ran."""
+    return (
+        passport.visibility != "private"
+        and passport.career_intent != "not_looking"
+        and passport.current_version_id is not None
+        and passport.deleted_at is None
+    )
+
+
 class TalentPoolService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, email_sender: EmailSender | None = None) -> None:
         self._session = session
         self._grants = TalentPoolGrantRepository(session)
         self._applications = ShadowApplicationRepository(session)
         self._jobs = ShadowJobRepository(session)
         self._passports = PhantomPassportRepository(session)
+        self._candidate_users = CandidateUserRepository(session)
         self._audit = AuditService(session)
+        self._email_sender = email_sender
+        self._settings = get_settings()
 
     # --- Company side: request a grant -----------------------------------------------------
 
@@ -97,7 +121,93 @@ class TalentPoolService:
             target_id=application.id,
             extra_data={"talent_pool_grant_id": str(grant.id)},
         )
+        await self._notify_candidate_of_request(
+            candidate_user_id=application.candidate_user_id,
+            company_id=actor.company_id,
+            role_title=job.title,
+        )
         return _to_grant_read(grant)
+
+    async def request_talent_pool_bulk(
+        self,
+        *,
+        actor: User,
+        job_id: uuid.UUID,
+        callsigns: list[str],
+        note: str | None,
+    ) -> TalentPoolBulkRequestResult:
+        """Requesting Talent Pool directly from Search Candidates results -- no application
+        exists for these candidates, so source_shadow_application_id is left null (see migration
+        0046's nullable + SET NULL treatment, added for exactly this case)."""
+        job = await self._jobs.get_by_id(job_id)
+        if job is None or job.company_id != actor.company_id or job.deleted_at is not None:
+            raise ShadowJobNotFoundError()
+
+        requested: list[str] = []
+        skipped: list[TalentPoolBulkSkip] = []
+        for callsign in callsigns:
+            passport = await self._passports.get_by_callsign(callsign)
+            if passport is None or not _is_discoverable(passport):
+                skipped.append(
+                    TalentPoolBulkSkip(callsign=callsign, reason="No longer discoverable")
+                )
+                continue
+
+            existing = await self._grants.get_active_by_pair(
+                candidate_user_id=passport.candidate_user_id, company_id=actor.company_id
+            )
+            if existing is not None:
+                skipped.append(
+                    TalentPoolBulkSkip(callsign=callsign, reason="Already requested or granted")
+                )
+                continue
+
+            grant = await self._grants.create(
+                candidate_user_id=passport.candidate_user_id,
+                company_id=actor.company_id,
+                source_shadow_application_id=None,
+                source_project_id=job.project_id,
+                source_role_title=job.title,
+                requested_by_user_id=actor.id,
+                note=note,
+            )
+            await self._audit.record(
+                company_id=actor.company_id,
+                actor_user_id=actor.id,
+                action="talent_pool.requested",
+                target_type="phantom_passport",
+                target_id=passport.id,
+                extra_data={"talent_pool_grant_id": str(grant.id), "source": "search_candidates"},
+            )
+            await self._notify_candidate_of_request(
+                candidate_user_id=passport.candidate_user_id,
+                company_id=actor.company_id,
+                role_title=job.title,
+            )
+            requested.append(callsign)
+
+        return TalentPoolBulkRequestResult(requested=requested, skipped=skipped)
+
+    async def _notify_candidate_of_request(
+        self, *, candidate_user_id: uuid.UUID, company_id: uuid.UUID, role_title: str
+    ) -> None:
+        if self._email_sender is None:
+            return
+        candidate = await self._candidate_users.get_by_id(candidate_user_id)
+        company = await self._session.get(Company, company_id)
+        if candidate is None or company is None:
+            return
+        requests_url = f"{self._settings.frontend_base_url}/shadow/passport/talent-memory"
+        subject, body = build_talent_pool_request_email(
+            company_name=company.name, role_title=role_title, requests_url=requests_url
+        )
+        try:
+            await self._email_sender.send(to=candidate.email, subject=subject, body=body)
+        except Exception:
+            # A send failure must never fail the request it's riding along with.
+            logger.exception(
+                "Failed to send Talent Pool request email to candidate %s", candidate_user_id
+            )
 
     async def list_company_talent_pool(
         self, *, company_id: uuid.UUID

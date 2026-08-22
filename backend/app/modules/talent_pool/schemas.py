@@ -57,3 +57,24 @@ class TalentPoolDecision(BaseModel):
     approve: bool
     # Ignored when approve=False. The candidate's own choice of how broadly to be kept on file.
     scope: TalentPoolScope = TalentPoolScope.PROJECT_ONLY
+
+
+class TalentPoolBulkRequestCreate(BaseModel):
+    """Requesting Talent Pool directly from Search Candidates results -- unlike the applicant-
+    scoped request above, there's no shadow_application_id here; callsigns are re-resolved
+    server-side (and re-checked for eligibility) rather than trusted from a possibly-stale
+    client-held search result."""
+
+    job_id: uuid.UUID
+    callsigns: list[str] = Field(min_length=1, max_length=50)
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class TalentPoolBulkSkip(BaseModel):
+    callsign: str
+    reason: str
+
+
+class TalentPoolBulkRequestResult(BaseModel):
+    requested: list[str]
+    skipped: list[TalentPoolBulkSkip]

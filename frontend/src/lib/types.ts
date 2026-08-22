@@ -1020,6 +1020,18 @@ export interface TalentPoolPoolListItem {
   granted_at: string;
 }
 
+// Bulk Talent Pool request from Search Candidates results -- see backend
+// talent_pool/schemas.py::TalentPoolBulkRequestResult.
+export interface TalentPoolBulkSkip {
+  callsign: string;
+  reason: string;
+}
+
+export interface TalentPoolBulkRequestResult {
+  requested: string[];
+  skipped: TalentPoolBulkSkip[];
+}
+
 // What the candidate sees -- company/role context plus the company's optional note.
 export interface CandidateTalentPoolRequest {
   id: string;

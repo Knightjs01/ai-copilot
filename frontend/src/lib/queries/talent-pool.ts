@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import type {
   CandidateTalentPoolRequest,
+  TalentPoolBulkRequestResult,
   TalentPoolGrantRead,
   TalentPoolPoolListItem,
   TalentPoolScope,
@@ -23,6 +24,29 @@ export function useRequestTalentPool(jobId: string, applicationId: string) {
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
+  });
+}
+
+export function useBulkRequestTalentPool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      jobId,
+      callsigns,
+      note,
+    }: {
+      jobId: string;
+      callsigns: string[];
+      note?: string;
+    }) =>
+      apiClient.post<TalentPoolBulkRequestResult>("/talent-pool/mine/search/request-bulk", {
+        job_id: jobId,
+        callsigns,
+        note: note || null,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["talent-pool", "mine"] });
     },
   });
 }

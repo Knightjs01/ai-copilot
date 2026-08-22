@@ -18,7 +18,7 @@ class TalentPoolGrantRepository:
         *,
         candidate_user_id: uuid.UUID,
         company_id: uuid.UUID,
-        source_shadow_application_id: uuid.UUID,
+        source_shadow_application_id: uuid.UUID | None,
         source_project_id: uuid.UUID | None,
         source_role_title: str,
         requested_by_user_id: uuid.UUID,

@@ -175,6 +175,18 @@ def build_reveal_request_email(*, company_name: str, application_url: str) -> tu
     return subject, body
 
 
+def build_talent_pool_request_email(
+    *, company_name: str, role_title: str, requests_url: str
+) -> tuple[str, str]:
+    subject = f"{company_name} would like to keep you on file"
+    body = (
+        f"{company_name} came across your profile (in connection with {role_title}) and would "
+        "like your permission to keep you on file for future roles.\n\n"
+        f"Review the request and decide whether to allow it:\n{requests_url}"
+    )
+    return subject, body
+
+
 def build_interview_scheduled_email(
     *, company_name: str, scheduled_at_display: str, interviews_url: str
 ) -> tuple[str, str]:

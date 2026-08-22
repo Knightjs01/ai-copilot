@@ -63,6 +63,142 @@ async def _apply_with_new_candidate(
     return apply_response.json(), candidate_headers
 
 
+async def _build_and_approve_discoverable_passport(
+    client: AsyncClient, *, email: str, full_name: str = "Jamie Candidate"
+) -> str:
+    tokens = await candidate_signup(client, email=email, full_name=full_name)
+    candidate_headers = auth_headers(tokens["access_token"])
+    payload = {
+        "headline": "Senior Product Leader",
+        "summary": "A senior product leader.",
+        "visibility": "discoverable",
+        "personal_info": {"legal_name": full_name},
+        "career_entries": [],
+    }
+    save_response = await client.put(
+        "/api/v1/phantom-passport/me", json=payload, headers=candidate_headers
+    )
+    assert save_response.status_code == 200, save_response.text
+    approve_response = await client.post(
+        "/api/v1/phantom-passport/me/approve", headers=candidate_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
+    return candidate_headers
+
+
+async def test_bulk_request_talent_pool_from_search_results(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(
+        client, email="owner@talentpool-bulk.com", company_name="Bulk Talent Pool Co"
+    )
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+
+    candidate_a_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate-a@talentpool-bulk.com", full_name="Candidate A"
+    )
+    candidate_b_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate-b@talentpool-bulk.com", full_name="Candidate B"
+    )
+
+    search_response = await client.get(
+        f"/api/v1/matches/mine/{job['id']}/candidates", headers=headers
+    )
+    assert search_response.status_code == 200, search_response.text
+    callsigns = [r["callsign"] for r in search_response.json()]
+    assert len(callsigns) == 2
+
+    bulk_response = await client.post(
+        "/api/v1/talent-pool/mine/search/request-bulk",
+        json={"job_id": job["id"], "callsigns": callsigns, "note": "Strong bench for later"},
+        headers=headers,
+    )
+    assert bulk_response.status_code == 200, bulk_response.text
+    body = bulk_response.json()
+    assert set(body["requested"]) == set(callsigns)
+    assert body["skipped"] == []
+
+    # Both candidates got a real email notification.
+    assert len(sent_emails.sent) == 2
+    assert {e["to"] for e in sent_emails.sent} == {
+        "candidate-a@talentpool-bulk.com",
+        "candidate-b@talentpool-bulk.com",
+    }
+    assert all("Bulk Talent Pool Co" in e["subject"] for e in sent_emails.sent)
+
+    # Each candidate can see the pending request on their own side.
+    for candidate_headers in (candidate_a_headers, candidate_b_headers):
+        my_requests = await client.get("/api/v1/talent-pool/my-requests", headers=candidate_headers)
+        assert my_requests.status_code == 200
+        assert len(my_requests.json()) == 1
+        assert my_requests.json()[0]["status"] == "requested"
+        assert my_requests.json()[0]["source_role_title"] == job["title"]
+
+
+async def test_bulk_request_skips_duplicates_and_ineligible_candidates(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@talentpool-bulkskip.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+
+    dup_candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate-dup@talentpool-bulkskip.com", full_name="Candidate Dup"
+    )
+    private_candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate-private@talentpool-bulkskip.com", full_name="Candidate Private"
+    )
+
+    # Resolve each candidate's own callsign directly rather than assuming search-result order
+    # matches creation order -- the two are unrelated and must not be conflated.
+    dup_me = await client.get("/api/v1/phantom-passport/me", headers=dup_candidate_headers)
+    dup_callsign = dup_me.json()["callsign"]
+    private_me = await client.get("/api/v1/phantom-passport/me", headers=private_candidate_headers)
+    private_callsign = private_me.json()["callsign"]
+
+    search_response = await client.get(
+        f"/api/v1/matches/mine/{job['id']}/candidates", headers=headers
+    )
+    results = {r["callsign"]: r for r in search_response.json()}
+    assert set(results.keys()) == {dup_callsign, private_callsign}
+
+    # First bulk call succeeds for the "dup" candidate, establishing an active grant.
+    first_response = await client.post(
+        "/api/v1/talent-pool/mine/search/request-bulk",
+        json={"job_id": job["id"], "callsigns": [dup_callsign]},
+        headers=headers,
+    )
+    assert first_response.status_code == 200, first_response.text
+    assert first_response.json()["requested"] == [dup_callsign]
+
+    # Candidate goes private after being found in search but before the bulk-save fires. PUT
+    # replaces the whole passport, so the full payload is resent with visibility flipped.
+    await client.put(
+        "/api/v1/phantom-passport/me",
+        json={
+            "headline": "Senior Product Leader",
+            "summary": "A senior product leader.",
+            "visibility": "private",
+            "personal_info": {"legal_name": "Candidate Private"},
+            "career_entries": [],
+        },
+        headers=private_candidate_headers,
+    )
+
+    second_response = await client.post(
+        "/api/v1/talent-pool/mine/search/request-bulk",
+        json={"job_id": job["id"], "callsigns": [dup_callsign, private_callsign]},
+        headers=headers,
+    )
+    assert second_response.status_code == 200, second_response.text
+    body = second_response.json()
+    assert body["requested"] == []
+    skipped_by_callsign = {s["callsign"]: s["reason"] for s in body["skipped"]}
+    assert skipped_by_callsign[dup_callsign] == "Already requested or granted"
+    assert skipped_by_callsign[private_callsign] == "No longer discoverable"
+
+
 async def test_request_talent_pool_requires_eligible_state(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@talentpool-eligible.com")
     headers = auth_headers(owner["access_token"])

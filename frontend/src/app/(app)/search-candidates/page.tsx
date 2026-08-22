@@ -3,7 +3,9 @@
 import * as React from "react";
 import { Search } from "lucide-react";
 
+import { BulkSaveToTalentPoolDialog } from "@/components/candidate-search/bulk-save-to-talent-pool-dialog";
 import { CandidateSearchResultCard } from "@/components/candidate-search/candidate-search-result-card";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
@@ -18,6 +20,21 @@ export default function SearchCandidatesPage() {
   const { data: results, isLoading: searching } = useCandidateSearch(jobId, {
     enabled: !!jobId,
   });
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setSelected(new Set());
+  }, [jobId]);
+
+  const toggleSelected = (callsign: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(callsign)) next.delete(callsign);
+      else next.add(callsign);
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,10 +90,40 @@ export default function SearchCandidatesPage() {
 
       {jobId && !searching && results && results.length > 0 && (
         <div className="flex flex-col gap-3">
+          {selected.size > 0 && (
+            <div className="sticky top-16 z-10 flex items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-2.5">
+              <p className="text-sm font-medium text-foreground">
+                {selected.size} candidate{selected.size === 1 ? "" : "s"} selected
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+                <Button variant="brand" size="sm" onClick={() => setBulkDialogOpen(true)}>
+                  Save to Talent Pool
+                </Button>
+              </div>
+            </div>
+          )}
           {results.map((result) => (
-            <CandidateSearchResultCard key={result.callsign} result={result} />
+            <CandidateSearchResultCard
+              key={result.callsign}
+              result={result}
+              selected={selected.has(result.callsign)}
+              onToggleSelected={() => toggleSelected(result.callsign)}
+            />
           ))}
         </div>
+      )}
+
+      {jobId && (
+        <BulkSaveToTalentPoolDialog
+          open={bulkDialogOpen}
+          onOpenChange={setBulkDialogOpen}
+          jobId={jobId}
+          callsigns={Array.from(selected)}
+          onDone={() => setSelected(new Set())}
+        />
       )}
     </div>
   );
