@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
+import { useProject } from "@/lib/queries/projects";
 import {
   useCloseShadowJob,
   useMyShadowJob,
@@ -29,6 +31,7 @@ export default function ShadowJobDetailPage() {
   const canUpdate = hasPermission("shadow_jobs.update");
   const { data: job, isLoading } = useMyShadowJob(params.jobId);
   const { data: applicants, isLoading: applicantsLoading } = useShadowJobApplicants(params.jobId);
+  const { data: sourceProject } = useProject(job?.project_id ?? undefined);
   const updateJob = useUpdateShadowJob(params.jobId);
   const publishJob = usePublishShadowJob(params.jobId);
   const closeJob = useCloseShadowJob(params.jobId);
@@ -78,6 +81,14 @@ export default function ShadowJobDetailPage() {
             {job.department || "No department set"} · {job.applicant_count} applicant
             {job.applicant_count === 1 ? "" : "s"}
           </p>
+          {sourceProject && (
+            <Link
+              href={`/projects/${sourceProject.id}`}
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              From: {sourceProject.title}
+            </Link>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={SHADOW_JOB_STATUS_VARIANT[job.status]}>

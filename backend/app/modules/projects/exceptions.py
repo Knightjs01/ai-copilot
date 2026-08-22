@@ -34,3 +34,8 @@ class JDExtractionFailedError(ProjectError):
 class RoleFieldsExtractionFailedError(ProjectError):
     status_code = 502
     detail = "Could not extract role fields — the AI provider request failed"
+
+
+class ProjectNotReadyToApproveError(ProjectError):
+    status_code = 400
+    detail = "Project is not ready to approve"

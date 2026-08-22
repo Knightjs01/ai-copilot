@@ -5,12 +5,55 @@ import { Briefcase } from "lucide-react";
 
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import { DashboardPanel } from "@/components/project/dashboard-panel";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useProjects } from "@/lib/queries/projects";
+import { PROJECT_STATUS_LABEL, PROJECT_STATUS_VARIANT } from "@/lib/status-display";
+import type { Project } from "@/lib/types";
+
+function ProjectCard({ project }: { project: Project }) {
+  return (
+    <Link href={`/projects/${project.id}`}>
+      <Card className="h-full transition-shadow hover:shadow-md hover:shadow-slate-900/[0.06]">
+        <CardHeader className="flex-row items-start justify-between gap-2">
+          <CardTitle>{project.title}</CardTitle>
+          <Badge variant={PROJECT_STATUS_VARIANT[project.status]}>
+            {PROJECT_STATUS_LABEL[project.status]}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {project.department || "No department set"}
+          </p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function ProjectGroup({ title, projects }: { title: string; projects: Project[] }) {
+  if (projects.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {projects.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects();
+
+  const live = projects?.filter((p) => p.status === "open") ?? [];
+  const draft = projects?.filter((p) => p.status === "draft") ?? [];
+  const other = projects?.filter((p) => p.status !== "open" && p.status !== "draft") ?? [];
 
   return (
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -32,21 +75,10 @@ export default function ProjectsPage() {
             <Spinner className="h-6 w-6 text-muted-foreground" />
           </div>
         ) : projects && projects.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.id}`}>
-                <Card className="h-full transition-shadow hover:shadow-md hover:shadow-slate-900/[0.06]">
-                  <CardHeader>
-                    <CardTitle>{project.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {project.department || "No department set"}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+          <div className="flex flex-col gap-8">
+            <ProjectGroup title="Live" projects={live} />
+            <ProjectGroup title="Draft" projects={draft} />
+            <ProjectGroup title="Other" projects={other} />
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">

@@ -62,7 +62,7 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
                 href="/projects"
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                Roles
+                Projects
               </Link>
               {canViewPipeline && (
                 <Link

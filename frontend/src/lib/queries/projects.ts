@@ -74,3 +74,26 @@ export function useUploadJd(projectId: string) {
     },
   });
 }
+
+export function usePostToShadow(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post<Project>(`/projects/${projectId}/post-to-shadow`),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["projects", projectId], data);
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs"] });
+    },
+  });
+}
+
+export function useSaveAsDraft(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post<Project>(`/projects/${projectId}/save-as-draft`),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["projects", projectId], data);
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}

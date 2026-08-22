@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 
-import { NewShadowJobDialog } from "@/components/shadow-jobs/new-shadow-job-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,7 +13,6 @@ import { SHADOW_JOB_STATUS_LABEL, SHADOW_JOB_STATUS_VARIANT } from "@/lib/status
 export default function ShadowJobsPage() {
   const { hasPermission } = useAuth();
   const canView = hasPermission("shadow_jobs.view");
-  const canCreate = hasPermission("shadow_jobs.create");
   const { data: jobs, isLoading } = useMyShadowJobs();
 
   if (!canView) {
@@ -39,7 +37,6 @@ export default function ShadowJobsPage() {
             they approve a reveal.
           </p>
         </div>
-        {canCreate && <NewShadowJobDialog />}
       </div>
 
       {isLoading ? (
@@ -73,7 +70,8 @@ export default function ShadowJobsPage() {
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
           <p className="text-sm font-medium text-foreground">No Shadow jobs yet</p>
           <p className="max-w-xs text-sm text-muted-foreground">
-            Post a role to start receiving anonymous applications.
+            Approve a hiring project and post it to Shadow to start receiving anonymous
+            applications.
           </p>
         </div>
       )}

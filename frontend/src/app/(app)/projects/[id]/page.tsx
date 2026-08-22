@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 
+import { ApproveProjectDialog } from "@/components/project/approve-project-dialog";
 import { BurnProjectDialog } from "@/components/project/burn-project-dialog";
 import { CandidatesTabSection } from "@/components/project/candidates-tab-section";
 import { EditProjectDialog } from "@/components/project/edit-project-dialog";
@@ -22,11 +23,17 @@ type ProjectTab = "overview" | "blueprint" | "candidates" | "vault";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { data: project, isLoading } = useProject(params.id);
   const [activeTab, setActiveTab] = React.useState<ProjectTab>("overview");
   const { hasPermission } = useAuth();
   const canRevealIdentity = hasPermission("identity_vault.reveal");
   const canEditProject = hasPermission("projects.update");
+
+  React.useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "candidates") setActiveTab("candidates");
+  }, [searchParams]);
 
   const tabOptions: { value: ProjectTab; label: string }[] = [
     { value: "overview", label: "Overview" },
@@ -51,6 +58,7 @@ export default function ProjectDetailPage() {
         </h1>
         <div className="flex items-center gap-2">
           {canEditProject && <EditProjectDialog project={project} />}
+          {canEditProject && <ApproveProjectDialog project={project} />}
           <BurnProjectDialog projectId={project.id} projectTitle={project.title} />
         </div>
       </div>

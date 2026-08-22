@@ -6,6 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.auth.service.user_service import UserService
+from app.modules.hiring_blueprint.models import HiringBlueprint
+from app.modules.hiring_blueprint.repository import HiringBlueprintRepository
+from app.modules.hiring_manager_alignment.models import HiringManagerAlignment
+from app.modules.hiring_manager_alignment.repository import HiringManagerAlignmentRepository
 from app.modules.privacy_gateway.exceptions import ExtractionFailedError, UnsupportedFileTypeError
 from app.modules.privacy_gateway.extraction import extract_text
 from app.modules.projects.exceptions import (
@@ -13,6 +17,7 @@ from app.modules.projects.exceptions import (
     InvalidProjectMemberError,
     JDExtractionFailedError,
     ProjectNotFoundError,
+    ProjectNotReadyToApproveError,
     RoleFieldsExtractionFailedError,
     UnsupportedJDFileTypeError,
 )
@@ -20,6 +25,8 @@ from app.modules.projects.llm_client import LLMRequestError, ProjectsLLMClient
 from app.modules.projects.models import Project, ProjectMember, ProjectStatus
 from app.modules.projects.repository import ProjectMemberRepository, ProjectRepository
 from app.modules.projects.schemas import JdUploadResult
+from app.modules.shadow_jobs.models import ShadowJobStatus
+from app.modules.shadow_jobs.repository import ShadowJobRepository
 
 
 class ProjectService:
@@ -31,6 +38,9 @@ class ProjectService:
         self._users = UserService(session)
         self._audit = AuditService(session)
         self._llm_client = llm_client
+        self._blueprints = HiringBlueprintRepository(session)
+        self._alignments = HiringManagerAlignmentRepository(session)
+        self._shadow_jobs = ShadowJobRepository(session)
 
     async def create_project(
         self,
@@ -180,6 +190,97 @@ class ProjectService:
             target_id=project.id,
         )
         return project
+
+    async def post_to_shadow(self, *, actor: User, project_id: uuid.UUID) -> Project:
+        project = await self.get_project(company_id=actor.company_id, project_id=project_id)
+        blueprint, _ = await self._require_ready_to_approve(project)
+
+        existing_job = await self._shadow_jobs.get_by_project_id(project.id)
+        if existing_job is None:
+            job = await self._shadow_jobs.create(
+                company_id=actor.company_id,
+                created_by_id=actor.id,
+                title=project.title,
+                department=project.department,
+                seniority=project.seniority,
+                employment_type="full_time",
+                location=project.location,
+                remote_preference=None,
+                salary_min=project.salary_min,
+                salary_max=project.salary_max,
+                summary=blueprint.role_summary,
+                description=project.role_brief or "",
+                requirements=list(blueprint.must_have_qualifications),
+                project_id=project.id,
+            )
+        else:
+            job = existing_job
+            job.title = project.title
+            job.department = project.department
+            job.seniority = project.seniority
+            job.location = project.location
+            job.salary_min = project.salary_min
+            job.salary_max = project.salary_max
+            job.summary = blueprint.role_summary
+            job.description = project.role_brief or ""
+            job.requirements = list(blueprint.must_have_qualifications)
+
+        job.status = ShadowJobStatus.PUBLISHED.value
+        if job.published_at is None:
+            job.published_at = datetime.now(timezone.utc)
+
+        project.status = ProjectStatus.OPEN.value
+
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="project.approved",
+            target_type="project",
+            target_id=project.id,
+        )
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="project.posted_to_shadow",
+            target_type="project",
+            target_id=project.id,
+            extra_data={"shadow_job_id": str(job.id)},
+        )
+        return project
+
+    async def save_as_draft(self, *, actor: User, project_id: uuid.UUID) -> Project:
+        project = await self.get_project(company_id=actor.company_id, project_id=project_id)
+        await self._require_ready_to_approve(project)
+
+        project.status = ProjectStatus.OPEN.value
+
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="project.approved",
+            target_type="project",
+            target_id=project.id,
+        )
+        return project
+
+    async def _require_ready_to_approve(
+        self, project: Project
+    ) -> tuple[HiringBlueprint, HiringManagerAlignment]:
+        missing = []
+        if not project.role_brief:
+            missing.append("a role brief")
+        blueprint = await self._blueprints.get_by_project_id(project.id)
+        if blueprint is None:
+            missing.append("a Hiring Blueprint")
+        alignment = await self._alignments.get_by_project_id(project.id)
+        if alignment is None:
+            missing.append("Hiring Manager Alignment")
+        if missing:
+            raise ProjectNotReadyToApproveError(
+                f"This role isn't ready to approve yet — missing {', '.join(missing)}."
+            )
+        assert blueprint is not None and alignment is not None
+        return blueprint, alignment
 
     async def upload_jd(
         self, *, actor: User, project_id: uuid.UUID, content: bytes, content_type: str

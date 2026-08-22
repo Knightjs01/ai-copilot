@@ -157,6 +157,30 @@ async def update_project(
     return ProjectRead.model_validate(project)
 
 
+@router.post("/{project_id}/post-to-shadow", response_model=ProjectRead)
+async def post_project_to_shadow(
+    project_id: uuid.UUID,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    __: None = Depends(require_project_access),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ProjectRead:
+    project = await ProjectService(session).post_to_shadow(actor=actor, project_id=project_id)
+    return ProjectRead.model_validate(project)
+
+
+@router.post("/{project_id}/save-as-draft", response_model=ProjectRead)
+async def save_project_as_draft(
+    project_id: uuid.UUID,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    __: None = Depends(require_project_access),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ProjectRead:
+    project = await ProjectService(session).save_as_draft(actor=actor, project_id=project_id)
+    return ProjectRead.model_validate(project)
+
+
 @router.post("/{project_id}/jd", response_model=JdUploadResult)
 async def upload_jd(
     project_id: uuid.UUID,
