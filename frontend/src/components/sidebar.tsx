@@ -3,15 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Briefcase,
   ChevronsLeft,
   ChevronsRight,
-  Globe,
   Home,
-  LogOut,
   Sparkles,
   Users,
   UsersRound,
@@ -19,15 +17,6 @@ import {
 } from "lucide-react";
 
 import { CreateMenu } from "@/components/create-menu";
-import { Avatar } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -40,9 +29,8 @@ interface NavItem {
 }
 
 export function Sidebar({ container }: { container?: HTMLElement | null }) {
-  const { user, hasPermission, logout } = useAuth();
+  const { user, hasPermission } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(false);
 
   if (!user) return null;
@@ -60,11 +48,6 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
   const visibleItems = items.filter((item) => !item.permission || hasPermission(item.permission));
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push("/login/recruiter");
-  };
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -144,43 +127,6 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
             {collapsed ? <ChevronsRight className="h-3.5 w-3.5" /> : <ChevronsLeft className="h-3.5 w-3.5" />}
             {!collapsed && "Collapse"}
           </button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Account menu"
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-secondary",
-                  collapsed && "justify-center px-0"
-                )}
-              >
-                <Avatar name={user.full_name} />
-                {!collapsed && (
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-foreground">
-                      {user.full_name}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">Settings</span>
-                  </span>
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent container={container} align="start" side="top">
-              <DropdownMenuLabel>{user.full_name}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => router.push("/settings")}>Settings</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => router.push("/")}>
-                <Globe className="h-3.5 w-3.5" />
-                Back to Phantom Hire
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleLogout}>
-                <LogOut className="h-3.5 w-3.5" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </aside>
     </TooltipProvider>
