@@ -3,12 +3,21 @@
 import * as React from "react";
 import Link from "next/link";
 import { Briefcase } from "lucide-react";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
 
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import { DashboardPanel } from "@/components/project/dashboard-panel";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProjects } from "@/lib/queries/projects";
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_VARIANT } from "@/lib/status-display";
 import { cn } from "@/lib/utils";
@@ -24,39 +33,104 @@ const STATUS_FILTERS: { value: ProjectStatus | "all"; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-function ProjectCard({ project }: { project: Project }) {
-  return (
-    <Link href={`/projects/${project.id}`}>
-      <Card className="h-full transition-shadow hover:shadow-md hover:shadow-slate-900/[0.06]">
-        <CardHeader className="flex-row items-start justify-between gap-2">
-          <CardTitle>{project.title}</CardTitle>
-          <Badge variant={PROJECT_STATUS_VARIANT[project.status]}>
-            {PROJECT_STATUS_LABEL[project.status]}
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {project.department || "No department set"}
-          </p>
-        </CardContent>
-      </Card>
-    </Link>
-  );
+function formatSalary(min: number | null, max: number | null): string | null {
+  if (!min && !max) return null;
+  const fmt = (n: number) => `£${(n / 1000).toFixed(0)}k`;
+  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
+  return fmt((min ?? max)!);
 }
 
-function ProjectGroup({ title, projects }: { title: string; projects: Project[] }) {
-  if (projects.length === 0) return null;
+const columnHelper = createColumnHelper<Project>();
+
+const columns = [
+  columnHelper.accessor("title", {
+    header: "Role",
+    cell: (info) => (
+      <Link
+        href={`/projects/${info.row.original.id}`}
+        className="font-medium text-foreground hover:underline"
+      >
+        {info.getValue()}
+      </Link>
+    ),
+  }),
+  columnHelper.accessor("department", {
+    header: "Department",
+    cell: (info) => <span className="text-foreground">{info.getValue() || "—"}</span>,
+  }),
+  columnHelper.accessor("seniority", {
+    header: "Seniority",
+    cell: (info) => <span className="text-foreground">{info.getValue() || "—"}</span>,
+  }),
+  columnHelper.accessor("location", {
+    header: "Location",
+    cell: (info) => <span className="text-foreground">{info.getValue() || "—"}</span>,
+  }),
+  columnHelper.accessor((row) => row.salary_min, {
+    id: "salary",
+    header: "Salary",
+    cell: (info) => (
+      <span className="text-foreground">
+        {formatSalary(info.row.original.salary_min, info.row.original.salary_max) || "—"}
+      </span>
+    ),
+  }),
+  columnHelper.accessor("status", {
+    header: "Status",
+    cell: (info) => (
+      <Badge variant={PROJECT_STATUS_VARIANT[info.getValue()]}>
+        {PROJECT_STATUS_LABEL[info.getValue()]}
+      </Badge>
+    ),
+  }),
+];
+
+function ProjectsTable({ projects }: { projects: Project[] }) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+
+  const table = useReactTable({
+    data: projects,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-      </div>
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    sortable={header.column.getCanSort()}
+                    sortDirection={header.column.getIsSorted()}
+                    onSort={header.column.getToggleSortingHandler()}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -66,10 +140,6 @@ export default function ProjectsPage() {
 
   const filtered =
     statusFilter === "all" ? projects ?? [] : (projects ?? []).filter((p) => p.status === statusFilter);
-
-  const live = filtered.filter((p) => p.status === "open");
-  const draft = filtered.filter((p) => p.status === "draft");
-  const other = filtered.filter((p) => p.status !== "open" && p.status !== "draft");
 
   return (
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -109,11 +179,7 @@ export default function ProjectsPage() {
             <Spinner className="h-6 w-6 text-muted-foreground" />
           </div>
         ) : filtered.length > 0 ? (
-          <div className="flex flex-col gap-8">
-            <ProjectGroup title="Live" projects={live} />
-            <ProjectGroup title="Draft" projects={draft} />
-            <ProjectGroup title="Other" projects={other} />
-          </div>
+          <ProjectsTable projects={filtered} />
         ) : (
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
             <Briefcase className="h-8 w-8 text-muted-foreground" />
