@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
+import { LiveRolePreviewFrame } from "@/components/project/live-role-preview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,17 +19,36 @@ import { ApiError } from "@/lib/api-client";
 import { useHiringBlueprint } from "@/lib/queries/hiring-blueprint";
 import { useHiringManagerAlignment } from "@/lib/queries/hiring-manager-alignment";
 import { usePostToShadow, useSaveAsDraft } from "@/lib/queries/projects";
+import { useProjectShadowJob } from "@/lib/queries/shadow-jobs";
 import type { Project } from "@/lib/types";
 
-type Step = "choose" | "cancel-confirm";
+type Step = "choose" | "cancel-confirm" | "posted";
 
-export function ApproveProjectDialog({ project }: { project: Project }) {
+export function ApproveProjectDialog({
+  project,
+  open,
+  onOpenChange,
+  hideTrigger,
+  description,
+}: {
+  project: Project;
+  // External control lets this same dialog be triggered from somewhere other than its own
+  // header button (e.g. "Build my pre-screen kit") without duplicating the readiness-check and
+  // post-to-shadow/save-as-draft logic a second time.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+  description?: string;
+}) {
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isOpen = open ?? internalOpen;
+  const setIsOpen = onOpenChange ?? setInternalOpen;
   const [step, setStep] = React.useState<Step>("choose");
   const [error, setError] = React.useState<string | null>(null);
   const { data: blueprint } = useHiringBlueprint(project.id);
   const { data: alignment } = useHiringManagerAlignment(project.id);
+  const { data: shadowJob } = useProjectShadowJob(project.id);
   const postToShadow = usePostToShadow(project.id);
   const saveAsDraft = useSaveAsDraft(project.id);
 
@@ -47,10 +67,7 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
   const handlePostToShadow = () => {
     setError(null);
     postToShadow.mutate(undefined, {
-      onSuccess: () => {
-        setOpen(false);
-        goToCandidates();
-      },
+      onSuccess: () => setStep("posted"),
       onError: handleError,
     });
   };
@@ -59,7 +76,7 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
     setError(null);
     saveAsDraft.mutate(undefined, {
       onSuccess: () => {
-        setOpen(false);
+        setIsOpen(false);
         goToCandidates();
       },
       onError: handleError,
@@ -67,7 +84,7 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
   };
 
   const handleCancelConfirm = () => {
-    setOpen(false);
+    setIsOpen(false);
     router.push("/projects");
   };
 
@@ -80,7 +97,7 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
       onClick={() => {
         setStep("choose");
         setError(null);
-        setOpen(true);
+        setIsOpen(true);
       }}
     >
       <CheckCircle2 className="h-3.5 w-3.5" />
@@ -90,35 +107,41 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
 
   return (
     <>
-      {isReady ? (
-        trigger
-      ) : (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0}>{trigger}</span>
-            </TooltipTrigger>
-            <TooltipContent>Missing {missing.join(", ")}.</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
+      {!hideTrigger &&
+        (isReady ? (
+          trigger
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>{trigger}</span>
+              </TooltipTrigger>
+              <TooltipContent>Missing {missing.join(", ")}.</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ))}
 
-      <Dialog open={open} onOpenChange={(next) => !isPending && setOpen(next)}>
-        <DialogContent>
-          {step === "choose" ? (
+      <Dialog open={isOpen} onOpenChange={(next) => !isPending && setIsOpen(next)}>
+        <DialogContent className={step === "posted" ? "max-w-3xl" : undefined}>
+          {step === "choose" && (
             <>
               <DialogHeader>
                 <DialogTitle>Approve &ldquo;{project.title}&rdquo;</DialogTitle>
                 <DialogDescription>
-                  Choose what happens next for this role.
+                  {description ?? "Choose what happens next for this role."}
                 </DialogDescription>
               </DialogHeader>
+              {!isReady && (
+                <p className="mb-3 rounded-xl bg-warning/15 p-3 text-sm font-medium text-warning-foreground">
+                  Missing {missing.join(", ")} — finish those first.
+                </p>
+              )}
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
                   onClick={handlePostToShadow}
-                  disabled={isPending}
-                  className="rounded-xl border border-border p-4 text-left transition-colors hover:border-brand hover:bg-brand/5 disabled:opacity-60"
+                  disabled={isPending || !isReady}
+                  className="rounded-xl border border-border p-4 text-left transition-colors hover:border-brand hover:bg-brand/5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <p className="text-sm font-semibold text-foreground">Post role to Shadow</p>
                   <p className="mt-0.5 text-sm text-muted-foreground">
@@ -129,8 +152,8 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
                 <button
                   type="button"
                   onClick={handleSaveAsDraft}
-                  disabled={isPending}
-                  className="rounded-xl border border-border p-4 text-left transition-colors hover:border-muted-foreground hover:bg-secondary disabled:opacity-60"
+                  disabled={isPending || !isReady}
+                  className="rounded-xl border border-border p-4 text-left transition-colors hover:border-muted-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <p className="text-sm font-semibold text-foreground">Save as draft</p>
                   <p className="mt-0.5 text-sm text-muted-foreground">
@@ -150,7 +173,9 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
                 </Button>
               </DialogFooter>
             </>
-          ) : (
+          )}
+
+          {step === "cancel-confirm" && (
             <>
               <DialogHeader>
                 <DialogTitle>Discard approval?</DialogTitle>
@@ -164,6 +189,36 @@ export function ApproveProjectDialog({ project }: { project: Project }) {
                 </Button>
                 <Button type="button" variant="brand" onClick={handleCancelConfirm}>
                   Confirm
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {step === "posted" && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  Posted to Shadow
+                </DialogTitle>
+                <DialogDescription>
+                  &ldquo;{project.title}&rdquo; is now live on the public job board.
+                </DialogDescription>
+              </DialogHeader>
+              {shadowJob ? (
+                <LiveRolePreviewFrame jobId={shadowJob.id} />
+              ) : (
+                <p className="text-sm text-muted-foreground">Loading preview…</p>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    goToCandidates();
+                  }}
+                >
+                  Continue to candidates
                 </Button>
               </DialogFooter>
             </>

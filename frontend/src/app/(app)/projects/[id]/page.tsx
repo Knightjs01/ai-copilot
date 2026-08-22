@@ -11,6 +11,7 @@ import { HiringBlueprintCard } from "@/components/project/hiring-blueprint-card"
 import { HiringManagerAlignmentCard } from "@/components/project/hiring-manager-alignment-card";
 import { IdentityVaultTab } from "@/components/project/identity-vault-tab";
 import { InterviewKitCard } from "@/components/project/interview-kit-card";
+import { LiveRolePreviewDialog } from "@/components/project/live-role-preview";
 import { ProjectAnalyticsCard } from "@/components/project/project-analytics-card";
 import { RoleHealthCard } from "@/components/project/role-health-card";
 import { RoleInfoCard } from "@/components/project/role-info-card";
@@ -18,6 +19,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth-context";
 import { useProject } from "@/lib/queries/projects";
+import { useProjectShadowJob } from "@/lib/queries/shadow-jobs";
 
 type ProjectTab = "overview" | "blueprint" | "candidates" | "vault";
 const PROJECT_TABS: ProjectTab[] = ["overview", "blueprint", "candidates", "vault"];
@@ -26,6 +28,7 @@ export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const { data: project, isLoading } = useProject(params.id);
+  const { data: shadowJob } = useProjectShadowJob(params.id);
   const [activeTab, setActiveTab] = React.useState<ProjectTab>("overview");
   const { hasPermission } = useAuth();
   const canRevealIdentity = hasPermission("identity_vault.reveal");
@@ -58,6 +61,7 @@ export default function ProjectDetailPage() {
           {project.title}
         </h1>
         <div className="flex items-center gap-2">
+          {shadowJob?.status === "published" && <LiveRolePreviewDialog jobId={shadowJob.id} />}
           {canEditProject && <EditProjectDialog project={project} />}
           {canEditProject && <ApproveProjectDialog project={project} />}
           <BurnProjectDialog projectId={project.id} projectTitle={project.title} />

@@ -4,6 +4,7 @@ import * as React from "react";
 import { CheckCircle2, Sparkles } from "lucide-react";
 
 import { AiProvenance } from "@/components/ai-provenance";
+import { ApproveProjectDialog } from "@/components/project/approve-project-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -110,6 +111,7 @@ export function InterviewKitCard({ project }: { project: Project }) {
   const toast = useToast();
 
   const [selection, setSelection] = React.useState<boolean[]>([]);
+  const [showApproveDialog, setShowApproveDialog] = React.useState(false);
 
   // Reset local selection whenever the kit's identity changes (first load, or a fresh
   // regenerate replaces every question) — generated_at is the real signal for "this is a
@@ -123,12 +125,7 @@ export function InterviewKitCard({ project }: { project: Project }) {
 
   const handleBuild = () => {
     updateSelection.mutate(selection, {
-      onSuccess: () => {
-        toast({
-          title: "Pre-screen kit built",
-          description: `${selectedCount} question${selectedCount === 1 ? "" : "s"} saved to the kit.`,
-        });
-      },
+      onSuccess: () => setShowApproveDialog(true),
       onError: () => {
         toast({
           title: "Couldn't save your selection",
@@ -213,6 +210,13 @@ export function InterviewKitCard({ project }: { project: Project }) {
           </p>
         )}
       </CardContent>
+      <ApproveProjectDialog
+        project={project}
+        open={showApproveDialog}
+        onOpenChange={setShowApproveDialog}
+        hideTrigger
+        description="Pre-screen questions added — this role is ready to post. What would you like to do?"
+      />
     </Card>
   );
 }
