@@ -35,7 +35,6 @@ const NAV_COMMANDS: NavCommand[] = [
   { label: "Home", href: "/home", icon: Home },
   { label: "Jobs", href: "/projects", icon: Briefcase },
   { label: "Candidates", href: "/pipeline", icon: Users, permission: "candidates.view" },
-  { label: "Discover Talent", href: "/talent", icon: UsersRound },
   { label: "Interviews", href: "/interviews", icon: Video, permission: "interviews.view" },
   { label: "Phantom AI", href: "/phantom-ai", icon: Sparkles },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
@@ -48,6 +47,12 @@ const NAV_COMMANDS: NavCommand[] = [
     href: "/search-candidates",
     icon: UserSearch,
     permission: "shadow_candidates.search",
+  },
+  {
+    label: "Talent Pool",
+    href: "/talent-pool",
+    icon: UsersRound,
+    permission: "talent_pool.view",
   },
   {
     label: "Company Profile",

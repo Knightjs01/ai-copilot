@@ -14,15 +14,17 @@ interface Crumb {
 }
 
 // Static top-level destinations, each with the parent hub it belongs to under the new IA (Talent
-// Pool/Search Candidates live under Talent; Team/Company/Security/Historic Vault live under
+// Pool/Search Candidates live under Phantom AI; Team/Company/Security/Historic Vault live under
 // Settings) -- purely presentational, no routing change.
 const STATIC_CRUMBS: Record<string, Crumb[]> = {
   "/home": [{ label: "Home" }],
   "/projects": [{ label: "Jobs" }],
   "/pipeline": [{ label: "Candidates" }],
-  "/talent": [{ label: "Discover Talent" }],
-  "/talent-pool": [{ label: "Discover Talent", href: "/talent" }, { label: "Talent Pool" }],
-  "/search-candidates": [{ label: "Discover Talent", href: "/talent" }, { label: "Phantom Smart Matches" }],
+  "/talent-pool": [{ label: "Phantom AI", href: "/phantom-ai" }, { label: "Talent Pool" }],
+  "/search-candidates": [
+    { label: "Phantom AI", href: "/phantom-ai" },
+    { label: "Phantom Smart Matches" },
+  ],
   "/interviews": [{ label: "Interviews" }],
   "/phantom-ai": [{ label: "Phantom AI" }],
   "/analytics": [{ label: "Analytics" }],

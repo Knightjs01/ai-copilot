@@ -12,7 +12,6 @@ import {
   Home,
   Sparkles,
   Users,
-  UsersRound,
   Video,
 } from "lucide-react";
 
@@ -39,7 +38,6 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
     { label: "Home", href: "/home", icon: Home },
     { label: "Jobs", href: "/projects", icon: Briefcase },
     { label: "Candidates", href: "/pipeline", icon: Users, permission: "candidates.view" },
-    { label: "Discover Talent", href: "/talent", icon: UsersRound },
     { label: "Interviews", href: "/interviews", icon: Video, permission: "interviews.view" },
     { label: "Phantom AI", href: "/phantom-ai", icon: Sparkles },
     { label: "Analytics", href: "/analytics", icon: BarChart3 },

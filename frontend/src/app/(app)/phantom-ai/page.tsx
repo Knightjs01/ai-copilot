@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ArrowRight, FileText, Search, Sparkles, UsersRound } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
 
 interface AiFeature {
   title: string;
   description: string;
   href: string;
   icon: typeof Sparkles;
+  permission?: string;
 }
 
 const GROUPS: { heading: string; items: AiFeature[] }[] = [
@@ -21,12 +23,14 @@ const GROUPS: { heading: string; items: AiFeature[] }[] = [
         description: "AI-ranked candidates from the discoverable Shadow pool, matched to a role.",
         href: "/search-candidates",
         icon: Search,
+        permission: "shadow_candidates.search",
       },
       {
         title: "Talent Pool matches",
         description: "Find matches for a role among candidates who've granted future-role access.",
         href: "/talent-pool",
         icon: UsersRound,
+        permission: "talent_pool.view",
       },
     ],
   },
@@ -45,6 +49,12 @@ const GROUPS: { heading: string; items: AiFeature[] }[] = [
 ];
 
 export default function PhantomAiHubPage() {
+  const { hasPermission } = useAuth();
+  const visibleGroups = GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.permission || hasPermission(item.permission)),
+  })).filter((group) => group.items.length > 0);
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -58,7 +68,7 @@ export default function PhantomAiHubPage() {
         </p>
       </div>
 
-      {GROUPS.map((group) => (
+      {visibleGroups.map((group) => (
         <div key={group.heading}>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             {group.heading}
