@@ -27,11 +27,11 @@ import { INTERVIEW_STATUS_LABEL, INTERVIEW_STATUS_VARIANT } from "@/lib/status-d
 
 type ProjectTab = "overview" | "blueprint" | "candidates" | "interviews" | "activity" | "vault";
 const PROJECT_TABS: ProjectTab[] = [
-  "overview",
-  "blueprint",
   "candidates",
   "interviews",
   "activity",
+  "overview",
+  "blueprint",
   "vault",
 ];
 
@@ -103,7 +103,7 @@ export default function ProjectDetailPage() {
   const searchParams = useSearchParams();
   const { data: project, isLoading } = useProject(params.id);
   const { data: shadowJob } = useProjectShadowJob(params.id);
-  const [activeTab, setActiveTab] = React.useState<ProjectTab>("overview");
+  const [activeTab, setActiveTab] = React.useState<ProjectTab>("candidates");
   const { hasPermission } = useAuth();
   const canRevealIdentity = hasPermission("identity_vault.reveal");
   const canEditProject = hasPermission("projects.update");
@@ -114,11 +114,11 @@ export default function ProjectDetailPage() {
   }, [searchParams]);
 
   const tabOptions: { value: ProjectTab; label: string }[] = [
-    { value: "overview", label: "Overview" },
-    { value: "blueprint", label: "Blueprint" },
     { value: "candidates", label: "Candidates" },
     { value: "interviews", label: "Interviews" },
     { value: "activity", label: "Activity" },
+    { value: "overview", label: "Overview" },
+    { value: "blueprint", label: "Blueprint" },
     ...(canRevealIdentity ? [{ value: "vault" as const, label: "Identity Vault" }] : []),
   ];
 
