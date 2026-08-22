@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { Check, Copy, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -103,12 +104,15 @@ export function MfaSetupDialog({
                 Set up multi-factor authentication
               </DialogTitle>
               <DialogDescription>
-                Add this key to an authenticator app (1Password, Authy, Google Authenticator),
+                Scan this with an authenticator app (1Password, Authy, Google Authenticator),
                 then enter the 6-digit code it generates to confirm.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleVerify} className="flex flex-col gap-4">
-              <Field label="Setup key">
+              <div className="flex justify-center rounded-xl border border-border bg-white p-4">
+                <QRCodeSVG value={setup.data.provisioning_uri} size={176} />
+              </div>
+              <Field label="Can't scan it? Enter this key manually">
                 <CopyableSecret value={setup.data.secret} />
               </Field>
               <Field label="6-digit code" htmlFor="mfa-verify-code">
