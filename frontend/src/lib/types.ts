@@ -880,6 +880,8 @@ export interface ShadowProfile {
   // pipeline_stage, unless the candidate has withdrawn — withdrawal always overrides wherever
   // the application sat in the pipeline. This is the field the merged Kanban groups by.
   effective_stage: ShadowEffectiveStage;
+  // True until a recruiter opens this applicant's card for the first time.
+  is_new: boolean;
 }
 
 export type MessageSenderType = "company" | "candidate";

@@ -144,6 +144,9 @@ class ShadowProfile(BaseModel):
     # persisted as pipeline_stage="withdrawn", so a withdrawn candidate's last real stage isn't
     # destroyed). This is the field the merged Kanban board actually groups by.
     effective_stage: str
+    # True until a recruiter opens this applicant's card for the first time (viewed_at is None).
+    # Powers the "New application" badge on the Kanban/applicant-list surfaces.
+    is_new: bool = False
 
 
 class ShadowApplicantPipelineUpdate(BaseModel):

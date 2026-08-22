@@ -115,6 +115,22 @@ export function useUpdateApplicantPipelineStage(jobId: string) {
   });
 }
 
+// Fire-and-forget: the caller marks a card viewed once (e.g. on click, or when its detail
+// mounts) — the backend itself is idempotent (mark_viewed is a no-op once viewed_at is set), so
+// there's no harm in calling this more than once for the same applicant.
+export function useMarkApplicantViewed(jobId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (applicationId: string) =>
+      apiClient.post<ShadowProfile>(
+        `/shadow-jobs/mine/${jobId}/applicants/${applicationId}/mark-viewed`
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
+  });
+}
+
 export function useApplicantMessages(jobId: string | undefined, applicationId: string | undefined) {
   return useQuery({
     queryKey: ["messages", "applicant-thread", jobId, applicationId],

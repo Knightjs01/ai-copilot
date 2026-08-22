@@ -163,6 +163,19 @@ async def update_applicant_pipeline_stage(
     )
 
 
+@router.post("/mine/{job_id}/applicants/{application_id}/mark-viewed", response_model=ShadowProfile)
+async def mark_applicant_viewed(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ShadowProfile:
+    return await ShadowJobService(session).mark_applicant_viewed(
+        actor=actor, job_id=job_id, application_id=application_id
+    )
+
+
 # --- Public job board ----------------------------------------------------------------------
 
 

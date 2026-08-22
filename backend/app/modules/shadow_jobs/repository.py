@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import delete, func, select
@@ -144,6 +145,13 @@ class ShadowApplicationRepository:
     ) -> ShadowApplication:
         application.pipeline_stage = pipeline_stage
         await self._session.flush()
+        return application
+
+    async def mark_viewed(self, application: ShadowApplication) -> ShadowApplication:
+        """No-op if already viewed -- viewed_at is a first-viewed timestamp, never overwritten."""
+        if application.viewed_at is None:
+            application.viewed_at = datetime.now(timezone.utc)
+            await self._session.flush()
         return application
 
     async def get_by_job_and_candidate(

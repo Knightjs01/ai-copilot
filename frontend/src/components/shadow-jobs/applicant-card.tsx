@@ -12,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
+import { useMarkApplicantViewed } from "@/lib/queries/shadow-jobs";
 import { useFetchRevealedIdentity } from "@/lib/queries/shadow-reveal";
+import { cn } from "@/lib/utils";
 import {
   SHADOW_APPLICATION_STATUS_LABEL,
   SHADOW_APPLICATION_STATUS_VARIANT,
@@ -37,6 +39,15 @@ export function ApplicantCard({
   const [identity, setIdentity] = React.useState<RevealedIdentity | null>(null);
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const fetchIdentity = useFetchRevealedIdentity(jobId);
+  const markViewed = useMarkApplicantViewed(jobId);
+  const markViewedRef = React.useRef(markViewed.mutate);
+  markViewedRef.current = markViewed.mutate;
+
+  // Opening this list is a real "the recruiter looked at their applicants" signal -- each card
+  // clears its own "new" flag once it's actually rendered here, not just when the list loads.
+  React.useEffect(() => {
+    if (profile.is_new) markViewedRef.current(profile.application_id);
+  }, [profile.is_new, profile.application_id]);
   const canRequestTalentPool =
     hasPermission("talent_pool.request") &&
     (jobStatus === "closed" || profile.status === "declined" || profile.status === "withdrawn");
@@ -55,11 +66,14 @@ export function ApplicantCard({
   };
 
   return (
-    <Card>
+    <Card className={cn(profile.is_new && "border-brand/50 bg-brand/5")}>
       <CardContent className="flex flex-col gap-3 py-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-0.5">
-            <h3 className="text-base font-semibold text-foreground">{profile.callsign}</h3>
+            <h3 className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+              {profile.callsign}
+              {profile.is_new && <Badge variant="success">New application</Badge>}
+            </h3>
             {profile.headline && (
               <p className="text-sm text-muted-foreground">{profile.headline}</p>
             )}

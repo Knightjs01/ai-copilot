@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { KanbanCard, KanbanColumn } from "@/components/ui/kanban";
 import { apiClient } from "@/lib/api-client";
-import { useUpdateApplicantPipelineStage } from "@/lib/queries/shadow-jobs";
+import { useMarkApplicantViewed, useUpdateApplicantPipelineStage } from "@/lib/queries/shadow-jobs";
 import { useToast } from "@/lib/toast-context";
 import type { Candidate, CandidateStatus, ShadowEffectiveStage, ShadowProfile } from "@/lib/types";
 import {
@@ -43,6 +43,7 @@ export function MergedPipelineKanban({
   const queryClient = useQueryClient();
   const toast = useToast();
   const updatePipelineStage = useUpdateApplicantPipelineStage(shadowJobId);
+  const markViewed = useMarkApplicantViewed(shadowJobId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -169,13 +170,35 @@ export function MergedPipelineKanban({
                 ))}
 
                 {stageApplicants.map((applicant) => (
-                  <Link key={applicant.application_id} href={`/shadow-jobs/${shadowJobId}`}>
-                    <KanbanCard id={shadowDragId(applicant.application_id)}>
+                  <Link
+                    key={applicant.application_id}
+                    href={`/shadow-jobs/${shadowJobId}`}
+                    onClick={() => {
+                      if (applicant.is_new) markViewed.mutate(applicant.application_id);
+                    }}
+                  >
+                    <KanbanCard
+                      id={shadowDragId(applicant.application_id)}
+                      className={applicant.is_new ? "border-brand/50 bg-brand/5" : undefined}
+                    >
                       <div className="flex items-center gap-2.5">
-                        <Avatar name={applicant.callsign} className="h-7 w-7 text-[10px]" />
+                        <span className="relative shrink-0">
+                          <Avatar name={applicant.callsign} className="h-7 w-7 text-[10px]" />
+                          {applicant.is_new && (
+                            <span
+                              className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success"
+                              aria-hidden
+                            />
+                          )}
+                        </span>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">
+                          <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
                             {applicant.callsign}
+                            {applicant.is_new && (
+                              <Badge variant="success" className="shrink-0 text-[10px]">
+                                New application
+                              </Badge>
+                            )}
                           </p>
                           {applicant.headline && (
                             <p className="truncate text-xs text-muted-foreground">

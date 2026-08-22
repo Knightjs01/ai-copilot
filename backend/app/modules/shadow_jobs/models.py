@@ -114,3 +114,8 @@ class ShadowApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     callsign: Mapped[str] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(20), default=ShadowApplicationStatus.SUBMITTED.value)
     pipeline_stage: Mapped[str] = mapped_column(String(20), default=ShadowPipelineStage.NEW.value)
+    # NULL until a recruiter opens this applicant's card -- powers the "New application" badge.
+    # See migration 0050 for why existing rows are backfilled rather than left NULL.
+    viewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )

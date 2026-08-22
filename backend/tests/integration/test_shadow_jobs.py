@@ -367,6 +367,78 @@ async def test_applicant_defaults_to_new_pipeline_stage(client: AsyncClient) -> 
     assert profile["effective_stage"] == "new"
 
 
+async def test_new_applicant_is_flagged_and_mark_viewed_clears_it(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-isnew.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    await _publish_job(client, headers=headers, job_id=job["id"])
+    application_id, _ = await _apply(
+        client, job_id=job["id"], candidate_email="applicant@shadowjobs-isnew.com"
+    )
+
+    applicants = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert applicants.json()[0]["is_new"] is True
+
+    mark_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application_id}/mark-viewed",
+        headers=headers,
+    )
+    assert mark_response.status_code == 200, mark_response.text
+    assert mark_response.json()["is_new"] is False
+
+    # Persisted, and re-marking an already-viewed applicant is a harmless no-op.
+    second_mark = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application_id}/mark-viewed",
+        headers=headers,
+    )
+    assert second_mark.status_code == 200
+    assert second_mark.json()["is_new"] is False
+
+    applicants_after = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert applicants_after.json()[0]["is_new"] is False
+
+
+async def test_mark_viewed_rejects_wrong_job_application_pairing(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-markwrongjob.com")
+    headers = auth_headers(owner["access_token"])
+    job_a = await _create_job(client, headers=headers, payload={**_JOB_PAYLOAD, "title": "Job A"})
+    await _publish_job(client, headers=headers, job_id=job_a["id"])
+    job_b = await _create_job(client, headers=headers, payload={**_JOB_PAYLOAD, "title": "Job B"})
+    await _publish_job(client, headers=headers, job_id=job_b["id"])
+    application_id, _ = await _apply(
+        client, job_id=job_a["id"], candidate_email="applicant@shadowjobs-markwrongjob.com"
+    )
+
+    response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job_b['id']}/applicants/{application_id}/mark-viewed",
+        headers=headers,
+    )
+    assert response.status_code == 404
+
+
+async def test_mark_viewed_cross_tenant_isolation(client: AsyncClient) -> None:
+    owner_a = await signup(client, email="owner-a@shadowjobs-markiso.com")
+    headers_a = auth_headers(owner_a["access_token"])
+    job = await _create_job(client, headers=headers_a)
+    await _publish_job(client, headers=headers_a, job_id=job["id"])
+    application_id, _ = await _apply(
+        client, job_id=job["id"], candidate_email="applicant@shadowjobs-markiso.com"
+    )
+
+    owner_b = await signup(client, email="owner-b@shadowjobs-markiso-b.com")
+    headers_b = auth_headers(owner_b["access_token"])
+
+    response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application_id}/mark-viewed",
+        headers=headers_b,
+    )
+    assert response.status_code == 404
+
+
 async def test_update_applicant_pipeline_stage_happy_path(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@shadowjobs-stageupdate.com")
     headers = auth_headers(owner["access_token"])

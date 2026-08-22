@@ -235,6 +235,35 @@ class ShadowJobService:
             ),
         )
 
+    async def mark_applicant_viewed(
+        self, *, actor: User, job_id: uuid.UUID, application_id: uuid.UUID
+    ) -> ShadowProfile:
+        await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)
+        application = await self._applications.get_by_id(application_id)
+        if application is None or application.shadow_job_id != job_id:
+            raise ShadowApplicationNotFoundError()
+
+        application = await self._applications.mark_viewed(application)
+
+        unread_counts = await self._unread_counts_for_applications([application.id])
+        upcoming_interview_ids = {
+            i.shadow_application_id
+            for i in await self._interviews.list_upcoming_by_application_ids([application.id])
+        }
+        talent_pool_grants = await self._talent_pool_grants.list_latest_by_company_and_candidates(
+            company_id=actor.company_id, candidate_user_ids=[application.candidate_user_id]
+        )
+        return await self._to_shadow_profile(
+            application,
+            unread_count=unread_counts.get(application.id, 0),
+            has_upcoming_interview=application.id in upcoming_interview_ids,
+            talent_pool_status=(
+                grant.status
+                if (grant := talent_pool_grants.get(application.candidate_user_id)) is not None
+                else None
+            ),
+        )
+
     async def _unread_counts_for_applications(
         self, application_ids: list[uuid.UUID]
     ) -> dict[uuid.UUID, int]:
@@ -312,6 +341,7 @@ class ShadowJobService:
                     talent_pool_status=talent_pool_status,
                     pipeline_stage=application.pipeline_stage,
                     effective_stage=effective_stage,
+                    is_new=application.viewed_at is None,
                 )
 
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
@@ -352,6 +382,7 @@ class ShadowJobService:
             talent_pool_status=talent_pool_status,
             pipeline_stage=application.pipeline_stage,
             effective_stage=effective_stage,
+            is_new=application.viewed_at is None,
         )
 
     # --- Public job board ---------------------------------------------------------------------
