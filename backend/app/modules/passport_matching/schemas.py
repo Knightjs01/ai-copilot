@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.modules.talent_pool.models import TalentPoolScope
+
 MatchTier = Literal["Excellent Match", "Strong Match", "Potential Match", "Weak Match"]
 
 
@@ -68,3 +70,13 @@ class CandidateSearchResult(BaseModel):
     match_summary: str
     strengths: list[str]
     gaps: list[str]
+
+
+class TalentPoolMatchResult(CandidateSearchResult):
+    """A Talent Pool candidate ranked against a NEW role — same shape as CandidateSearchResult,
+    plus the grant context that makes this result meaningful (spec: "you previously considered
+    this candidate for..."). See PassportMatchingService.search_talent_pool_for_job."""
+
+    source_role_title: str
+    scope: TalentPoolScope
+    granted_at: datetime

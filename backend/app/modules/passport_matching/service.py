@@ -31,6 +31,7 @@ from app.modules.passport_matching.schemas import (
     CandidateSearchCareerEntry,
     CandidateSearchResult,
     PassportJobMatchRead,
+    TalentPoolMatchResult,
 )
 from app.modules.phantom_passport.repository import (
     PassportCareerEntryRepository,
@@ -39,6 +40,8 @@ from app.modules.phantom_passport.repository import (
 )
 from app.modules.shadow_jobs.models import ShadowJob, ShadowJobStatus
 from app.modules.shadow_jobs.repository import ShadowJobRepository
+from app.modules.talent_pool.models import TalentPoolGrant, TalentPoolScope
+from app.modules.talent_pool.repository import TalentPoolGrantRepository
 
 _MAX_BATCH_JOBS = 24
 _MAX_SEARCH_RESULTS = 24
@@ -88,6 +91,7 @@ class PassportMatchingService:
         self._jobs = ShadowJobRepository(session)
         self._blueprints = HiringBlueprintRepository(session)
         self._alignments = HiringManagerAlignmentRepository(session)
+        self._talent_pool_grants = TalentPoolGrantRepository(session)
         self._llm_client = llm_client
 
     async def _resolve_approved_passport_version_id(self, candidate: CandidateUser) -> uuid.UUID:
@@ -325,6 +329,106 @@ class PassportMatchingService:
                     match_summary=match.summary,
                     strengths=match.strengths,
                     gaps=match.gaps,
+                )
+            )
+
+        results.sort(key=lambda r: r.match_score, reverse=True)
+        return results[:_MAX_SEARCH_RESULTS]
+
+    async def search_talent_pool_for_job(
+        self, *, actor: User, job_id: uuid.UUID
+    ) -> list[TalentPoolMatchResult]:
+        """Rank this company's granted Talent Pool candidates against a role -- the future
+        Hiring Blueprint matching step of Talent Memory (talent_pool/__init__.py). Reuses every
+        scoring/caching primitive search_candidates_for_job already established; the only real
+        difference is where the candidate pool comes from (talent_pool_grants, scoped by the
+        candidate's own chosen project_only/company_wide permission, instead of every
+        discoverable Passport)."""
+        job = await self._jobs.get_by_id(job_id)
+        if job is None or job.company_id != actor.company_id or job.deleted_at is not None:
+            raise ShadowJobNotFoundError()
+
+        grants = await self._talent_pool_grants.list_eligible_for_job(
+            company_id=actor.company_id, project_id=job.project_id
+        )
+        if not grants:
+            return []
+
+        blueprint: HiringBlueprint | None = None
+        alignment: HiringManagerAlignment | None = None
+        if job.project_id is not None:
+            blueprint = await self._blueprints.get_by_project_id(job.project_id)
+            alignment = await self._alignments.get_by_project_id(job.project_id)
+
+        semaphore = asyncio.Semaphore(_COMPUTE_CONCURRENCY)
+
+        async def _score_one(
+            grant: TalentPoolGrant,
+        ) -> tuple[TalentPoolGrant, Any, PassportMatchDraft | None]:
+            passport = await self._passports.get_by_candidate_user_id(grant.candidate_user_id)
+            if passport is None or passport.current_version_id is None:
+                return grant, None, None
+            version = await self._versions.get_by_id(passport.current_version_id)
+            if version is None:
+                return grant, None, None
+            async with semaphore:
+                try:
+                    return (
+                        grant,
+                        passport,
+                        await self._score_via_llm(
+                            passport_snapshot=version.snapshot,
+                            job=job,
+                            blueprint=blueprint,
+                            alignment=alignment,
+                        ),
+                    )
+                except PassportMatchGenerationError:
+                    # One candidate's score failing shouldn't blank the whole list -- same "fail
+                    # open" discipline as search_candidates_for_job.
+                    return grant, passport, None
+
+        scored = await asyncio.gather(*(_score_one(g) for g in grants))
+
+        results: list[TalentPoolMatchResult] = []
+        for grant, passport, draft in scored:
+            if draft is None or passport is None:
+                continue
+            match = await self._persist_match(
+                passport_version_id=passport.current_version_id, job=job, draft=draft
+            )
+            career_entries = await self._career_entries.list_by_passport_id(passport.id)
+            results.append(
+                TalentPoolMatchResult(
+                    callsign=passport.callsign or "Unknown",
+                    headline=passport.headline,
+                    seniority=passport.seniority,
+                    years_experience=passport.years_experience,
+                    summary=passport.summary,
+                    skills=list(passport.skills),
+                    industries=list(passport.industries),
+                    location=passport.location,
+                    remote_preference=passport.remote_preference,
+                    salary_min=passport.salary_min,
+                    salary_max=passport.salary_max,
+                    notice_period=passport.notice_period,
+                    career_intent=passport.career_intent,
+                    career_entries=[
+                        CandidateSearchCareerEntry(
+                            title=entry.title,
+                            company_name_anonymized=entry.company_name_anonymized,
+                            is_current=entry.is_current,
+                        )
+                        for entry in career_entries
+                    ],
+                    match_tier=match.match_tier,  # type: ignore[arg-type]
+                    match_score=match.match_score,
+                    match_summary=match.summary,
+                    strengths=match.strengths,
+                    gaps=match.gaps,
+                    source_role_title=grant.source_role_title,
+                    scope=TalentPoolScope(grant.scope),
+                    granted_at=grant.responded_at or grant.created_at,
                 )
             )
 

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +48,13 @@ function ToneList({
   );
 }
 
-export function CandidateSearchResultCard({ result }: { result: CandidateSearchResult }) {
+export function CandidateSearchResultCard({
+  result,
+  contextLine,
+}: {
+  result: CandidateSearchResult;
+  contextLine?: ReactNode;
+}) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 py-5">
@@ -57,6 +64,7 @@ export function CandidateSearchResultCard({ result }: { result: CandidateSearchR
             {result.headline && (
               <p className="text-sm text-muted-foreground">{result.headline}</p>
             )}
+            {contextLine && <p className="text-xs text-muted-foreground">{contextLine}</p>}
           </div>
           <Badge variant={MATCH_TIER_VARIANT[result.match_tier]}>{result.match_tier}</Badge>
         </div>

@@ -31,6 +31,7 @@ from app.modules.projects.api import router as projects_router
 from app.modules.saved_shadow_jobs.api import router as saved_shadow_jobs_router
 from app.modules.shadow_jobs.api import router as shadow_jobs_router
 from app.modules.shadow_reveal.api import router as shadow_reveal_router
+from app.modules.talent_pool.api import router as talent_pool_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
@@ -55,6 +56,7 @@ api_router.include_router(candidate_auth_router)
 api_router.include_router(phantom_passport_router)
 api_router.include_router(shadow_jobs_router)
 api_router.include_router(shadow_reveal_router)
+api_router.include_router(talent_pool_router)
 api_router.include_router(saved_shadow_jobs_router)
 api_router.include_router(passport_matching_router)
 api_router.include_router(messages_router)

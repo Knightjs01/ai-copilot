@@ -774,6 +774,15 @@ export interface CandidateSearchResult {
   gaps: string[];
 }
 
+// A Talent Pool candidate ranked against a NEW role -- same shape as CandidateSearchResult, plus
+// the grant context that makes the result meaningful ("previously considered for X"). See
+// backend passport_matching/schemas.py::TalentPoolMatchResult.
+export interface TalentPoolMatchResult extends CandidateSearchResult {
+  source_role_title: string;
+  scope: TalentPoolScope;
+  granted_at: string;
+}
+
 export interface BoardFilters {
   seniority: string | null;
   remote_preference: string | null;
@@ -837,6 +846,8 @@ export interface ShadowProfile {
   career_entries: ShadowCareerEntrySummary[];
   unread_message_count: number;
   has_upcoming_interview: boolean;
+  // Null when no Talent Pool request has ever been made for this candidate at this company.
+  talent_pool_status: TalentPoolGrantStatus | null;
 }
 
 export type MessageSenderType = "company" | "candidate";
@@ -929,6 +940,47 @@ export interface CandidateRevealHistoryItem {
   responded_at: string | null;
   disclosure_level: DisclosureLevel | null;
   disclosed_fields: ShadowField[] | null;
+}
+
+export type TalentPoolGrantStatus = "requested" | "granted" | "declined" | "withdrawn";
+export type TalentPoolScope = "project_only" | "company_wide";
+
+// Company-side view of one grant it created. callsign is populated only once status == "granted"
+// -- see backend phantom_passport/models.py's documented exception for PhantomPassport.callsign.
+export interface TalentPoolGrantRead {
+  id: string;
+  shadow_application_id: string | null;
+  source_role_title: string;
+  status: TalentPoolGrantStatus;
+  scope: TalentPoolScope;
+  requested_at: string;
+  responded_at: string | null;
+  review_date: string | null;
+  callsign: string | null;
+}
+
+// One row in the company's Talent Pool list -- only ever built from a granted row.
+export interface TalentPoolPoolListItem {
+  id: string;
+  callsign: string;
+  headline: string | null;
+  seniority: string | null;
+  source_role_title: string;
+  scope: TalentPoolScope;
+  granted_at: string;
+}
+
+// What the candidate sees -- company/role context plus the company's optional note.
+export interface CandidateTalentPoolRequest {
+  id: string;
+  company_name: string;
+  source_role_title: string;
+  note: string | null;
+  status: TalentPoolGrantStatus;
+  scope: TalentPoolScope;
+  requested_at: string;
+  responded_at: string | null;
+  review_date: string | null;
 }
 
 export interface RevealedCareerEntry {

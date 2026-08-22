@@ -99,6 +99,14 @@ class PhantomPassport(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base
     # shadow_jobs' per-application Callsigns (fresh for every job application, deliberately, so
     # applying to two roles never links back to the same person). Only ever returned to the
     # owning candidate via GET /phantom-passport/me — never added to any company-facing schema.
+    #
+    # One narrow, documented exception: talent_pool.TalentPoolService surfaces this same stable
+    # callsign to a specific company, but only when that company holds a currently-granted Talent
+    # Pool permission for this candidate (never for a requested/declined/withdrawn row). Once a
+    # candidate has explicitly consented to being kept on file for future roles at one company,
+    # that company recognizing "we've seen this person before" is the entire point of the
+    # feature — a fully consented case, distinct from the cross-application correlation this
+    # field's no-company-exposure rule otherwise exists to prevent.
     callsign: Mapped[str | None] = mapped_column(String(50), nullable=True, unique=True)
 
 

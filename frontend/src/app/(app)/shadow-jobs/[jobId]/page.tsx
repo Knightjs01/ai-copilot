@@ -158,7 +158,12 @@ export default function ShadowJobDetailPage() {
         ) : applicants && applicants.length > 0 ? (
           <div className="flex flex-col gap-3">
             {applicants.map((profile) => (
-              <ApplicantCard key={profile.application_id} jobId={job.id} profile={profile} />
+              <ApplicantCard
+                key={profile.application_id}
+                jobId={job.id}
+                jobStatus={job.status}
+                profile={profile}
+              />
             ))}
           </div>
         ) : (

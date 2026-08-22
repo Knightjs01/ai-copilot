@@ -27,6 +27,7 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
   const canViewHistoricVault = hasPermission("historic_vault.view");
   const canViewShadowJobs = hasPermission("shadow_jobs.view");
   const canSearchCandidates = hasPermission("shadow_candidates.search");
+  const canViewTalentPool = hasPermission("talent_pool.view");
   const canManageCompany = hasPermission("company.manage_settings");
   const canViewPipeline = hasPermission("candidates.view");
 
@@ -99,6 +100,14 @@ export function TopNav({ container }: { container?: HTMLElement | null }) {
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Search Candidates
+                </Link>
+              )}
+              {canViewTalentPool && (
+                <Link
+                  href="/talent-pool"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Talent Pool
                 </Link>
               )}
               {canManageCompany && (

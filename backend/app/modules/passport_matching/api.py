@@ -22,6 +22,7 @@ from app.modules.passport_matching.schemas import (
     CandidateSearchResult,
     PassportJobMatchRead,
     SearchQueryRequest,
+    TalentPoolMatchResult,
 )
 from app.modules.passport_matching.service import PassportMatchingService
 
@@ -76,5 +77,18 @@ async def search_candidates(
     llm_client: PassportMatchingLLMClient = Depends(get_passport_matching_llm_client),
 ) -> list[CandidateSearchResult]:
     return await PassportMatchingService(session, llm_client=llm_client).search_candidates_for_job(
+        actor=actor, job_id=job_id
+    )
+
+
+@router.get("/mine/{job_id}/talent-pool", response_model=list[TalentPoolMatchResult])
+async def search_talent_pool(
+    job_id: uuid.UUID,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.TALENT_POOL_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+    llm_client: PassportMatchingLLMClient = Depends(get_passport_matching_llm_client),
+) -> list[TalentPoolMatchResult]:
+    return await PassportMatchingService(session, llm_client=llm_client).search_talent_pool_for_job(
         actor=actor, job_id=job_id
     )

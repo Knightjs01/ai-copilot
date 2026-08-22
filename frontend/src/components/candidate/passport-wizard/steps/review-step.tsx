@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, FileText, History, Sparkles } from "lucide-react";
+import { Archive, CheckCircle2, FileText, History, Sparkles } from "lucide-react";
 
 import { AnonymisedCvDialog } from "@/components/candidate/passport-wizard/anonymised-cv-dialog";
 import { PassportCard } from "@/components/candidate/passport-wizard/passport-card";
@@ -125,6 +125,11 @@ export function ReviewStep({
             <Button type="button" variant="secondary" className="self-start" asChild>
               <Link href="/shadow/passport/identity-activity">
                 <History className="h-4 w-4" /> Identity activity
+              </Link>
+            </Button>
+            <Button type="button" variant="secondary" className="self-start" asChild>
+              <Link href="/shadow/passport/talent-memory">
+                <Archive className="h-4 w-4" /> Talent memory
               </Link>
             </Button>
           </div>

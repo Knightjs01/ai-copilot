@@ -13,6 +13,7 @@ from app.modules.companies.service import is_profile_publicly_visible
 from app.modules.interviews.repository import InterviewRepository
 from app.modules.messages.models import Message
 from app.modules.messages.repository import MessageRepository, MessageThreadRepository
+from app.modules.talent_pool.repository import TalentPoolGrantRepository
 from app.modules.phantom_passport.exceptions import PassportNotApprovedError, PassportNotFoundError
 from app.modules.phantom_passport.repository import (
     PassportCareerEntryRepository,
@@ -72,6 +73,7 @@ class ShadowJobService:
         self._message_threads = MessageThreadRepository(session)
         self._messages_repo = MessageRepository(session)
         self._interviews = InterviewRepository(session)
+        self._talent_pool_grants = TalentPoolGrantRepository(session)
 
     # --- Company-side job management --------------------------------------------------------
 
@@ -169,11 +171,19 @@ class ShadowJobService:
             i.shadow_application_id
             for i in await self._interviews.list_upcoming_by_application_ids(application_ids)
         }
+        talent_pool_grants = await self._talent_pool_grants.list_latest_by_company_and_candidates(
+            company_id=company_id, candidate_user_ids=[a.candidate_user_id for a in applications]
+        )
         return [
             await self._to_shadow_profile(
                 a,
                 unread_count=unread_counts.get(a.id, 0),
                 has_upcoming_interview=a.id in upcoming_interview_ids,
+                talent_pool_status=(
+                    grant.status
+                    if (grant := talent_pool_grants.get(a.candidate_user_id)) is not None
+                    else None
+                ),
             )
             for a in applications
         ]
@@ -214,6 +224,7 @@ class ShadowJobService:
         *,
         unread_count: int = 0,
         has_upcoming_interview: bool = False,
+        talent_pool_status: str | None = None,
     ) -> ShadowProfile:
         # An application with a recorded passport_version_id is frozen to exactly what the
         # candidate had approved at apply time — a later Passport edit/re-approval must not
@@ -246,6 +257,7 @@ class ShadowJobService:
                     ],
                     unread_message_count=unread_count,
                     has_upcoming_interview=has_upcoming_interview,
+                    talent_pool_status=talent_pool_status,
                 )
 
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
@@ -283,6 +295,7 @@ class ShadowJobService:
             ],
             unread_message_count=unread_count,
             has_upcoming_interview=has_upcoming_interview,
+            talent_pool_status=talent_pool_status,
         )
 
     # --- Public job board ---------------------------------------------------------------------

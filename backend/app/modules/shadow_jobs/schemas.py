@@ -128,3 +128,6 @@ class ShadowProfile(BaseModel):
     career_entries: list[ShadowCareerEntrySummary]
     unread_message_count: int = 0
     has_upcoming_interview: bool = False
+    # None when no Talent Pool request has ever been made for this candidate at this company —
+    # see talent_pool/service.py. A bulk lookup, same shape as unread_message_count above.
+    talent_pool_status: str | None = None

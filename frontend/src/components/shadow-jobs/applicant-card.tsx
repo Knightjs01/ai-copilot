@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, MessageCircle } from "lucide-react";
 
 import { RequestRevealDialog } from "@/components/shadow-jobs/request-reveal-dialog";
+import { SaveToTalentPoolDialog } from "@/components/shadow-jobs/save-to-talent-pool-dialog";
 import { ScheduleInterviewDialog } from "@/components/shadow-jobs/schedule-interview-dialog";
 import { StepUpDialog } from "@/components/step-up-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -12,15 +13,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
 import { useFetchRevealedIdentity } from "@/lib/queries/shadow-reveal";
-import { SHADOW_APPLICATION_STATUS_LABEL, SHADOW_APPLICATION_STATUS_VARIANT } from "@/lib/status-display";
-import type { RevealedIdentity, ShadowProfile } from "@/lib/types";
+import {
+  SHADOW_APPLICATION_STATUS_LABEL,
+  SHADOW_APPLICATION_STATUS_VARIANT,
+  TALENT_POOL_STATUS_LABEL,
+  TALENT_POOL_STATUS_VARIANT,
+} from "@/lib/status-display";
+import type { RevealedIdentity, ShadowJobStatus, ShadowProfile } from "@/lib/types";
 
-export function ApplicantCard({ jobId, profile }: { jobId: string; profile: ShadowProfile }) {
+export function ApplicantCard({
+  jobId,
+  jobStatus,
+  profile,
+}: {
+  jobId: string;
+  jobStatus: ShadowJobStatus;
+  profile: ShadowProfile;
+}) {
   const { hasPermission } = useAuth();
   const isRevealable = profile.status === "revealed";
   const [identity, setIdentity] = React.useState<RevealedIdentity | null>(null);
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
   const fetchIdentity = useFetchRevealedIdentity(jobId);
+  const canRequestTalentPool =
+    hasPermission("talent_pool.request") &&
+    (jobStatus === "closed" || profile.status === "declined" || profile.status === "withdrawn");
+  const talentPoolActionable =
+    canRequestTalentPool &&
+    (profile.talent_pool_status === null ||
+      profile.talent_pool_status === "declined" ||
+      profile.talent_pool_status === "withdrawn");
 
   const handleVerified = async (stepUpToken: string) => {
     const result = await fetchIdentity.mutateAsync({
@@ -113,6 +135,26 @@ export function ApplicantCard({ jobId, profile }: { jobId: string; profile: Shad
               <p className="text-xs text-muted-foreground">
                 {profile.callsign} declined this reveal request.
               </p>
+            ) : null}
+          </div>
+        )}
+
+        {canRequestTalentPool && (
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
+            {talentPoolActionable ? (
+              <SaveToTalentPoolDialog
+                jobId={jobId}
+                applicationId={profile.application_id}
+                callsign={profile.callsign}
+              />
+            ) : profile.talent_pool_status === "requested" ? (
+              <p className="text-xs text-muted-foreground">
+                Waiting on {profile.callsign} to respond to your Talent Pool request.
+              </p>
+            ) : profile.talent_pool_status === "granted" ? (
+              <Badge variant={TALENT_POOL_STATUS_VARIANT.granted}>
+                {TALENT_POOL_STATUS_LABEL.granted}
+              </Badge>
             ) : null}
           </div>
         )}

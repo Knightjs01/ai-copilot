@@ -23,6 +23,8 @@ class Permissions:
     INTERVIEWS_SCHEDULE = "interviews.schedule"
     SHADOW_CANDIDATES_SEARCH = "shadow_candidates.search"
     HIRING_MANAGER_ALIGNMENT_SUBMIT = "hiring_manager_alignment.submit"
+    TALENT_POOL_REQUEST = "talent_pool.request"
+    TALENT_POOL_VIEW = "talent_pool.view"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -50,6 +52,8 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.INTERVIEWS_SCHEDULE: "Schedule, reschedule, or cancel interviews with a Shadow applicant",
     Permissions.SHADOW_CANDIDATES_SEARCH: "Search discoverable Shadow candidates ranked by AI match",
     Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT: "Submit hiring-manager top-requirements for a project",
+    Permissions.TALENT_POOL_REQUEST: "Ask a Shadow applicant to be kept on file for future roles",
+    Permissions.TALENT_POOL_VIEW: "View candidates who have granted future-role Talent Pool access",
 }
 
 
@@ -94,6 +98,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.INTERVIEWS_SCHEDULE,
         Permissions.SHADOW_CANDIDATES_SEARCH,
         Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT,
+        Permissions.TALENT_POOL_REQUEST,
+        Permissions.TALENT_POOL_VIEW,
     ],
     # Recruiter is the day-to-day operational role -- real create/update rights across both the
     # ATS pipeline and the Shadow marketplace, resource-scoped to assigned projects (like the old
@@ -113,6 +119,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.INTERVIEWS_VIEW,
         Permissions.INTERVIEWS_SCHEDULE,
         Permissions.SHADOW_CANDIDATES_SEARCH,
+        Permissions.TALENT_POOL_REQUEST,
+        Permissions.TALENT_POOL_VIEW,
     ],
     # Resource-scoped to projects it's been added to (via ProjectMember, same mechanism Recruiter
     # uses) -- reviews candidates and submits hiring-manager alignment for its own project(s) only.
@@ -121,6 +129,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.PROJECTS_VIEW,
         Permissions.CANDIDATES_VIEW,
         Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT,
+        Permissions.TALENT_POOL_VIEW,
     ],
     # Resource-scoped to specific interviews via interview_participants -- the narrowest role,
     # sees only the interview(s) it's been assigned to conduct.

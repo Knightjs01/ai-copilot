@@ -18,6 +18,8 @@ import type {
   ShadowApplicationStatus,
   ShadowField,
   ShadowJobStatus,
+  TalentPoolGrantStatus,
+  TalentPoolScope,
   VerificationStatus,
 } from "@/lib/types";
 
@@ -172,6 +174,25 @@ export const INTERVIEW_STATUS_VARIANT: Record<InterviewStatus, Variant> = {
   scheduled: "info",
   cancelled: "outline",
   completed: "success",
+};
+
+export const TALENT_POOL_STATUS_LABEL: Record<TalentPoolGrantStatus, string> = {
+  requested: "Requested",
+  granted: "In Talent Pool",
+  declined: "Declined",
+  withdrawn: "Withdrawn",
+};
+
+export const TALENT_POOL_STATUS_VARIANT: Record<TalentPoolGrantStatus, Variant> = {
+  requested: "warning",
+  granted: "success",
+  declined: "outline",
+  withdrawn: "outline",
+};
+
+export const TALENT_POOL_SCOPE_LABEL: Record<TalentPoolScope, string> = {
+  project_only: "This role's team only",
+  company_wide: "Anywhere at this company",
 };
 
 export const REMOTE_PREFERENCE_LABEL: Record<RemotePreference, string> = {
