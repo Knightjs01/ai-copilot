@@ -4,7 +4,12 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.shadow_jobs.models import EmploymentType, ShadowApplicationStatus, ShadowJobStatus
+from app.modules.shadow_jobs.models import (
+    EmploymentType,
+    ShadowApplicationStatus,
+    ShadowJobStatus,
+    ShadowPipelineStage,
+)
 
 
 class ShadowJobCreate(BaseModel):
@@ -131,3 +136,15 @@ class ShadowProfile(BaseModel):
     # None when no Talent Pool request has ever been made for this candidate at this company —
     # see talent_pool/service.py. A bulk lookup, same shape as unread_message_count above.
     talent_pool_status: str | None = None
+    # Recruiter-set hiring-pipeline progress -- independent of `status` above, which is
+    # identity-reveal workflow state only. See ShadowPipelineStage's docstring in models.py.
+    pipeline_stage: str
+    # `pipeline_stage`, unless the candidate has withdrawn -- withdrawal is candidate-initiated
+    # only and always overrides wherever the application sat in the pipeline (computed, never
+    # persisted as pipeline_stage="withdrawn", so a withdrawn candidate's last real stage isn't
+    # destroyed). This is the field the merged Kanban board actually groups by.
+    effective_stage: str
+
+
+class ShadowApplicantPipelineUpdate(BaseModel):
+    pipeline_stage: ShadowPipelineStage

@@ -15,8 +15,10 @@ directly — this module never imports PassportPersonalInfoRepository or Passpor
 all, so it is structurally incapable of leaking a candidate's legal name, phone, or address into
 a recruiter-facing response, the same schema-level guarantee phantom_passport itself relies on.
 
-Deferred, not built here: Reveal Request workflow (an application's status can reach
-"reveal_requested" but nothing yet transitions it to "revealed" or lets a candidate decline),
-AI matching/ranking, recruiter AI copilot, and Employer Protection blocklists. ShadowApplication
-status is a plain string column so those can layer on without a schema change.
+The Reveal Request workflow has since shipped (see shadow_reveal/) and drives ShadowApplication's
+status through reveal_requested -> revealed/declined for real. Hiring-pipeline progress
+(new/screening/interviewing/offer/hired/rejected) is a separate, independent field --
+pipeline_stage -- since ShadowApplicationStatus is entirely about identity-disclosure state, not
+where an applicant sits in the hiring process. Still deferred, not built here: AI matching/
+ranking, recruiter AI copilot, and Employer Protection blocklists.
 """

@@ -23,6 +23,7 @@ from app.modules.phantom_passport.repository import (
 from app.modules.phantom_passport.schemas import ShadowProfileSnapshot
 from app.modules.shadow_jobs.exceptions import (
     ApplicationAlreadyWithdrawnError,
+    ApplicationWithdrawnStageError,
     CallsignGenerationExhaustedError,
     DuplicateApplicationError,
     PassportRequiredError,
@@ -188,6 +189,52 @@ class ShadowJobService:
             for a in applications
         ]
 
+    async def update_applicant_pipeline_stage(
+        self,
+        *,
+        actor: User,
+        job_id: uuid.UUID,
+        application_id: uuid.UUID,
+        pipeline_stage: str,
+    ) -> ShadowProfile:
+        await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)
+        application = await self._applications.get_by_id(application_id)
+        if application is None or application.shadow_job_id != job_id:
+            raise ShadowApplicationNotFoundError()
+        if application.status == ShadowApplicationStatus.WITHDRAWN.value:
+            raise ApplicationWithdrawnStageError()
+
+        application = await self._applications.update_pipeline_stage(
+            application, pipeline_stage=pipeline_stage
+        )
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="shadow_application.pipeline_stage_updated",
+            target_type="shadow_application",
+            target_id=application.id,
+            extra_data={"pipeline_stage": pipeline_stage},
+        )
+
+        unread_counts = await self._unread_counts_for_applications([application.id])
+        upcoming_interview_ids = {
+            i.shadow_application_id
+            for i in await self._interviews.list_upcoming_by_application_ids([application.id])
+        }
+        talent_pool_grants = await self._talent_pool_grants.list_latest_by_company_and_candidates(
+            company_id=actor.company_id, candidate_user_ids=[application.candidate_user_id]
+        )
+        return await self._to_shadow_profile(
+            application,
+            unread_count=unread_counts.get(application.id, 0),
+            has_upcoming_interview=application.id in upcoming_interview_ids,
+            talent_pool_status=(
+                grant.status
+                if (grant := talent_pool_grants.get(application.candidate_user_id)) is not None
+                else None
+            ),
+        )
+
     async def _unread_counts_for_applications(
         self, application_ids: list[uuid.UUID]
     ) -> dict[uuid.UUID, int]:
@@ -226,6 +273,11 @@ class ShadowJobService:
         has_upcoming_interview: bool = False,
         talent_pool_status: str | None = None,
     ) -> ShadowProfile:
+        effective_stage = (
+            ShadowApplicationStatus.WITHDRAWN.value
+            if application.status == ShadowApplicationStatus.WITHDRAWN.value
+            else application.pipeline_stage
+        )
         # An application with a recorded passport_version_id is frozen to exactly what the
         # candidate had approved at apply time — a later Passport edit/re-approval must not
         # retroactively change what a recruiter sees here. Only applications submitted before
@@ -258,6 +310,8 @@ class ShadowJobService:
                     unread_message_count=unread_count,
                     has_upcoming_interview=has_upcoming_interview,
                     talent_pool_status=talent_pool_status,
+                    pipeline_stage=application.pipeline_stage,
+                    effective_stage=effective_stage,
                 )
 
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
@@ -296,6 +350,8 @@ class ShadowJobService:
             unread_message_count=unread_count,
             has_upcoming_interview=has_upcoming_interview,
             talent_pool_status=talent_pool_status,
+            pipeline_stage=application.pipeline_stage,
+            effective_stage=effective_stage,
         )
 
     # --- Public job board ---------------------------------------------------------------------

@@ -556,6 +556,18 @@ export type ShadowApplicationStatus =
   | "declined"
   | "withdrawn";
 
+// Recruiter-set hiring-pipeline progress for a Shadow applicant — independent of
+// ShadowApplicationStatus above, which tracks identity-reveal workflow state only.
+export type ShadowPipelineStage =
+  | "new"
+  | "screening"
+  | "interviewing"
+  | "offer"
+  | "hired"
+  | "rejected";
+
+export type ShadowEffectiveStage = ShadowPipelineStage | "withdrawn";
+
 // The company-side view of a job posting (own company only, any status) — see
 // ShadowJobBoardListing below for the public/candidate-facing view (published only, spans every
 // company).
@@ -863,6 +875,10 @@ export interface ShadowProfile {
   has_upcoming_interview: boolean;
   // Null when no Talent Pool request has ever been made for this candidate at this company.
   talent_pool_status: TalentPoolGrantStatus | null;
+  pipeline_stage: ShadowPipelineStage;
+  // pipeline_stage, unless the candidate has withdrawn — withdrawal always overrides wherever
+  // the application sat in the pipeline. This is the field the merged Kanban groups by.
+  effective_stage: ShadowEffectiveStage;
 }
 
 export type MessageSenderType = "company" | "candidate";

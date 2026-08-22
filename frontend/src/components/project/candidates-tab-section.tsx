@@ -7,12 +7,16 @@ import { AddCandidateDialog } from "@/components/project/add-candidate-dialog";
 import { CandidatesKanban } from "@/components/project/candidates-kanban";
 import { CandidatesListTab } from "@/components/project/candidates-list-tab";
 import { CandidatesToolbar } from "@/components/project/candidates-toolbar";
+import { MergedPipelineKanban } from "@/components/project/merged-pipeline-kanban";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCandidates } from "@/lib/queries/candidates";
+import { useProjectShadowJob, useShadowJobApplicants } from "@/lib/queries/shadow-jobs";
 import type { CandidateSource } from "@/lib/types";
 
 export function CandidatesTabSection({ projectId }: { projectId: string }) {
   const { data: candidates, isLoading } = useCandidates(projectId);
+  const { data: shadowJob } = useProjectShadowJob(projectId);
+  const { data: shadowApplicants } = useShadowJobApplicants(shadowJob?.id);
   const [search, setSearch] = React.useState("");
   const [sourceFilter, setSourceFilter] = React.useState<CandidateSource | "all">("all");
 
@@ -42,7 +46,9 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
     );
   }
 
-  if (!candidates || candidates.length === 0) {
+  const hasShadowApplicants = !!shadowApplicants && shadowApplicants.length > 0;
+
+  if ((!candidates || candidates.length === 0) && !hasShadowApplicants) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
         <Users className="h-8 w-8 text-muted-foreground" />
@@ -66,12 +72,21 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
         sourceFilter={sourceFilter}
         onSourceFilterChange={setSourceFilter}
         matchCount={filteredCandidates.length}
-        totalCount={candidates.length}
+        totalCount={candidates?.length ?? 0}
       />
-      <CandidatesKanban
-        queryKey={["candidates", { projectId }]}
-        candidates={filteredCandidates}
-      />
+      {shadowJob ? (
+        <MergedPipelineKanban
+          candidatesQueryKey={["candidates", { projectId }]}
+          candidates={filteredCandidates}
+          shadowJobId={shadowJob.id}
+          shadowApplicants={shadowApplicants ?? []}
+        />
+      ) : (
+        <CandidatesKanban
+          queryKey={["candidates", { projectId }]}
+          candidates={filteredCandidates}
+        />
+      )}
       <CandidatesListTab candidates={filteredCandidates} />
     </div>
   );

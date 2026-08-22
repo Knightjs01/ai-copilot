@@ -16,6 +16,8 @@ import { useFetchRevealedIdentity } from "@/lib/queries/shadow-reveal";
 import {
   SHADOW_APPLICATION_STATUS_LABEL,
   SHADOW_APPLICATION_STATUS_VARIANT,
+  SHADOW_EFFECTIVE_STAGE_LABEL,
+  SHADOW_EFFECTIVE_STAGE_VARIANT,
   TALENT_POOL_STATUS_LABEL,
   TALENT_POOL_STATUS_VARIANT,
 } from "@/lib/status-display";
@@ -62,9 +64,16 @@ export function ApplicantCard({
               <p className="text-sm text-muted-foreground">{profile.headline}</p>
             )}
           </div>
-          <Badge variant={SHADOW_APPLICATION_STATUS_VARIANT[profile.status]}>
-            {SHADOW_APPLICATION_STATUS_LABEL[profile.status]}
-          </Badge>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Badge variant={SHADOW_EFFECTIVE_STAGE_VARIANT[profile.effective_stage]}>
+              {SHADOW_EFFECTIVE_STAGE_LABEL[profile.effective_stage]}
+            </Badge>
+            {profile.effective_stage !== "withdrawn" && (
+              <Badge variant={SHADOW_APPLICATION_STATUS_VARIANT[profile.status]}>
+                {SHADOW_APPLICATION_STATUS_LABEL[profile.status]}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {profile.summary && <p className="text-sm text-foreground">{profile.summary}</p>}

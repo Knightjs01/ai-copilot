@@ -1,7 +1,13 @@
 from httpx import AsyncClient
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, candidate_signup, invite_and_accept, signup
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    create_project,
+    invite_and_accept,
+    signup,
+)
 
 _JOB_PAYLOAD = {
     "title": "Staff Product Designer",
@@ -331,3 +337,174 @@ async def test_candidate_can_withdraw_application(client: AsyncClient) -> None:
         f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
     )
     assert applicants_response.json()[0]["status"] == "withdrawn"
+
+
+async def _apply(client: AsyncClient, *, job_id: str, candidate_email: str) -> tuple[str, dict]:
+    """Signs up a fresh candidate, saves+approves a Passport, and applies to job_id. Returns
+    (application_id, candidate_headers)."""
+    candidate_tokens = await candidate_signup(client, email=candidate_email)
+    candidate_headers = auth_headers(candidate_tokens["access_token"])
+    await _save_passport(client, headers=candidate_headers)
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_id}/apply", headers=candidate_headers
+    )
+    assert apply_response.status_code == 201, apply_response.text
+    return apply_response.json()["id"], candidate_headers
+
+
+async def test_applicant_defaults_to_new_pipeline_stage(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-stagedefault.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    await _publish_job(client, headers=headers, job_id=job["id"])
+    await _apply(client, job_id=job["id"], candidate_email="applicant@shadowjobs-stagedefault.com")
+
+    applicants = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    profile = applicants.json()[0]
+    assert profile["pipeline_stage"] == "new"
+    assert profile["effective_stage"] == "new"
+
+
+async def test_update_applicant_pipeline_stage_happy_path(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-stageupdate.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    await _publish_job(client, headers=headers, job_id=job["id"])
+    application_id, _ = await _apply(
+        client, job_id=job["id"], candidate_email="applicant@shadowjobs-stageupdate.com"
+    )
+
+    response = await client.patch(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application_id}",
+        json={"pipeline_stage": "interviewing"},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["pipeline_stage"] == "interviewing"
+    assert body["effective_stage"] == "interviewing"
+
+    # Persisted -- a fresh GET of the applicant list reflects it.
+    applicants = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert applicants.json()[0]["pipeline_stage"] == "interviewing"
+
+
+async def test_pipeline_stage_update_rejects_wrong_job_application_pairing(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@shadowjobs-stagewrongjob.com")
+    headers = auth_headers(owner["access_token"])
+    job_a = await _create_job(client, headers=headers, payload={**_JOB_PAYLOAD, "title": "Job A"})
+    await _publish_job(client, headers=headers, job_id=job_a["id"])
+    job_b = await _create_job(client, headers=headers, payload={**_JOB_PAYLOAD, "title": "Job B"})
+    await _publish_job(client, headers=headers, job_id=job_b["id"])
+    application_id, _ = await _apply(
+        client, job_id=job_a["id"], candidate_email="applicant@shadowjobs-stagewrongjob.com"
+    )
+
+    # application_id belongs to job_a, not job_b.
+    response = await client.patch(
+        f"/api/v1/shadow-jobs/mine/{job_b['id']}/applicants/{application_id}",
+        json={"pipeline_stage": "screening"},
+        headers=headers,
+    )
+    assert response.status_code == 404
+
+
+async def test_pipeline_stage_update_rejects_withdrawn_application(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-stagewithdrawn.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    await _publish_job(client, headers=headers, job_id=job["id"])
+    application_id, candidate_headers = await _apply(
+        client, job_id=job["id"], candidate_email="applicant@shadowjobs-stagewithdrawn.com"
+    )
+    withdraw_response = await client.post(
+        f"/api/v1/shadow-jobs/applications/me/{application_id}/withdraw",
+        headers=candidate_headers,
+    )
+    assert withdraw_response.status_code == 200, withdraw_response.text
+
+    response = await client.patch(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application_id}",
+        json={"pipeline_stage": "screening"},
+        headers=headers,
+    )
+    assert response.status_code == 400
+
+    # effective_stage stays "withdrawn" regardless of pipeline_stage, which was never touched.
+    applicants = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    profile = applicants.json()[0]
+    assert profile["effective_stage"] == "withdrawn"
+    assert profile["pipeline_stage"] == "new"
+
+
+async def test_pipeline_stage_update_requires_permission(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@shadowjobs-stageperm.com")
+    owner_headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=owner_headers)
+    await _publish_job(client, headers=owner_headers, job_id=job["id"])
+    application_id, _ = await _apply(
+        client, job_id=job["id"], candidate_email="applicant@shadowjobs-stageperm.com"
+    )
+
+    hiring_manager = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="hm@shadowjobs-stageperm.com",
+        role="Hiring Manager",
+        sent_emails=sent_emails,
+    )
+    hm_headers = auth_headers(hiring_manager["access_token"])
+
+    response = await client.patch(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application_id}",
+        json={"pipeline_stage": "screening"},
+        headers=hm_headers,
+    )
+    assert response.status_code == 403
+
+
+async def test_get_project_shadow_job_returns_linked_job(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-projectlink.com")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers, title="Linked Project")
+    job = await _create_job(
+        client, headers=headers, payload={**_JOB_PAYLOAD, "project_id": project["id"]}
+    )
+
+    response = await client.get(f"/api/v1/projects/{project['id']}/shadow-job", headers=headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["id"] == job["id"]
+
+
+async def test_get_project_shadow_job_404_when_unlinked(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-projectunlinked.com")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers, title="No Job Linked")
+
+    response = await client.get(f"/api/v1/projects/{project['id']}/shadow-job", headers=headers)
+    assert response.status_code == 404
+
+
+async def test_get_project_shadow_job_404_cross_company(client: AsyncClient) -> None:
+    owner_a = await signup(client, email="owner@shadowjobs-projecta.com")
+    headers_a = auth_headers(owner_a["access_token"])
+    project = await create_project(client, headers=headers_a, title="Company A Project")
+    await _create_job(
+        client, headers=headers_a, payload={**_JOB_PAYLOAD, "project_id": project["id"]}
+    )
+
+    owner_b = await signup(client, email="owner@shadowjobs-projectb.com")
+    headers_b = auth_headers(owner_b["access_token"])
+
+    response = await client.get(f"/api/v1/projects/{project['id']}/shadow-job", headers=headers_b)
+    assert response.status_code == 404

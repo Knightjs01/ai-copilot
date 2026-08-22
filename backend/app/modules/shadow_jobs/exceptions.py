@@ -39,3 +39,8 @@ class CallsignGenerationExhaustedError(ShadowJobError):
 class ApplicationAlreadyWithdrawnError(ShadowJobError):
     status_code = 400
     detail = "This application has already been withdrawn"
+
+
+class ApplicationWithdrawnStageError(ShadowJobError):
+    status_code = 400
+    detail = "Withdrawn applications can't have their pipeline stage changed"

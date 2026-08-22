@@ -16,6 +16,7 @@ import type {
   RemotePreference,
   RoleName,
   ShadowApplicationStatus,
+  ShadowEffectiveStage,
   ShadowField,
   ShadowJobStatus,
   TalentPoolGrantStatus,
@@ -163,6 +164,39 @@ export const SHADOW_APPLICATION_STATUS_VARIANT: Record<ShadowApplicationStatus, 
   declined: "outline",
   withdrawn: "outline",
 };
+
+// Reuses CANDIDATE_STATUS_LABEL's exact copy for the 6 shared words plus "Withdrawn", so ATS and
+// Shadow cards land in identically-labeled columns in the merged pipeline Kanban.
+export const SHADOW_EFFECTIVE_STAGE_LABEL: Record<ShadowEffectiveStage, string> = {
+  new: "New",
+  screening: "Screening",
+  interviewing: "Interviewing",
+  offer: "Offer",
+  hired: "Hired",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+};
+
+export const SHADOW_EFFECTIVE_STAGE_VARIANT: Record<ShadowEffectiveStage, Variant> = {
+  new: "neutral",
+  screening: "info",
+  interviewing: "info",
+  offer: "warning",
+  hired: "success",
+  rejected: "danger",
+  withdrawn: "neutral",
+};
+
+// Column order for the merged pipeline Kanban board — matches CANDIDATE_STATUS_COLUMNS exactly.
+export const SHADOW_EFFECTIVE_STAGE_COLUMNS: ShadowEffectiveStage[] = [
+  "new",
+  "screening",
+  "interviewing",
+  "offer",
+  "hired",
+  "rejected",
+  "withdrawn",
+];
 
 export const INTERVIEW_STATUS_LABEL: Record<InterviewStatus, string> = {
   scheduled: "Scheduled",

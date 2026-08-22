@@ -13,6 +13,7 @@ import type {
   ShadowJobBoardListing,
   ShadowJobCreateInput,
   ShadowJobUpdateInput,
+  ShadowPipelineStage,
   ShadowProfile,
 } from "@/lib/types";
 
@@ -82,6 +83,34 @@ export function useShadowJobApplicants(jobId: string | undefined) {
     queryKey: ["shadow-jobs", "applicants", jobId],
     queryFn: () => apiClient.get<ShadowProfile[]>(`/shadow-jobs/mine/${jobId}/applicants`),
     enabled: !!jobId,
+  });
+}
+
+export function useProjectShadowJob(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ["shadow-jobs", "project", projectId],
+    queryFn: () =>
+      fetchOrNull(() => apiClient.get<ShadowJob>(`/projects/${projectId}/shadow-job`)),
+    enabled: !!projectId,
+  });
+}
+
+export function useUpdateApplicantPipelineStage(jobId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      applicationId,
+      pipelineStage,
+    }: {
+      applicationId: string;
+      pipelineStage: ShadowPipelineStage;
+    }) =>
+      apiClient.patch<ShadowProfile>(`/shadow-jobs/mine/${jobId}/applicants/${applicationId}`, {
+        pipeline_stage: pipelineStage,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
   });
 }
 

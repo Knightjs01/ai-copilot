@@ -25,9 +25,10 @@ class ShadowJobStatus(str, enum.Enum):
 
 
 class ShadowApplicationStatus(str, enum.Enum):
-    """Only SUBMITTED/UNDER_REVIEW/DECLINED/WITHDRAWN are ever set by this module today.
-    REVEAL_REQUESTED and REVEALED exist so the Reveal Request workflow (deferred — see
-    shadow_jobs/__init__.py) can land as a status-transition feature, not a schema migration."""
+    """Identity-reveal workflow state only -- not hiring-pipeline progress (see
+    ShadowPipelineStage below for that). REVEAL_REQUESTED/REVEALED/DECLINED are driven by the
+    shadow_reveal module: a company's reveal request sets REVEAL_REQUESTED, the candidate's own
+    approve/decline sets REVEALED or DECLINED."""
 
     SUBMITTED = "submitted"
     UNDER_REVIEW = "under_review"
@@ -35,6 +36,22 @@ class ShadowApplicationStatus(str, enum.Enum):
     REVEALED = "revealed"
     DECLINED = "declined"
     WITHDRAWN = "withdrawn"
+
+
+class ShadowPipelineStage(str, enum.Enum):
+    """Recruiter-set hiring-pipeline progress for a Shadow applicant — independent of
+    ShadowApplicationStatus, which tracks identity-reveal workflow state only. Not imported from
+    candidates.models.CandidateStatus even though the 6 values match by convention (same word
+    choices as the ATS Kanban), so the two pipelines can diverge independently later without a
+    cross-module type dependency — matches this module's existing "two independent identity
+    systems by design" precedent (see the Callsign word-pool comment in service.py)."""
+
+    NEW = "new"
+    SCREENING = "screening"
+    INTERVIEWING = "interviewing"
+    OFFER = "offer"
+    HIRED = "hired"
+    REJECTED = "rejected"
 
 
 class ShadowJob(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
@@ -96,3 +113,4 @@ class ShadowApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     callsign: Mapped[str] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(20), default=ShadowApplicationStatus.SUBMITTED.value)
+    pipeline_stage: Mapped[str] = mapped_column(String(20), default=ShadowPipelineStage.NEW.value)

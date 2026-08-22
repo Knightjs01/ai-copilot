@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
+    get_current_user_model,
     get_email_sender,
     get_tenant_db,
     require_mfa_enrolled,
@@ -18,8 +19,11 @@ from app.modules.candidate_auth.dependencies import require_candidate_mfa_enroll
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.dependencies import require_verified_domain
 from app.modules.job_alerts.service import JobAlertService
+from app.modules.shadow_jobs.exceptions import ShadowJobNotFoundError
 from app.modules.shadow_jobs.models import ShadowJob
+from app.modules.shadow_jobs.repository import ShadowJobRepository
 from app.modules.shadow_jobs.schemas import (
+    ShadowApplicantPipelineUpdate,
     ShadowApplicationRead,
     ShadowJobBoardListing,
     ShadowJobCreate,
@@ -30,6 +34,14 @@ from app.modules.shadow_jobs.schemas import (
 from app.modules.shadow_jobs.service import ShadowJobService
 
 router = APIRouter(prefix="/shadow-jobs", tags=["shadow-jobs"])
+
+# Nested project sub-resource lookup ("does this project have a linked Shadow Job") -- a separate
+# APIRouter with its own /projects prefix, mirroring hiring_blueprint/api.py's exact pattern: a
+# capability module owns its own routes even when nested under another resource's URL, rather
+# than projects/api.py importing Shadow internals at the route layer.
+project_router = APIRouter(
+    prefix="/projects", tags=["shadow-jobs"], dependencies=[Depends(require_mfa_enrolled)]
+)
 
 
 async def _to_job_read(service: ShadowJobService, job: ShadowJob) -> ShadowJobRead:
@@ -134,6 +146,23 @@ async def list_applicants(
     )
 
 
+@router.patch("/mine/{job_id}/applicants/{application_id}", response_model=ShadowProfile)
+async def update_applicant_pipeline_stage(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    body: ShadowApplicantPipelineUpdate,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ShadowProfile:
+    return await ShadowJobService(session).update_applicant_pipeline_stage(
+        actor=actor,
+        job_id=job_id,
+        application_id=application_id,
+        pipeline_stage=body.pipeline_stage.value,
+    )
+
+
 # --- Public job board ----------------------------------------------------------------------
 
 
@@ -208,3 +237,20 @@ async def withdraw_application(
     return await ShadowJobService(session).withdraw_application(
         candidate=candidate, application_id=application_id
     )
+
+
+# --- Project sub-resource: "does this project have a linked Shadow Job" --------------------
+
+
+@project_router.get("/{project_id}/shadow-job", response_model=ShadowJobRead)
+async def get_project_shadow_job(
+    project_id: uuid.UUID,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ShadowJobRead:
+    service = ShadowJobService(session)
+    job = await ShadowJobRepository(session).get_by_project_id(project_id)
+    if job is None or job.company_id != actor.company_id:
+        raise ShadowJobNotFoundError()
+    return await _to_job_read(service, job)

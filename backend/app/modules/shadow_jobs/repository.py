@@ -139,6 +139,13 @@ class ShadowApplicationRepository:
         await self._session.flush()
         return application
 
+    async def update_pipeline_stage(
+        self, application: ShadowApplication, *, pipeline_stage: str
+    ) -> ShadowApplication:
+        application.pipeline_stage = pipeline_stage
+        await self._session.flush()
+        return application
+
     async def get_by_job_and_candidate(
         self, *, shadow_job_id: uuid.UUID, candidate_user_id: uuid.UUID
     ) -> ShadowApplication | None:
