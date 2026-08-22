@@ -33,13 +33,6 @@ const STATUS_FILTERS: { value: ProjectStatus | "all"; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-function formatSalary(min: number | null, max: number | null): string | null {
-  if (!min && !max) return null;
-  const fmt = (n: number) => `£${(n / 1000).toFixed(0)}k`;
-  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
-  return fmt((min ?? max)!);
-}
-
 const columnHelper = createColumnHelper<Project>();
 
 const columns = [
@@ -54,26 +47,9 @@ const columns = [
       </Link>
     ),
   }),
-  columnHelper.accessor("department", {
-    header: "Department",
-    cell: (info) => <span className="text-foreground">{info.getValue() || "—"}</span>,
-  }),
-  columnHelper.accessor("seniority", {
-    header: "Seniority",
-    cell: (info) => <span className="text-foreground">{info.getValue() || "—"}</span>,
-  }),
   columnHelper.accessor("location", {
     header: "Location",
     cell: (info) => <span className="text-foreground">{info.getValue() || "—"}</span>,
-  }),
-  columnHelper.accessor((row) => row.salary_min, {
-    id: "salary",
-    header: "Salary",
-    cell: (info) => (
-      <span className="text-foreground">
-        {formatSalary(info.row.original.salary_min, info.row.original.salary_max) || "—"}
-      </span>
-    ),
   }),
   columnHelper.accessor("status", {
     header: "Status",
