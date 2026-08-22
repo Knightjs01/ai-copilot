@@ -16,6 +16,7 @@ import type {
   ShadowJobUpdateInput,
   ShadowPipelineStage,
   ShadowProfile,
+  ShadowProfileCompanyWide,
 } from "@/lib/types";
 
 // --- Company side (company auth, apiClient) --------------------------------------------------
@@ -84,6 +85,37 @@ export function useShadowJobApplicants(jobId: string | undefined) {
     queryKey: ["shadow-jobs", "applicants", jobId],
     queryFn: () => apiClient.get<ShadowProfile[]>(`/shadow-jobs/mine/${jobId}/applicants`),
     enabled: !!jobId,
+  });
+}
+
+// Company-wide Candidates/Pipeline nav destination -- every Shadow applicant across every job
+// for this tenant, mirroring useCompanyInterviews' exact shape.
+export function useAllShadowApplicants(options?: { enabled?: boolean }) {
+  const { enabled = true } = options ?? {};
+  return useQuery({
+    queryKey: ["shadow-jobs", "applicants", "mine-company"],
+    queryFn: () => apiClient.get<ShadowProfileCompanyWide[]>("/shadow-jobs/applicants/mine"),
+    enabled,
+  });
+}
+
+// Recruiter-triggered application for a candidate who's already granted this company Talent Pool
+// access -- the consent-gated replacement for manually creating a brand-new Candidate row.
+export function useAddFromTalentPool(jobId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (callsign: string) =>
+      apiClient.post<ShadowApplication>(
+        `/shadow-jobs/mine/${jobId}/applicants/add-from-talent-pool`,
+        { callsign }
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+      void queryClient.invalidateQueries({ queryKey: ["talent-pool", "eligible"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["shadow-jobs", "applicants", "mine-company"],
+      });
+    },
   });
 }
 

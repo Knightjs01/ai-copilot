@@ -2,7 +2,7 @@
 
 import { Search } from "lucide-react";
 
-import { AddCandidateDialog } from "@/components/project/add-candidate-dialog";
+import { AddExistingCandidateDialog } from "@/components/project/add-existing-candidate-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
@@ -13,6 +13,7 @@ const SOURCE_OPTIONS = Object.keys(CANDIDATE_SOURCE_LABEL) as CandidateSource[];
 
 export function CandidatesToolbar({
   projectId,
+  shadowJobId,
   search,
   onSearchChange,
   sourceFilter,
@@ -21,6 +22,7 @@ export function CandidatesToolbar({
   totalCount,
 }: {
   projectId?: string;
+  shadowJobId?: string;
   search: string;
   onSearchChange: (value: string) => void;
   sourceFilter: CandidateSource | "all";
@@ -65,7 +67,9 @@ export function CandidatesToolbar({
         </span>
       </div>
 
-      {projectId && <AddCandidateDialog projectId={projectId} />}
+      {projectId && (
+        <AddExistingCandidateDialog projectId={projectId} shadowJobId={shadowJobId} />
+      )}
     </div>
   );
 }

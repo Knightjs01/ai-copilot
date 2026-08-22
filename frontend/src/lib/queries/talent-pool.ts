@@ -51,6 +51,18 @@ export function useBulkRequestTalentPool() {
   });
 }
 
+// Granted candidates eligible to be added to this project's pipeline (company_wide grants plus
+// project_only grants scoped to this exact project) -- powers "Add existing candidate," the
+// consent-gated replacement for manually creating a brand-new Candidate row.
+export function useEligibleTalentPoolForProject(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ["talent-pool", "eligible", projectId],
+    queryFn: () =>
+      apiClient.get<TalentPoolPoolListItem[]>(`/talent-pool/mine/projects/${projectId}/eligible`),
+    enabled: !!projectId,
+  });
+}
+
 export function useCompanyTalentPool() {
   return useQuery({
     queryKey: ["talent-pool", "mine"],

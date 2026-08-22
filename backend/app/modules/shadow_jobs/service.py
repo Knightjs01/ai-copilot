@@ -1,3 +1,4 @@
+import logging
 import secrets
 import uuid
 from collections import defaultdict
@@ -5,7 +6,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.modules.audit.service import AuditService
+from app.modules.auth.email import EmailSender, build_added_to_pipeline_email
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.models import Company
@@ -30,6 +33,7 @@ from app.modules.shadow_jobs.exceptions import (
     ShadowApplicationNotFoundError,
     ShadowJobNotFoundError,
     ShadowJobNotPublishedError,
+    TalentPoolGrantRequiredError,
 )
 from app.modules.shadow_jobs.models import (
     ShadowApplication,
@@ -45,7 +49,10 @@ from app.modules.shadow_jobs.schemas import (
     ShadowJobCreate,
     ShadowJobUpdate,
     ShadowProfile,
+    ShadowProfileCompanyWide,
 )
+
+logger = logging.getLogger("app.shadow_jobs.service")
 
 # Deliberately a separate word pool from identity_vault's — Shadow Callsigns (per job
 # application, marketplace-side) and ATS Callsigns (per project, for candidates a recruiter
@@ -60,7 +67,7 @@ _MAX_CALLSIGN_ATTEMPTS = 5
 
 
 class ShadowJobService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, email_sender: EmailSender | None = None) -> None:
         self._session = session
         self._jobs = ShadowJobRepository(session)
         self._applications = ShadowApplicationRepository(session)
@@ -75,6 +82,8 @@ class ShadowJobService:
         self._messages_repo = MessageRepository(session)
         self._interviews = InterviewRepository(session)
         self._talent_pool_grants = TalentPoolGrantRepository(session)
+        self._email_sender = email_sender
+        self._settings = get_settings()
 
     # --- Company-side job management --------------------------------------------------------
 
@@ -188,6 +197,50 @@ class ShadowJobService:
             )
             for a in applications
         ]
+
+    async def list_applicants_for_company(self, *, actor: User) -> list[ShadowProfileCompanyWide]:
+        """Every applicant across every one of this company's Shadow Jobs, not scoped to one job
+        -- powers the centralised cross-project Candidates/Pipeline view. Mirrors list_applicants'
+        bulk-lookup shape exactly, just seeded from a company-wide application list and joining
+        job title/project per row since the job isn't already known from the URL."""
+        applications = await self._applications.list_by_company_id(actor.company_id)
+        application_ids = [a.id for a in applications]
+        unread_counts = await self._unread_counts_for_applications(application_ids)
+        upcoming_interview_ids = {
+            i.shadow_application_id
+            for i in await self._interviews.list_upcoming_by_application_ids(application_ids)
+        }
+        talent_pool_grants = await self._talent_pool_grants.list_latest_by_company_and_candidates(
+            company_id=actor.company_id,
+            candidate_user_ids=[a.candidate_user_id for a in applications],
+        )
+        job_ids = {a.shadow_job_id for a in applications}
+        jobs = {job_id: await self._jobs.get_by_id(job_id) for job_id in job_ids}
+
+        results: list[ShadowProfileCompanyWide] = []
+        for a in applications:
+            job = jobs.get(a.shadow_job_id)
+            if job is None:
+                continue
+            profile = await self._to_shadow_profile(
+                a,
+                unread_count=unread_counts.get(a.id, 0),
+                has_upcoming_interview=a.id in upcoming_interview_ids,
+                talent_pool_status=(
+                    grant.status
+                    if (grant := talent_pool_grants.get(a.candidate_user_id)) is not None
+                    else None
+                ),
+            )
+            results.append(
+                ShadowProfileCompanyWide(
+                    **profile.model_dump(),
+                    shadow_job_id=job.id,
+                    job_title=job.title,
+                    project_id=job.project_id,
+                )
+            )
+        return results
 
     async def update_applicant_pipeline_stage(
         self,
@@ -491,6 +544,98 @@ class ShadowJobService:
             status=ShadowApplicationStatus(application.status),
             applied_at=application.created_at,
         )
+
+    async def apply_on_behalf(
+        self, *, actor: User, job_id: uuid.UUID, callsign: str
+    ) -> ShadowApplicationRead:
+        """Recruiter-triggered application for a candidate who already has a GRANTED Talent Pool
+        relationship with this company -- reuses their approved Passport exactly like their own
+        one-click apply, but requires real, standing consent rather than acting on a stranger's
+        profile. The replacement for manually creating a brand-new ATS Candidate row: any
+        candidate reachable this way already has a Phantom Passport and already said "consider me
+        for future roles here."
+        """
+        job = await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)
+        if job.status != ShadowJobStatus.PUBLISHED.value:
+            raise ShadowJobNotPublishedError()
+
+        passport = await self._passports.get_by_callsign(callsign)
+        if passport is None:
+            raise PassportNotFoundError()
+
+        grant = await self._talent_pool_grants.get_granted_eligible_for_project(
+            candidate_user_id=passport.candidate_user_id,
+            company_id=actor.company_id,
+            project_id=job.project_id,
+        )
+        if grant is None:
+            raise TalentPoolGrantRequiredError()
+
+        if passport.current_version_id is None:
+            raise PassportNotApprovedError()
+
+        existing = await self._applications.get_by_job_and_candidate(
+            shadow_job_id=job.id, candidate_user_id=passport.candidate_user_id
+        )
+        if existing is not None:
+            raise DuplicateApplicationError()
+
+        new_callsign = await self._generate_callsign(job.id)
+        application = await self._applications.create(
+            company_id=job.company_id,
+            shadow_job_id=job.id,
+            candidate_user_id=passport.candidate_user_id,
+            phantom_passport_id=passport.id,
+            passport_version_id=passport.current_version_id,
+            callsign=new_callsign,
+        )
+        await self._audit.record(
+            company_id=job.company_id,
+            actor_user_id=actor.id,
+            action="shadow_application.added_by_recruiter",
+            target_type="shadow_application",
+            target_id=application.id,
+            extra_data={
+                "callsign": new_callsign,
+                "shadow_job_id": str(job.id),
+                "talent_pool_grant_id": str(grant.id),
+            },
+        )
+        await self._notify_candidate_of_pipeline_add(
+            candidate_user_id=passport.candidate_user_id,
+            company_id=job.company_id,
+            role_title=job.title,
+        )
+
+        company = await self._session.get(Company, job.company_id)
+        return ShadowApplicationRead(
+            id=application.id,
+            shadow_job_id=job.id,
+            job_title=job.title,
+            company_name=company.name if company else "Unknown company",
+            callsign=application.callsign,
+            status=ShadowApplicationStatus(application.status),
+            applied_at=application.created_at,
+        )
+
+    async def _notify_candidate_of_pipeline_add(
+        self, *, candidate_user_id: uuid.UUID, company_id: uuid.UUID, role_title: str
+    ) -> None:
+        if self._email_sender is None:
+            return
+        candidate = await self._session.get(CandidateUser, candidate_user_id)
+        company = await self._session.get(Company, company_id)
+        if candidate is None or company is None:
+            return
+        applications_url = f"{self._settings.frontend_base_url}/shadow/applications"
+        subject, body = build_added_to_pipeline_email(
+            company_name=company.name, role_title=role_title, applications_url=applications_url
+        )
+        try:
+            await self._email_sender.send(to=candidate.email, subject=subject, body=body)
+        except Exception:
+            # A send failure must never fail the request it's riding along with.
+            logger.exception("Failed to send pipeline-add email to candidate %s", candidate_user_id)
 
     async def list_my_applications(
         self, *, candidate: CandidateUser

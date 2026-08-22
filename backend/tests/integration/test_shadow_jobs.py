@@ -65,6 +65,250 @@ async def _save_passport(client: AsyncClient, *, headers: dict) -> None:
     assert approve_response.status_code == 200, approve_response.text
 
 
+async def _build_and_approve_discoverable_passport(
+    client: AsyncClient, *, email: str, full_name: str = "Jamie Candidate"
+) -> tuple[str, dict]:
+    tokens = await candidate_signup(client, email=email, full_name=full_name)
+    candidate_headers = auth_headers(tokens["access_token"])
+    payload = {
+        "headline": "Senior Product Leader",
+        "summary": "A senior product leader.",
+        "visibility": "discoverable",
+        "personal_info": {"legal_name": full_name},
+        "career_entries": [],
+    }
+    save_response = await client.put(
+        "/api/v1/phantom-passport/me", json=payload, headers=candidate_headers
+    )
+    assert save_response.status_code == 200, save_response.text
+    approve_response = await client.post(
+        "/api/v1/phantom-passport/me/approve", headers=candidate_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
+    me_response = await client.get("/api/v1/phantom-passport/me", headers=candidate_headers)
+    return me_response.json()["callsign"], candidate_headers
+
+
+async def _grant_talent_pool(
+    client: AsyncClient,
+    *,
+    headers: dict,
+    candidate_headers: dict,
+    job_id: str,
+    callsign: str,
+    scope: str = "company_wide",
+) -> None:
+    bulk_response = await client.post(
+        "/api/v1/talent-pool/mine/search/request-bulk",
+        json={"job_id": job_id, "callsigns": [callsign]},
+        headers=headers,
+    )
+    assert bulk_response.status_code == 200, bulk_response.text
+    assert bulk_response.json()["requested"] == [callsign]
+
+    my_requests = await client.get("/api/v1/talent-pool/my-requests", headers=candidate_headers)
+    grant_id = my_requests.json()[0]["id"]
+    respond = await client.post(
+        f"/api/v1/talent-pool/requests/me/{grant_id}/respond",
+        json={"approve": True, "scope": scope},
+        headers=candidate_headers,
+    )
+    assert respond.status_code == 200, respond.text
+
+
+async def test_apply_on_behalf_creates_application_for_granted_candidate(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@shadowjobs-behalf.com", company_name="Behalf Co")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    job = await _publish_job(client, headers=headers, job_id=job["id"])
+
+    callsign, candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate@shadowjobs-behalf.com", full_name="Behalf Candidate"
+    )
+    await _grant_talent_pool(
+        client,
+        headers=headers,
+        candidate_headers=candidate_headers,
+        job_id=job["id"],
+        callsign=callsign,
+    )
+
+    response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/add-from-talent-pool",
+        json={"callsign": callsign},
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["job_title"] == job["title"]
+    assert body["status"] == "submitted"
+
+    applicants = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert applicants.status_code == 200, applicants.text
+    assert any(a["application_id"] == body["id"] for a in applicants.json())
+
+    pipeline_emails = [e for e in sent_emails.sent if e["to"] == "candidate@shadowjobs-behalf.com"]
+    assert any("Behalf Co" in e["subject"] for e in pipeline_emails)
+
+
+async def test_apply_on_behalf_rejects_without_talent_pool_grant(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-behalf-nogrant.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    job = await _publish_job(client, headers=headers, job_id=job["id"])
+
+    callsign, _candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate@shadowjobs-behalf-nogrant.com", full_name="Ungranted Candidate"
+    )
+
+    response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/add-from-talent-pool",
+        json={"callsign": callsign},
+        headers=headers,
+    )
+    assert response.status_code == 400
+
+
+async def test_apply_on_behalf_rejects_project_only_grant_for_different_project(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@shadowjobs-behalf-wrongproject.com")
+    headers = auth_headers(owner["access_token"])
+    project_a = await create_project(client, headers=headers, title="Project A")
+    project_b = await create_project(client, headers=headers, title="Project B")
+    job_a = await _create_job(
+        client, headers=headers, payload={**_JOB_PAYLOAD, "project_id": project_a["id"]}
+    )
+    job_a = await _publish_job(client, headers=headers, job_id=job_a["id"])
+    job_b = await _create_job(
+        client, headers=headers, payload={**_JOB_PAYLOAD, "project_id": project_b["id"]}
+    )
+    job_b = await _publish_job(client, headers=headers, job_id=job_b["id"])
+
+    callsign, candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate@shadowjobs-behalf-wrongproject.com", full_name="Narrow Candidate"
+    )
+    await _grant_talent_pool(
+        client,
+        headers=headers,
+        candidate_headers=candidate_headers,
+        job_id=job_a["id"],
+        callsign=callsign,
+        scope="project_only",
+    )
+
+    ok_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job_a['id']}/applicants/add-from-talent-pool",
+        json={"callsign": callsign},
+        headers=headers,
+    )
+    assert ok_response.status_code == 201, ok_response.text
+
+    rejected_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job_b['id']}/applicants/add-from-talent-pool",
+        json={"callsign": callsign},
+        headers=headers,
+    )
+    assert rejected_response.status_code == 400
+
+
+async def test_apply_on_behalf_rejects_duplicate_application(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-behalf-dup.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_job(client, headers=headers)
+    job = await _publish_job(client, headers=headers, job_id=job["id"])
+
+    callsign, candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate@shadowjobs-behalf-dup.com", full_name="Dup Candidate"
+    )
+    await _grant_talent_pool(
+        client,
+        headers=headers,
+        candidate_headers=candidate_headers,
+        job_id=job["id"],
+        callsign=callsign,
+    )
+
+    first = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/add-from-talent-pool",
+        json={"callsign": callsign},
+        headers=headers,
+    )
+    assert first.status_code == 201, first.text
+
+    second = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/add-from-talent-pool",
+        json={"callsign": callsign},
+        headers=headers,
+    )
+    assert second.status_code == 409
+
+
+async def test_list_applicants_for_company_merges_across_jobs(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowjobs-companywide.com")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers, title="Linked Project")
+    job_linked = await _create_job(
+        client,
+        headers=headers,
+        payload={**_JOB_PAYLOAD, "project_id": project["id"], "title": "Linked Role"},
+    )
+    job_linked = await _publish_job(client, headers=headers, job_id=job_linked["id"])
+    job_unlinked = await _create_job(
+        client, headers=headers, payload={**_JOB_PAYLOAD, "title": "Unlinked Role"}
+    )
+    job_unlinked = await _publish_job(client, headers=headers, job_id=job_unlinked["id"])
+
+    _linked_callsign, linked_candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="linked@shadowjobs-companywide.com", full_name="Linked Applicant"
+    )
+    apply_linked = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_linked['id']}/apply", headers=linked_candidate_headers
+    )
+    assert apply_linked.status_code == 201, apply_linked.text
+
+    _unlinked_callsign, unlinked_candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="unlinked@shadowjobs-companywide.com", full_name="Unlinked Applicant"
+    )
+    apply_unlinked = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_unlinked['id']}/apply", headers=unlinked_candidate_headers
+    )
+    assert apply_unlinked.status_code == 201, apply_unlinked.text
+
+    response = await client.get("/api/v1/shadow-jobs/applicants/mine", headers=headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert len(body) == 2
+    by_job_title = {a["job_title"]: a for a in body}
+    assert by_job_title["Linked Role"]["project_id"] == project["id"]
+    assert by_job_title["Unlinked Role"]["project_id"] is None
+
+
+async def test_list_applicants_for_company_cross_tenant_isolation(client: AsyncClient) -> None:
+    owner_a = await signup(client, email="owner-a@shadowjobs-companywide-iso.com")
+    headers_a = auth_headers(owner_a["access_token"])
+    job_a = await _create_job(client, headers=headers_a)
+    job_a = await _publish_job(client, headers=headers_a, job_id=job_a["id"])
+    _callsign, candidate_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate@shadowjobs-companywide-iso.com", full_name="Isolated Applicant"
+    )
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_a['id']}/apply", headers=candidate_headers
+    )
+    assert apply_response.status_code == 201, apply_response.text
+
+    owner_b = await signup(client, email="owner-b@shadowjobs-companywide-iso-b.com")
+    headers_b = auth_headers(owner_b["access_token"])
+
+    response = await client.get("/api/v1/shadow-jobs/applicants/mine", headers=headers_b)
+    assert response.status_code == 200, response.text
+    assert response.json() == []
+
+
 async def test_owner_can_create_job(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@shadowjobs-perm.com")
     job = await _create_job(client, headers=auth_headers(owner["access_token"]))

@@ -74,6 +74,18 @@ async def list_company_talent_pool(
     return await TalentPoolService(session).list_company_talent_pool(company_id=actor.company_id)
 
 
+@router.get("/mine/projects/{project_id}/eligible", response_model=list[TalentPoolPoolListItem])
+async def list_eligible_for_project(
+    project_id: uuid.UUID,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.TALENT_POOL_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[TalentPoolPoolListItem]:
+    return await TalentPoolService(session).list_eligible_for_project(
+        actor=actor, project_id=project_id
+    )
+
+
 # --- Candidate side ------------------------------------------------------------------------------
 
 

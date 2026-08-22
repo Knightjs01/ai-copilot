@@ -574,3 +574,88 @@ async def test_project_burn_nulls_source_application_without_deleting_grant(
     assert still_in_pool.status_code == 200, still_in_pool.text
     assert len(still_in_pool.json()) == 1
     assert still_in_pool.json()[0]["source_role_title"] == "Staff Engineer"
+
+
+async def test_list_eligible_for_project_scopes_by_company_wide_and_project_only(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@talentpool-eligible-project.com")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers, title="Eligible Project")
+    other_project = await create_project(client, headers=headers, title="Other Project")
+
+    job_response = await client.post(
+        "/api/v1/shadow-jobs",
+        json={**_JOB_PAYLOAD, "project_id": project["id"]},
+        headers=headers,
+    )
+    assert job_response.status_code == 201, job_response.text
+    job = job_response.json()
+    publish_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
+    )
+    assert publish_response.status_code == 200, publish_response.text
+
+    company_wide_headers = await _build_and_approve_discoverable_passport(
+        client, email="candidate-wide@talentpool-eligible-project.com", full_name="Wide Candidate"
+    )
+    project_only_headers = await _build_and_approve_discoverable_passport(
+        client,
+        email="candidate-narrow@talentpool-eligible-project.com",
+        full_name="Narrow Candidate",
+    )
+    company_wide_me = await client.get("/api/v1/phantom-passport/me", headers=company_wide_headers)
+    company_wide_callsign = company_wide_me.json()["callsign"]
+    project_only_me = await client.get("/api/v1/phantom-passport/me", headers=project_only_headers)
+    project_only_callsign = project_only_me.json()["callsign"]
+
+    bulk_response = await client.post(
+        "/api/v1/talent-pool/mine/search/request-bulk",
+        json={"job_id": job["id"], "callsigns": [company_wide_callsign, project_only_callsign]},
+        headers=headers,
+    )
+    assert bulk_response.status_code == 200, bulk_response.text
+
+    for candidate_headers, scope in (
+        (company_wide_headers, "company_wide"),
+        (project_only_headers, "project_only"),
+    ):
+        my_requests = await client.get("/api/v1/talent-pool/my-requests", headers=candidate_headers)
+        grant_id = my_requests.json()[0]["id"]
+        respond = await client.post(
+            f"/api/v1/talent-pool/requests/me/{grant_id}/respond",
+            json={"approve": True, "scope": scope},
+            headers=candidate_headers,
+        )
+        assert respond.status_code == 200, respond.text
+
+    # Eligible for the linked project: both (company_wide is always eligible, project_only
+    # matches this exact project).
+    eligible_for_project = await client.get(
+        f"/api/v1/talent-pool/mine/projects/{project['id']}/eligible", headers=headers
+    )
+    assert eligible_for_project.status_code == 200, eligible_for_project.text
+    eligible_callsigns = {c["callsign"] for c in eligible_for_project.json()}
+    assert eligible_callsigns == {company_wide_callsign, project_only_callsign}
+
+    # Eligible for a different project: only the company_wide grant.
+    eligible_for_other = await client.get(
+        f"/api/v1/talent-pool/mine/projects/{other_project['id']}/eligible", headers=headers
+    )
+    assert eligible_for_other.status_code == 200, eligible_for_other.text
+    other_callsigns = {c["callsign"] for c in eligible_for_other.json()}
+    assert other_callsigns == {company_wide_callsign}
+
+
+async def test_list_eligible_for_project_404s_for_wrong_company(client: AsyncClient) -> None:
+    owner_a = await signup(client, email="owner-a@talentpool-eligible-404.com")
+    headers_a = auth_headers(owner_a["access_token"])
+    project_a = await create_project(client, headers=headers_a, title="Project A")
+
+    owner_b = await signup(client, email="owner-b@talentpool-eligible-404-b.com")
+    headers_b = auth_headers(owner_b["access_token"])
+
+    response = await client.get(
+        f"/api/v1/talent-pool/mine/projects/{project_a['id']}/eligible", headers=headers_b
+    )
+    assert response.status_code == 404

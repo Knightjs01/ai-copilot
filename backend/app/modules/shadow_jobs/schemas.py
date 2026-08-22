@@ -151,3 +151,21 @@ class ShadowProfile(BaseModel):
 
 class ShadowApplicantPipelineUpdate(BaseModel):
     pipeline_stage: ShadowPipelineStage
+
+
+class AddFromTalentPoolRequest(BaseModel):
+    """Recruiter-triggered application on behalf of an already-granted Talent Pool candidate --
+    callsign is re-resolved to a candidate_user_id server-side (never trusted from the client),
+    same discipline as TalentPoolBulkRequestCreate."""
+
+    callsign: str
+
+
+class ShadowProfileCompanyWide(ShadowProfile):
+    """Same shape as ShadowProfile, plus which job/project this application belongs to -- powers
+    the company-wide Candidates/Pipeline merge, where (unlike a single job's applicant list) the
+    job context isn't already implied by the URL."""
+
+    shadow_job_id: uuid.UUID
+    job_title: str
+    project_id: uuid.UUID | None

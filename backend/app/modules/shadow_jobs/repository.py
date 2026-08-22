@@ -182,6 +182,14 @@ class ShadowApplicationRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_company_id(self, company_id: uuid.UUID) -> list[ShadowApplication]:
+        result = await self._session.execute(
+            select(ShadowApplication)
+            .where(ShadowApplication.company_id == company_id)
+            .order_by(ShadowApplication.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def list_by_job(self, shadow_job_id: uuid.UUID) -> list[ShadowApplication]:
         result = await self._session.execute(
             select(ShadowApplication)

@@ -3,23 +3,29 @@
 import * as React from "react";
 import { ShieldAlert, Users } from "lucide-react";
 
-import { CandidatesKanban } from "@/components/project/candidates-kanban";
 import { CandidatesListTab } from "@/components/project/candidates-list-tab";
 import { CandidatesToolbar } from "@/components/project/candidates-toolbar";
+import { CrossProjectPipelineKanban } from "@/components/project/cross-project-pipeline-kanban";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useAllCandidates } from "@/lib/queries/candidates";
 import { useProjects } from "@/lib/queries/projects";
+import { useAllShadowApplicants } from "@/lib/queries/shadow-jobs";
 import { cn } from "@/lib/utils";
 import type { CandidateSource } from "@/lib/types";
 
 type OwnerFilter = "all" | "mine";
+
+const SHADOW_APPLICANTS_QUERY_KEY = ["shadow-jobs", "applicants", "mine-company"];
 
 export default function PipelinePage() {
   const { hasPermission, user } = useAuth();
   const canView = hasPermission("candidates.view");
   const { data: candidates, isLoading: candidatesLoading } = useAllCandidates();
   const { data: projects, isLoading: projectsLoading } = useProjects();
+  const { data: shadowApplicants, isLoading: shadowApplicantsLoading } = useAllShadowApplicants({
+    enabled: canView,
+  });
   const [search, setSearch] = React.useState("");
   const [sourceFilter, setSourceFilter] = React.useState<CandidateSource | "all">("all");
   const [ownerFilter, setOwnerFilter] = React.useState<OwnerFilter>("all");
@@ -46,6 +52,18 @@ export default function PipelinePage() {
     });
   }, [candidates, search, sourceFilter, ownerFilter, user?.id]);
 
+  // Shadow applicants have no "created by a specific recruiter" concept (they applied
+  // themselves) and no `source` field -- the owner/source filters only meaningfully apply to
+  // directly-added ATS candidates, so applicants are shown under "All Candidates" only, filtered
+  // just by callsign search.
+  const filteredShadowApplicants = React.useMemo(() => {
+    if (!shadowApplicants || ownerFilter === "mine") return [];
+    const query = search.trim().toLowerCase();
+    return shadowApplicants.filter(
+      (applicant) => query.length === 0 || applicant.callsign.toLowerCase().includes(query)
+    );
+  }, [shadowApplicants, search, ownerFilter]);
+
   if (!canView) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
@@ -58,7 +76,7 @@ export default function PipelinePage() {
     );
   }
 
-  const isLoading = candidatesLoading || projectsLoading;
+  const isLoading = candidatesLoading || projectsLoading || shadowApplicantsLoading;
 
   if (isLoading) {
     return (
@@ -74,13 +92,17 @@ export default function PipelinePage() {
     );
   }
 
-  if (!candidates || candidates.length === 0) {
+  const hasAnyCandidates =
+    (candidates && candidates.length > 0) || (shadowApplicants && shadowApplicants.length > 0);
+
+  if (!hasAnyCandidates) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
         <Users className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">No candidates yet</p>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Candidates across every role you can see will appear here once you add them from a role.
+          Everyone who applies through the Shadow job board, or is added from a role&apos;s
+          Talent Pool, will appear here.
         </p>
       </div>
     );
@@ -118,12 +140,14 @@ export default function PipelinePage() {
         onSearchChange={setSearch}
         sourceFilter={sourceFilter}
         onSourceFilterChange={setSourceFilter}
-        matchCount={filteredCandidates.length}
-        totalCount={candidates.length}
+        matchCount={filteredCandidates.length + filteredShadowApplicants.length}
+        totalCount={(candidates?.length ?? 0) + (shadowApplicants?.length ?? 0)}
       />
-      <CandidatesKanban
-        queryKey={["candidates", "all"]}
+      <CrossProjectPipelineKanban
+        candidatesQueryKey={["candidates", "all"]}
         candidates={filteredCandidates}
+        shadowApplicantsQueryKey={SHADOW_APPLICANTS_QUERY_KEY}
+        shadowApplicants={filteredShadowApplicants}
         projectTitles={projectTitles}
       />
       <CandidatesListTab candidates={filteredCandidates} />

@@ -884,6 +884,14 @@ export interface ShadowProfile {
   is_new: boolean;
 }
 
+// Same shape as ShadowProfile, plus which job/project this application belongs to -- powers the
+// company-wide Candidates/Pipeline merge, where the job context isn't already known from the URL.
+export interface ShadowProfileCompanyWide extends ShadowProfile {
+  shadow_job_id: string;
+  job_title: string;
+  project_id: string | null;
+}
+
 export type MessageSenderType = "company" | "candidate";
 
 // is_mine/sender_label are resolved server-side per the requesting principal -- the frontend

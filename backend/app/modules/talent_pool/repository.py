@@ -105,6 +105,33 @@ class TalentPoolGrantRepository:
         )
         return list(result.scalars().all())
 
+    async def get_granted_eligible_for_project(
+        self, *, candidate_user_id: uuid.UUID, company_id: uuid.UUID, project_id: uuid.UUID | None
+    ) -> TalentPoolGrant | None:
+        """Single-candidate version of list_eligible_for_job's scope check -- powers apply-on-
+        behalf eligibility (ShadowJobService.apply_on_behalf): may this specific granted candidate
+        be attached to a role at this project without a fresh consent request?"""
+        if project_id is not None:
+            scope_condition = or_(
+                TalentPoolGrant.scope == TalentPoolScope.COMPANY_WIDE.value,
+                and_(
+                    TalentPoolGrant.scope == TalentPoolScope.PROJECT_ONLY.value,
+                    TalentPoolGrant.source_project_id == project_id,
+                ),
+            )
+        else:
+            scope_condition = TalentPoolGrant.scope == TalentPoolScope.COMPANY_WIDE.value
+
+        result = await self._session.execute(
+            select(TalentPoolGrant).where(
+                TalentPoolGrant.candidate_user_id == candidate_user_id,
+                TalentPoolGrant.company_id == company_id,
+                TalentPoolGrant.status == TalentPoolGrantStatus.GRANTED.value,
+                scope_condition,
+            )
+        )
+        return result.scalars().first()
+
     async def list_granted_by_company_id(self, company_id: uuid.UUID) -> list[TalentPoolGrant]:
         result = await self._session.execute(
             select(TalentPoolGrant)

@@ -44,3 +44,8 @@ class ApplicationAlreadyWithdrawnError(ShadowJobError):
 class ApplicationWithdrawnStageError(ShadowJobError):
     status_code = 400
     detail = "Withdrawn applications can't have their pipeline stage changed"
+
+
+class TalentPoolGrantRequiredError(ShadowJobError):
+    status_code = 400
+    detail = "This candidate hasn't granted your company Talent Pool access"

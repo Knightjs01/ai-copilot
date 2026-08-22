@@ -13,6 +13,8 @@ from app.modules.candidate_auth.repository import CandidateUserRepository
 from app.modules.companies.models import Company
 from app.modules.phantom_passport.models import PhantomPassport
 from app.modules.phantom_passport.repository import PhantomPassportRepository
+from app.modules.projects.exceptions import ProjectNotFoundError
+from app.modules.projects.repository import ProjectRepository
 from app.modules.shadow_jobs.exceptions import (
     ShadowApplicationNotFoundError,
     ShadowJobNotFoundError,
@@ -70,6 +72,7 @@ class TalentPoolService:
         self._grants = TalentPoolGrantRepository(session)
         self._applications = ShadowApplicationRepository(session)
         self._jobs = ShadowJobRepository(session)
+        self._projects = ProjectRepository(session)
         self._passports = PhantomPassportRepository(session)
         self._candidate_users = CandidateUserRepository(session)
         self._audit = AuditService(session)
@@ -213,6 +216,38 @@ class TalentPoolService:
         self, *, company_id: uuid.UUID
     ) -> list[TalentPoolPoolListItem]:
         grants = await self._grants.list_granted_by_company_id(company_id)
+        items: list[TalentPoolPoolListItem] = []
+        for grant in grants:
+            passport = await self._passports.get_by_candidate_user_id(grant.candidate_user_id)
+            if passport is None or passport.callsign is None or grant.responded_at is None:
+                continue
+            items.append(
+                TalentPoolPoolListItem(
+                    id=grant.id,
+                    callsign=passport.callsign,
+                    headline=passport.headline,
+                    seniority=passport.seniority,
+                    source_role_title=grant.source_role_title,
+                    scope=TalentPoolScope(grant.scope),
+                    granted_at=grant.responded_at,
+                )
+            )
+        return items
+
+    async def list_eligible_for_project(
+        self, *, actor: User, project_id: uuid.UUID
+    ) -> list[TalentPoolPoolListItem]:
+        """Granted Talent Pool candidates eligible to be added to this project's pipeline --
+        company_wide grants plus project_only grants scoped to this exact project. Powers "Add
+        existing candidate" on a project's Candidates tab, the consent-gated replacement for
+        manually creating a brand-new Candidate row."""
+        project = await self._projects.get_by_id(project_id)
+        if project is None or project.company_id != actor.company_id:
+            raise ProjectNotFoundError()
+
+        grants = await self._grants.list_eligible_for_job(
+            company_id=actor.company_id, project_id=project_id
+        )
         items: list[TalentPoolPoolListItem] = []
         for grant in grants:
             passport = await self._passports.get_by_candidate_user_id(grant.candidate_user_id)

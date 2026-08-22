@@ -196,3 +196,15 @@ def build_interview_scheduled_email(
         f"View the details:\n{interviews_url}"
     )
     return subject, body
+
+
+def build_added_to_pipeline_email(
+    *, company_name: str, role_title: str, applications_url: str
+) -> tuple[str, str]:
+    subject = f"{company_name} added you to consideration for {role_title}"
+    body = (
+        f"Based on your Talent Pool permission with {company_name}, they've added you to "
+        f"consideration for {role_title}. You can review or withdraw the application anytime.\n\n"
+        f"View it here:\n{applications_url}"
+    )
+    return subject, body

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Users } from "lucide-react";
 
-import { AddCandidateDialog } from "@/components/project/add-candidate-dialog";
+import { AddExistingCandidateDialog } from "@/components/project/add-existing-candidate-dialog";
 import { CandidatesKanban } from "@/components/project/candidates-kanban";
 import { CandidatesListTab } from "@/components/project/candidates-list-tab";
 import { CandidatesToolbar } from "@/components/project/candidates-toolbar";
@@ -54,10 +54,11 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
         <Users className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">No candidates yet</p>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Add your first candidate to start screening for this role.
+          Candidates apply through the Shadow job board, or you can add an existing Talent Pool
+          candidate directly.
         </p>
         <div className="mt-2">
-          <AddCandidateDialog projectId={projectId} />
+          <AddExistingCandidateDialog projectId={projectId} shadowJobId={shadowJob?.id} />
         </div>
       </div>
     );
@@ -67,6 +68,7 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
     <div className="flex flex-col gap-8">
       <CandidatesToolbar
         projectId={projectId}
+        shadowJobId={shadowJob?.id}
         search={search}
         onSearchChange={setSearch}
         sourceFilter={sourceFilter}

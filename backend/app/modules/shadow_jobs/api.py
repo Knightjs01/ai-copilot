@@ -23,6 +23,7 @@ from app.modules.shadow_jobs.exceptions import ShadowJobNotFoundError
 from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.repository import ShadowJobRepository
 from app.modules.shadow_jobs.schemas import (
+    AddFromTalentPoolRequest,
     ShadowApplicantPipelineUpdate,
     ShadowApplicationRead,
     ShadowJobBoardListing,
@@ -30,6 +31,7 @@ from app.modules.shadow_jobs.schemas import (
     ShadowJobRead,
     ShadowJobUpdate,
     ShadowProfile,
+    ShadowProfileCompanyWide,
 )
 from app.modules.shadow_jobs.service import ShadowJobService
 
@@ -143,6 +145,33 @@ async def list_applicants(
 ) -> list[ShadowProfile]:
     return await ShadowJobService(session).list_applicants(
         company_id=actor.company_id, job_id=job_id
+    )
+
+
+@router.get("/applicants/mine", response_model=list[ShadowProfileCompanyWide])
+async def list_all_applicants_for_company(
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[ShadowProfileCompanyWide]:
+    return await ShadowJobService(session).list_applicants_for_company(actor=actor)
+
+
+@router.post(
+    "/mine/{job_id}/applicants/add-from-talent-pool",
+    response_model=ShadowApplicationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_applicant_from_talent_pool(
+    job_id: uuid.UUID,
+    body: AddFromTalentPoolRequest,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    session: AsyncSession = Depends(get_tenant_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> ShadowApplicationRead:
+    return await ShadowJobService(session, email_sender=email_sender).apply_on_behalf(
+        actor=actor, job_id=job_id, callsign=body.callsign
     )
 
 

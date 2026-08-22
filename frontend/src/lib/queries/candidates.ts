@@ -38,25 +38,6 @@ export function useCandidate(candidateId: string | undefined) {
   });
 }
 
-interface CreateCandidateInput {
-  project_id: string;
-  full_name: string;
-  email?: string;
-  phone?: string;
-  source?: CandidateSource;
-}
-
-export function useCreateCandidate(projectId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CreateCandidateInput) => apiClient.post<Candidate>("/candidates", input),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["candidates", { projectId }] });
-      invalidateProjectAnalytics(queryClient);
-    },
-  });
-}
-
 interface UpdateCandidateInput {
   source?: CandidateSource;
   status?: CandidateStatus;
