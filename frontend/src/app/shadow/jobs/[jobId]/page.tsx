@@ -25,7 +25,6 @@ import {
   MATCH_TIER_VARIANT,
   REMOTE_PREFERENCE_LABEL,
 } from "@/lib/status-display";
-import styles from "../../shadow-theme.module.css";
 
 function MatchToneList({
   title,
@@ -130,12 +129,12 @@ export default function ShadowJobDetailPage() {
   const salary = job ? formatSalary(job.salary_min, job.salary_max) : null;
 
   return (
-    // ShadowTopNav + this outer bg-slate-50 gutter stay light. Only <main> (the actual job
-    // detail content) goes obsidian/blue — Shadow keeps its own distinct dark theme, separate
-    // from Passport's, per the user's explicit call to not merge the two.
+    // This page deliberately stays on the app's real light theme (matching the ATS's own brand
+    // feel) rather than Shadow's dark obsidian scope used elsewhere -- a candidate reviewing a
+    // specific role should see the same clean, on-brand look a recruiter previewing it does.
     <div className="min-h-screen bg-slate-50">
       <ShadowTopNav />
-      <main ref={mainRef} className={`${styles.shadowTheme} mx-auto max-w-4xl rounded-2xl px-6 py-10`}>
+      <main ref={mainRef} className="mx-auto max-w-4xl rounded-2xl bg-white px-6 py-10">
         {(isLoading || authLoading) && (
           <div className="flex justify-center py-16">
             <Spinner className="h-6 w-6 text-muted-foreground" />
