@@ -18,6 +18,7 @@ from app.modules.projects.llm_client import ProjectsLLMClient
 from app.modules.projects.repository import ProjectMemberRepository
 from app.modules.projects.schemas import (
     JdUploadResult,
+    ProjectActivityEntry,
     ProjectCreate,
     ProjectMemberCreate,
     ProjectMemberRead,
@@ -198,6 +199,20 @@ async def upload_jd(
         content=content,
         content_type=file.content_type or "application/octet-stream",
     )
+
+
+@router.get("/{project_id}/activity", response_model=list[ProjectActivityEntry])
+async def get_project_activity(
+    project_id: uuid.UUID,
+    actor: User = Depends(get_current_user_model),
+    _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_VIEW)),
+    __: None = Depends(require_project_access),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[ProjectActivityEntry]:
+    entries = await ProjectService(session).list_activity(
+        company_id=actor.company_id, project_id=project_id
+    )
+    return [ProjectActivityEntry.model_validate(e) for e in entries]
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

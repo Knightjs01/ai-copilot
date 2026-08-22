@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Briefcase } from "lucide-react";
 
@@ -10,7 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useProjects } from "@/lib/queries/projects";
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_VARIANT } from "@/lib/status-display";
-import type { Project } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import type { Project, ProjectStatus } from "@/lib/types";
+
+// The real ProjectStatus enum -- no "Archived" chip, that status doesn't exist.
+const STATUS_FILTERS: { value: ProjectStatus | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "open", label: "Open" },
+  { value: "draft", label: "Draft" },
+  { value: "on_hold", label: "Paused" },
+  { value: "filled", label: "Filled" },
+  { value: "cancelled", label: "Cancelled" },
+];
 
 function ProjectCard({ project }: { project: Project }) {
   return (
@@ -50,10 +62,14 @@ function ProjectGroup({ title, projects }: { title: string; projects: Project[] 
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects();
+  const [statusFilter, setStatusFilter] = React.useState<ProjectStatus | "all">("all");
 
-  const live = projects?.filter((p) => p.status === "open") ?? [];
-  const draft = projects?.filter((p) => p.status === "draft") ?? [];
-  const other = projects?.filter((p) => p.status !== "open" && p.status !== "draft") ?? [];
+  const filtered =
+    statusFilter === "all" ? projects ?? [] : (projects ?? []).filter((p) => p.status === statusFilter);
+
+  const live = filtered.filter((p) => p.status === "open");
+  const draft = filtered.filter((p) => p.status === "draft");
+  const other = filtered.filter((p) => p.status !== "open" && p.status !== "draft");
 
   return (
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -70,11 +86,29 @@ export default function ProjectsPage() {
           <NewProjectDialog />
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setStatusFilter(f.value)}
+              className={cn(
+                "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                statusFilter === f.value
+                  ? "bg-brand/10 text-brand"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         {isLoading ? (
           <div className="flex justify-center py-24">
             <Spinner className="h-6 w-6 text-muted-foreground" />
           </div>
-        ) : projects && projects.length > 0 ? (
+        ) : filtered.length > 0 ? (
           <div className="flex flex-col gap-8">
             <ProjectGroup title="Live" projects={live} />
             <ProjectGroup title="Draft" projects={draft} />

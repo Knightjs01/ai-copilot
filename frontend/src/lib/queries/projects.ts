@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
-import type { JdUploadResult, Project, ProjectStatus } from "@/lib/types";
+import type { JdUploadResult, Project, ProjectActivityEntry, ProjectStatus } from "@/lib/types";
 
 export function useProjects() {
   return useQuery({
@@ -84,6 +84,14 @@ export function usePostToShadow(projectId: string) {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       void queryClient.invalidateQueries({ queryKey: ["shadow-jobs"] });
     },
+  });
+}
+
+export function useProjectActivity(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ["projects", projectId, "activity"],
+    queryFn: () => apiClient.get<ProjectActivityEntry[]>(`/projects/${projectId}/activity`),
+    enabled: !!projectId,
   });
 }
 

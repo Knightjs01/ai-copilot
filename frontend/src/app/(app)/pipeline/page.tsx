@@ -10,15 +10,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useAllCandidates } from "@/lib/queries/candidates";
 import { useProjects } from "@/lib/queries/projects";
+import { cn } from "@/lib/utils";
 import type { CandidateSource } from "@/lib/types";
 
+type OwnerFilter = "all" | "mine";
+
 export default function PipelinePage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canView = hasPermission("candidates.view");
   const { data: candidates, isLoading: candidatesLoading } = useAllCandidates();
   const { data: projects, isLoading: projectsLoading } = useProjects();
   const [search, setSearch] = React.useState("");
   const [sourceFilter, setSourceFilter] = React.useState<CandidateSource | "all">("all");
+  const [ownerFilter, setOwnerFilter] = React.useState<OwnerFilter>("all");
 
   const projectTitles = React.useMemo(() => {
     const map: Record<string, string> = {};
@@ -37,9 +41,10 @@ export default function PipelinePage() {
         candidate.callsign.toLowerCase().includes(query) ||
         candidate.candidate_ref.toLowerCase().includes(query);
       const matchesSource = sourceFilter === "all" || candidate.source === sourceFilter;
-      return matchesSearch && matchesSource;
+      const matchesOwner = ownerFilter === "all" || candidate.created_by_id === user?.id;
+      return matchesSearch && matchesSource && matchesOwner;
     });
-  }, [candidates, search, sourceFilter]);
+  }, [candidates, search, sourceFilter, ownerFilter, user?.id]);
 
   if (!canView) {
     return (
@@ -88,6 +93,24 @@ export default function PipelinePage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Every candidate across every role, in one board.
         </p>
+      </div>
+
+      <div className="flex gap-2">
+        {(["all", "mine"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setOwnerFilter(value)}
+            className={cn(
+              "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+              ownerFilter === value
+                ? "bg-brand/10 text-brand"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            )}
+          >
+            {value === "all" ? "All Candidates" : "My Candidates"}
+          </button>
+        ))}
       </div>
 
       <CandidatesToolbar

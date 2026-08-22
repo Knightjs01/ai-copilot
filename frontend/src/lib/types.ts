@@ -932,6 +932,22 @@ export interface CandidateInterviewSummary extends Interview {
   callsign: string;
 }
 
+// Company-wide "Interviews" nav destination -- omits company_name (every row is already this
+// company's own) and adds project_id so a row can deep-link into a linked Project's Interviews tab.
+export interface CompanyInterviewSummary extends Interview {
+  job_title: string;
+  callsign: string;
+  project_id: string | null;
+}
+
+export interface ProjectActivityEntry {
+  id: string;
+  action: string;
+  actor_user_id: string | null;
+  extra_data: Record<string, unknown>;
+  created_at: string;
+}
+
 export type RevealRequestStatus = "pending" | "approved" | "declined";
 
 // The company-side view of a Reveal Request it created.

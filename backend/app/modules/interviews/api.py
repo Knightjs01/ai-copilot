@@ -16,6 +16,7 @@ from app.modules.candidate_auth.dependencies import require_candidate_mfa_enroll
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.interviews.schemas import (
     CandidateInterviewSummary,
+    CompanyInterviewSummary,
     InterviewCreate,
     InterviewRead,
     InterviewUpdate,
@@ -37,6 +38,17 @@ async def list_my_interviews(
 
 
 # --- Company side --------------------------------------------------------------------------
+
+
+@router.get("/mine", response_model=list[CompanyInterviewSummary])
+async def list_company_interviews(
+    actor: User = Depends(require_mfa_enrolled),
+    current_user: CurrentUser = Depends(require_permission(Permissions.INTERVIEWS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[CompanyInterviewSummary]:
+    return await InterviewService(session).list_for_company_wide(
+        actor=actor, permissions=current_user.permissions
+    )
 
 
 @router.get("/mine/{job_id}/applicants/{application_id}", response_model=list[InterviewRead])

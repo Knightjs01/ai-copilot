@@ -36,3 +36,14 @@ class CandidateInterviewSummary(InterviewRead):
     job_title: str
     company_name: str
     callsign: str
+
+
+class CompanyInterviewSummary(InterviewRead):
+    """Powers the company-wide Interviews nav destination -- unlike CandidateInterviewSummary,
+    company_name is omitted (every row is already this company's own) and project_id is included
+    so the frontend can deep-link into the job's linked Project (?tab=interviews) when one
+    exists."""
+
+    job_title: str
+    callsign: str
+    project_id: uuid.UUID | None

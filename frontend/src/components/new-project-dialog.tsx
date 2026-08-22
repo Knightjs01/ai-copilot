@@ -27,9 +27,19 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export function NewProjectDialog() {
+export function NewProjectDialog({
+  open: openProp,
+  onOpenChange,
+  hideTrigger,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+} = {}) {
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const createProject = useCreateProject();
 
   const {
@@ -51,12 +61,14 @@ export function NewProjectDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4" />
-          New project
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="h-4 w-4" />
+            New project
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New hiring project</DialogTitle>

@@ -54,6 +54,16 @@ class InterviewRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_company_id(self, company_id: uuid.UUID) -> list[Interview]:
+        """Powers the company-wide Interviews nav destination -- every interview across every
+        job/application for this tenant, ordered soonest-first."""
+        result = await self._session.execute(
+            select(Interview)
+            .where(Interview.company_id == company_id)
+            .order_by(Interview.scheduled_at)
+        )
+        return list(result.scalars().all())
+
     async def list_upcoming_by_application_ids(
         self, shadow_application_ids: list[uuid.UUID]
     ) -> list[Interview]:

@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.auth.service.user_service import UserService
@@ -33,6 +35,7 @@ class ProjectService:
     def __init__(self, session: AsyncSession, llm_client: ProjectsLLMClient | None = None) -> None:
         # llm_client is only needed by upload_jd -- every other method here is a plain read/write
         # and shouldn't need to inject/construct one.
+        self._session = session
         self._repository = ProjectRepository(session)
         self._members = ProjectMemberRepository(session)
         self._users = UserService(session)
@@ -87,6 +90,21 @@ class ProjectService:
         if project is None or project.company_id != company_id or project.deleted_at is not None:
             raise ProjectNotFoundError()
         return project
+
+    async def list_activity(
+        self, *, company_id: uuid.UUID, project_id: uuid.UUID
+    ) -> list[AuditLog]:
+        await self.get_project(company_id=company_id, project_id=project_id)
+        result = await self._session.execute(
+            select(AuditLog)
+            .where(
+                AuditLog.company_id == company_id,
+                AuditLog.target_type == "project",
+                AuditLog.target_id == project_id,
+            )
+            .order_by(AuditLog.created_at.desc())
+        )
+        return list(result.scalars().all())
 
     async def list_projects(
         self,

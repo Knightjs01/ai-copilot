@@ -256,6 +256,41 @@ async def test_app_auth_role_has_no_grants_on_projects() -> None:
         await auth_engine.dispose()
 
 
+async def test_project_activity_feed_scoped_to_this_project(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@project-activity.com", company_name="Activity Co")
+    headers = auth_headers(owner["access_token"])
+
+    project_a = await create_project(client, headers=headers, title="Role A")
+    project_b = await create_project(client, headers=headers, title="Role B")
+
+    await client.patch(
+        f"/api/v1/projects/{project_a['id']}", json={"status": "open"}, headers=headers
+    )
+    await client.patch(
+        f"/api/v1/projects/{project_b['id']}", json={"status": "open"}, headers=headers
+    )
+
+    response = await client.get(f"/api/v1/projects/{project_a['id']}/activity", headers=headers)
+    assert response.status_code == 200, response.text
+    entries = response.json()
+    assert len(entries) >= 1
+    assert all("id" in e and "action" in e and "created_at" in e for e in entries)
+    # Newest first.
+    assert entries == sorted(entries, key=lambda e: e["created_at"], reverse=True)
+
+
+async def test_project_activity_feed_cross_tenant_isolation(client: AsyncClient) -> None:
+    owner_a = await signup(client, email="owner-a@project-activity-iso.com")
+    headers_a = auth_headers(owner_a["access_token"])
+    project_a = await create_project(client, headers=headers_a, title="Role A")
+
+    owner_b = await signup(client, email="owner-b@project-activity-iso-b.com")
+    headers_b = auth_headers(owner_b["access_token"])
+
+    response = await client.get(f"/api/v1/projects/{project_a['id']}/activity", headers=headers_b)
+    assert response.status_code == 404
+
+
 async def test_role_fields_round_trip_and_clear_to_null(client: AsyncClient) -> None:
     """AI Role Intake: seniority/location/salary_min/salary_max round-trip through PATCH, and
     -- unlike department/role_brief, which can only ever be set, never cleared -- these four

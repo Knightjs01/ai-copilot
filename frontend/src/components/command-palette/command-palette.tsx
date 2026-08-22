@@ -6,18 +6,23 @@ import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
+  BarChart3,
   Briefcase,
   Building2,
+  Home,
   LayoutGrid,
   ShieldCheck,
+  Sparkles,
   UserSearch,
   Users,
+  UsersRound,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
-import type { Candidate, Project } from "@/lib/types";
+import type { Candidate, Project, TalentPoolPoolListItem } from "@/lib/types";
 
 interface NavCommand {
   label: string;
@@ -27,7 +32,13 @@ interface NavCommand {
 }
 
 const NAV_COMMANDS: NavCommand[] = [
-  { label: "Projects", href: "/projects", icon: Briefcase },
+  { label: "Home", href: "/home", icon: Home },
+  { label: "Jobs", href: "/projects", icon: Briefcase },
+  { label: "Candidates", href: "/pipeline", icon: Users, permission: "candidates.view" },
+  { label: "Talent", href: "/talent", icon: UsersRound },
+  { label: "Interviews", href: "/interviews", icon: Video, permission: "interviews.view" },
+  { label: "Phantom AI", href: "/phantom-ai", icon: Sparkles },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Team", href: "/team", icon: Users },
   { label: "Security", href: "/security", icon: ShieldCheck },
   { label: "Historic Vault", href: "/historic-vault", icon: Archive, permission: "historic_vault.view" },
@@ -74,6 +85,8 @@ export function CommandPalette({
   const candidates = projectId
     ? queryClient.getQueryData<Candidate[]>(["candidates", { projectId }]) ?? []
     : [];
+  const allCandidates = queryClient.getQueryData<Candidate[]>(["candidates", "all"]) ?? [];
+  const talentPool = queryClient.getQueryData<TalentPoolPoolListItem[]>(["talent-pool", "mine"]) ?? [];
 
   const go = (href: string) => {
     onOpenChange(false);
@@ -136,6 +149,44 @@ export function CommandPalette({
                     {candidate.callsign}
                     <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                       {candidate.candidate_ref}
+                    </span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
+
+            {allCandidates.length > 0 && !projectId && (
+              <Command.Group heading="Candidates" className={GROUP_CLASS}>
+                {allCandidates.map((candidate) => (
+                  <Command.Item
+                    key={candidate.id}
+                    value={`${candidate.callsign} ${candidate.candidate_ref}`}
+                    onSelect={() => go(`/projects/${candidate.project_id}/candidates/${candidate.id}`)}
+                    className={ITEM_CLASS}
+                  >
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {candidate.callsign}
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      {candidate.candidate_ref}
+                    </span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
+
+            {talentPool.length > 0 && (
+              <Command.Group heading="Talent Pool" className={GROUP_CLASS}>
+                {talentPool.map((item) => (
+                  <Command.Item
+                    key={item.id}
+                    value={`${item.callsign} ${item.source_role_title}`}
+                    onSelect={() => go("/talent-pool")}
+                    className={ITEM_CLASS}
+                  >
+                    <UsersRound className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {item.callsign}
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      {item.source_role_title}
                     </span>
                   </Command.Item>
                 ))}

@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
 import type {
+  CompanyInterviewSummary,
   Interview,
   MessageThread,
   ShadowApplication,
@@ -135,6 +136,16 @@ export function useSendCompanyMessage(jobId: string, applicationId: string) {
       queryClient.setQueryData(["messages", "applicant-thread", jobId, applicationId], data);
       void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
     },
+  });
+}
+
+// Company-wide Interviews nav destination -- every interview across every job for this tenant.
+export function useCompanyInterviews(options?: { enabled?: boolean }) {
+  const { enabled = true } = options ?? {};
+  return useQuery({
+    queryKey: ["interviews", "mine-company"],
+    queryFn: () => apiClient.get<CompanyInterviewSummary[]>("/interviews/mine"),
+    enabled,
   });
 }
 

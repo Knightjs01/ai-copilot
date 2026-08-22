@@ -1,4 +1,6 @@
 import uuid
+from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -66,3 +68,16 @@ class ProjectMemberRead(BaseModel):
     id: uuid.UUID
     project_id: uuid.UUID
     user_id: uuid.UUID
+
+
+class ProjectActivityEntry(BaseModel):
+    """A single project-scoped audit event -- scoped to target_type="project" events only (not
+    also joining in this project's candidate-level events), a real, stated scope cut."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    action: str
+    actor_user_id: uuid.UUID | None
+    extra_data: dict[str, Any]
+    created_at: datetime

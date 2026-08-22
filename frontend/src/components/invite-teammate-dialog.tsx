@@ -39,8 +39,18 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export function InviteTeammateDialog() {
-  const [open, setOpen] = React.useState(false);
+export function InviteTeammateDialog({
+  open: openProp,
+  onOpenChange,
+  hideTrigger,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+} = {}) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [role, setRole] = React.useState<RoleName>("Recruiter");
   const [pendingValues, setPendingValues] = React.useState<FormValues | null>(null);
   const [stepUpOpen, setStepUpOpen] = React.useState(false);
@@ -80,12 +90,14 @@ export function InviteTeammateDialog() {
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button size="sm">
-            <UserPlus className="h-3.5 w-3.5" />
-            Invite teammate
-          </Button>
-        </DialogTrigger>
+        {!hideTrigger && (
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <UserPlus className="h-3.5 w-3.5" />
+              Invite teammate
+            </Button>
+          </DialogTrigger>
+        )}
         <DialogContent container={container}>
           <DialogHeader>
             <DialogTitle>Invite a teammate</DialogTitle>

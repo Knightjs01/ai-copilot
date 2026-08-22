@@ -329,6 +329,70 @@ async def test_cross_tenant_and_cross_candidate_isolation(client: AsyncClient) -
     assert len(candidate_a_list.json()) == 1
 
 
+async def test_company_wide_interview_list(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@interviews-companywide.com")
+    owner_headers = auth_headers(owner["access_token"])
+    job_a = await _create_and_publish_job(client, headers=owner_headers)
+    application_a, _ = await _apply_with_new_candidate(
+        client, job_id=job_a["id"], email="candidate-a@interviews-companywide.com"
+    )
+    job_b = await _create_and_publish_job(client, headers=owner_headers)
+    application_b, _ = await _apply_with_new_candidate(
+        client, job_id=job_b["id"], email="candidate-b@interviews-companywide.com"
+    )
+
+    await client.post(
+        f"/api/v1/interviews/mine/{job_a['id']}/applicants/{application_a['id']}",
+        json={"scheduled_at": _future_iso(days=1)},
+        headers=owner_headers,
+    )
+    await client.post(
+        f"/api/v1/interviews/mine/{job_b['id']}/applicants/{application_b['id']}",
+        json={"scheduled_at": _future_iso(days=2)},
+        headers=owner_headers,
+    )
+
+    response = await client.get("/api/v1/interviews/mine", headers=owner_headers)
+    assert response.status_code == 200, response.text
+    rows = response.json()
+    assert len(rows) == 2
+    assert {r["job_title"] for r in rows} == {job_a["title"], job_b["title"]}
+    assert rows[0]["scheduled_at"] < rows[1]["scheduled_at"]
+
+
+async def test_company_wide_interview_list_scopes_interviewer_to_assigned(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@interviews-companywide-scope.com")
+    owner_headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=owner_headers)
+    application, _ = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="candidate@interviews-companywide-scope.com"
+    )
+    interviewer = await invite_and_accept(
+        client,
+        inviter_headers=owner_headers,
+        email="interviewer@interviews-companywide-scope.com",
+        role="Interviewer",
+        sent_emails=sent_emails,
+    )
+    interviewer_headers = auth_headers(interviewer["access_token"])
+
+    # An interview this Interviewer is NOT assigned to.
+    await client.post(
+        f"/api/v1/interviews/mine/{job['id']}/applicants/{application['id']}",
+        json={"scheduled_at": _future_iso()},
+        headers=owner_headers,
+    )
+
+    owner_view = await client.get("/api/v1/interviews/mine", headers=owner_headers)
+    assert len(owner_view.json()) == 1
+
+    interviewer_view = await client.get("/api/v1/interviews/mine", headers=interviewer_headers)
+    assert interviewer_view.status_code == 200
+    assert interviewer_view.json() == []
+
+
 async def test_burn_project_purges_interviews(client: AsyncClient) -> None:
     owner = await signup(
         client, email="owner@interviews-burn.com", company_name="Burn Interviews Co"

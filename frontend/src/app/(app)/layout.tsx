@@ -3,9 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { AppHeader } from "@/components/app-header";
 import { CommandPaletteProvider } from "@/components/command-palette/command-palette-provider";
+import { Sidebar } from "@/components/sidebar";
 import { Toaster } from "@/components/toaster";
-import { TopNav } from "@/components/top-nav";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -52,9 +53,14 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div ref={setWrapper} className={cn("min-h-screen bg-background", theme === "dark" && "dark")}>
       <CommandPaletteProvider container={wrapper}>
-        <TopNav container={wrapper} />
         <ThemeScopeProvider container={wrapper}>
-          <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+          <div className="flex min-h-screen">
+            <Sidebar container={wrapper} />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <AppHeader />
+              <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">{children}</main>
+            </div>
+          </div>
         </ThemeScopeProvider>
       </CommandPaletteProvider>
       <Toaster />

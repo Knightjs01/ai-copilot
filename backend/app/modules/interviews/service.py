@@ -19,6 +19,7 @@ from app.modules.interviews.models import Interview
 from app.modules.interviews.repository import InterviewParticipantRepository, InterviewRepository
 from app.modules.interviews.schemas import (
     CandidateInterviewSummary,
+    CompanyInterviewSummary,
     InterviewCreate,
     InterviewRead,
     InterviewUpdate,
@@ -184,6 +185,44 @@ class InterviewService:
             interviews = [i for i in interviews if i.id in assigned_ids]
 
         return [await self._to_read(i) for i in interviews]
+
+    async def list_for_company_wide(
+        self, *, actor: User, permissions: set[str]
+    ) -> list[CompanyInterviewSummary]:
+        """Company-wide Interviews nav destination -- every interview across every job for this
+        tenant, same Interviewer-participant scoping as list_for_company but by company_id
+        instead of one application at a time."""
+        interviews = await self._interviews.list_by_company_id(actor.company_id)
+
+        if Permissions.INTERVIEWS_SCHEDULE not in permissions:
+            assigned_ids = set(await self._participants.list_interview_ids_for_user(actor.id))
+            interviews = [i for i in interviews if i.id in assigned_ids]
+
+        summaries: list[CompanyInterviewSummary] = []
+        for interview in interviews:
+            application = await self._applications.get_by_id(interview.shadow_application_id)
+            if application is None:
+                continue
+            job = await self._jobs.get_by_id(application.shadow_job_id)
+            interviewer_user_ids = await self._participants.list_user_ids_for_interview(
+                interview.id
+            )
+            summaries.append(
+                CompanyInterviewSummary(
+                    id=interview.id,
+                    application_id=application.id,
+                    scheduled_at=interview.scheduled_at,
+                    location=interview.location,
+                    meeting_link=interview.meeting_link,
+                    status=interview.status,  # type: ignore[arg-type]
+                    created_at=interview.created_at,
+                    interviewer_user_ids=interviewer_user_ids,
+                    job_title=job.title if job else "Unknown role",
+                    callsign=application.callsign,
+                    project_id=job.project_id if job else None,
+                )
+            )
+        return summaries
 
     # --- Candidate side ------------------------------------------------------------------------
 
