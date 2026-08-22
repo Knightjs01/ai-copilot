@@ -2,14 +2,23 @@
 
 import * as React from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Plus } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { MATCH_TIER_VARIANT } from "@/lib/status-display";
 import { cn } from "@/lib/utils";
 import type { CandidateSearchResult } from "@/lib/types";
+
+export type QuickTalentPoolState = "idle" | "pending" | "added" | "skipped";
+
+export interface QuickTalentPoolAction {
+  state: QuickTalentPoolState;
+  skipReason?: string;
+  onAdd: () => void;
+}
 
 function ToneList({
   title,
@@ -56,12 +65,16 @@ export function CandidateSearchResultCard({
   contextLine,
   selected,
   onToggleSelected,
+  talentPoolAction,
 }: {
   result: CandidateSearchResult;
   contextLine?: ReactNode;
   // Optional — omitted entirely on pages that don't wire up a selection/bulk-action toolbar.
   selected?: boolean;
   onToggleSelected?: () => void;
+  // Optional per-card quick-add to Talent Pool — omitted on pages where it doesn't apply (e.g.
+  // Talent Pool's own "find matches" section, where the candidate is already granted).
+  talentPoolAction?: QuickTalentPoolAction;
 }) {
   const [expanded, setExpanded] = React.useState(false);
 
@@ -104,6 +117,37 @@ export function CandidateSearchResultCard({
             <span className="text-xs font-medium text-muted-foreground">
               {result.match_score}% match
             </span>
+            {talentPoolAction && (
+              <>
+                {talentPoolAction.state === "idle" && (
+                  <button
+                    type="button"
+                    onClick={talentPoolAction.onAdd}
+                    className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:border-brand hover:text-brand"
+                  >
+                    <Plus className="h-2.5 w-2.5" />
+                    Add to Talent Pool
+                  </button>
+                )}
+                {talentPoolAction.state === "pending" && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                    <Spinner className="h-2.5 w-2.5" />
+                    Adding…
+                  </span>
+                )}
+                {talentPoolAction.state === "added" && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-success">
+                    <Check className="h-2.5 w-2.5" />
+                    Added
+                  </span>
+                )}
+                {talentPoolAction.state === "skipped" && (
+                  <span className="max-w-[7rem] text-right text-[10px] font-medium text-muted-foreground">
+                    {talentPoolAction.skipReason ?? "Skipped"}
+                  </span>
+                )}
+              </>
+            )}
           </div>
         </div>
 

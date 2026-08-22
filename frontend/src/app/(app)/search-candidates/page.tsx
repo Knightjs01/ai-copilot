@@ -4,7 +4,10 @@ import * as React from "react";
 import { Search } from "lucide-react";
 
 import { BulkSaveToTalentPoolDialog } from "@/components/candidate-search/bulk-save-to-talent-pool-dialog";
-import { CandidateSearchResultCard } from "@/components/candidate-search/candidate-search-result-card";
+import {
+  CandidateSearchResultCard,
+  type QuickTalentPoolState,
+} from "@/components/candidate-search/candidate-search-result-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import { useCandidateSearch } from "@/lib/queries/candidate-search";
 import { useMyShadowJobs } from "@/lib/queries/shadow-jobs";
+import { useBulkRequestTalentPool } from "@/lib/queries/talent-pool";
 
 export default function SearchCandidatesPage() {
   const container = useThemeScopeContainer();
@@ -22,9 +26,14 @@ export default function SearchCandidatesPage() {
   });
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false);
+  const [quickAddState, setQuickAddState] = React.useState<
+    Record<string, { state: QuickTalentPoolState; skipReason?: string }>
+  >({});
+  const bulkRequest = useBulkRequestTalentPool();
 
   React.useEffect(() => {
     setSelected(new Set());
+    setQuickAddState({});
   }, [jobId]);
 
   const toggleSelected = (callsign: string) => {
@@ -34,6 +43,29 @@ export default function SearchCandidatesPage() {
       else next.add(callsign);
       return next;
     });
+  };
+
+  const handleQuickAdd = async (callsign: string) => {
+    if (!jobId) return;
+    setQuickAddState((prev) => ({ ...prev, [callsign]: { state: "pending" } }));
+    try {
+      const result = await bulkRequest.mutateAsync({ jobId, callsigns: [callsign] });
+      if (result.requested.includes(callsign)) {
+        setQuickAddState((prev) => ({ ...prev, [callsign]: { state: "added" } }));
+      } else {
+        const skip = result.skipped.find((s) => s.callsign === callsign);
+        setQuickAddState((prev) => ({
+          ...prev,
+          [callsign]: { state: "skipped", skipReason: skip?.reason },
+        }));
+      }
+    } catch {
+      setQuickAddState((prev) => {
+        const next = { ...prev };
+        delete next[callsign];
+        return next;
+      });
+    }
   };
 
   return (
@@ -111,6 +143,11 @@ export default function SearchCandidatesPage() {
               result={result}
               selected={selected.has(result.callsign)}
               onToggleSelected={() => toggleSelected(result.callsign)}
+              talentPoolAction={{
+                state: quickAddState[result.callsign]?.state ?? "idle",
+                skipReason: quickAddState[result.callsign]?.skipReason,
+                onAdd: () => void handleQuickAdd(result.callsign),
+              }}
             />
           ))}
         </div>
@@ -122,7 +159,19 @@ export default function SearchCandidatesPage() {
           onOpenChange={setBulkDialogOpen}
           jobId={jobId}
           callsigns={Array.from(selected)}
-          onDone={() => setSelected(new Set())}
+          onDone={(result) => {
+            setSelected(new Set());
+            setQuickAddState((prev) => {
+              const next = { ...prev };
+              for (const callsign of result.requested) {
+                next[callsign] = { state: "added" };
+              }
+              for (const skip of result.skipped) {
+                next[skip.callsign] = { state: "skipped", skipReason: skip.reason };
+              }
+              return next;
+            });
+          }}
         />
       )}
     </div>

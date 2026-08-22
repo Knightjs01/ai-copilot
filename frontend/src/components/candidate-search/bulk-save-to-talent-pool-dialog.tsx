@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api-client";
 import { useBulkRequestTalentPool } from "@/lib/queries/talent-pool";
 import { useToast } from "@/lib/toast-context";
+import type { TalentPoolBulkRequestResult } from "@/lib/types";
 
 export function BulkSaveToTalentPoolDialog({
   open,
@@ -27,7 +28,7 @@ export function BulkSaveToTalentPoolDialog({
   onOpenChange: (open: boolean) => void;
   jobId: string;
   callsigns: string[];
-  onDone: () => void;
+  onDone: (result: TalentPoolBulkRequestResult) => void;
 }) {
   const [note, setNote] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
@@ -40,7 +41,7 @@ export function BulkSaveToTalentPoolDialog({
       const result = await bulkRequest.mutateAsync({ jobId, callsigns, note });
       onOpenChange(false);
       setNote("");
-      onDone();
+      onDone(result);
       if (result.requested.length > 0) {
         toast({
           title: `Requested ${result.requested.length} candidate${result.requested.length === 1 ? "" : "s"} for Talent Pool`,
