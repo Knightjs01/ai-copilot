@@ -115,6 +115,39 @@ async def test_candidate_send_creates_thread_and_company_can_reply(client: Async
     assert reply_thread["messages"][-1]["sender_type"] == "company"
 
 
+async def test_company_reply_emails_the_candidate(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(
+        client, email="owner@messages-notify.com", company_name="Notify Messages Co"
+    )
+    owner_headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=owner_headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="candidate@messages-notify.com"
+    )
+    # Candidate's own first message doesn't need to email themselves.
+    await client.post(
+        f"/api/v1/messages/{application['id']}",
+        json={"body": "Hi, just checking in."},
+        headers=candidate_headers,
+    )
+    assert sent_emails.sent == []
+
+    reply_response = await client.post(
+        f"/api/v1/messages/mine/{job['id']}/applicants/{application['id']}",
+        json={"body": "Thanks for reaching out."},
+        headers=owner_headers,
+    )
+    assert reply_response.status_code == 201, reply_response.text
+
+    assert len(sent_emails.sent) == 1
+    email = sent_emails.sent[0]
+    assert email["to"] == "candidate@messages-notify.com"
+    assert "Notify Messages Co" in email["subject"]
+    assert application["id"] in email["body"]
+
+
 async def test_unread_counts_and_mark_read_on_open(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@messages-unread.com")
     owner_headers = auth_headers(owner["access_token"])

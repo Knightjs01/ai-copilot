@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { Tag } from "lucide-react";
+import { MessageCircle, Tag } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -215,6 +215,14 @@ export function MergedPipelineKanban({
                               {skill}
                             </Badge>
                           ))}
+                        </div>
+                      )}
+
+                      {applicant.unread_message_count > 0 && (
+                        <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-info">
+                          <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                          {applicant.unread_message_count} new message
+                          {applicant.unread_message_count === 1 ? "" : "s"}
                         </div>
                       )}
 

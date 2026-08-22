@@ -1,5 +1,6 @@
 from httpx import AsyncClient
 
+from tests.conftest import CapturingEmailSender
 from tests.integration.helpers import auth_headers, candidate_signup, signup, step_up_headers
 
 _JOB_PAYLOAD = {
@@ -78,6 +79,32 @@ async def test_request_reveal_transitions_application_status(client: AsyncClient
         "/api/v1/shadow-jobs/applications/me", headers=_candidate_headers
     )
     assert applications_response.json()[0]["status"] == "reveal_requested"
+
+
+async def test_request_reveal_emails_the_candidate(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(
+        client, email="owner@shadowreveal-notify.com", company_name="Notify Reveal Co"
+    )
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, _candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="applicant@shadowreveal-notify.com"
+    )
+
+    request_response = await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={"reason": "Moving to final interview"},
+        headers=headers,
+    )
+    assert request_response.status_code == 201, request_response.text
+
+    assert len(sent_emails.sent) == 1
+    email = sent_emails.sent[0]
+    assert email["to"] == "applicant@shadowreveal-notify.com"
+    assert "Notify Reveal Co" in email["subject"]
+    assert application["id"] in email["body"]
 
 
 async def test_duplicate_reveal_request_rejected(client: AsyncClient) -> None:

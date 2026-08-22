@@ -6,10 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
+    get_email_sender,
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
 )
+from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
@@ -79,8 +81,9 @@ async def schedule_applicant_interview(
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.INTERVIEWS_SCHEDULE)),
     session: AsyncSession = Depends(get_tenant_db),
+    email_sender: EmailSender = Depends(get_email_sender),
 ) -> InterviewRead:
-    return await InterviewService(session).schedule(
+    return await InterviewService(session, email_sender=email_sender).schedule(
         actor=actor, job_id=job_id, application_id=application_id, data=body
     )
 

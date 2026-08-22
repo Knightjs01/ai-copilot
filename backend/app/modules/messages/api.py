@@ -6,10 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
+    get_email_sender,
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
 )
+from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
@@ -84,7 +86,8 @@ async def send_applicant_message(
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.MESSAGES_SEND)),
     session: AsyncSession = Depends(get_tenant_db),
+    email_sender: EmailSender = Depends(get_email_sender),
 ) -> MessageThreadRead:
-    return await MessageService(session).send_as_company(
+    return await MessageService(session, email_sender=email_sender).send_as_company(
         actor=actor, job_id=job_id, application_id=application_id, body=body.body
     )

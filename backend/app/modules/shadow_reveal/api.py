@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
+    get_email_sender,
     get_tenant_db,
     require_mfa_enrolled,
     require_permission,
     require_step_up,
 )
+from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
@@ -43,8 +45,9 @@ async def request_reveal(
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
+    email_sender: EmailSender = Depends(get_email_sender),
 ) -> RevealRequestRead:
-    return await ShadowRevealService(session).request_reveal(
+    return await ShadowRevealService(session, email_sender=email_sender).request_reveal(
         actor=actor, job_id=job_id, application_id=application_id, body=body
     )
 

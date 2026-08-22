@@ -153,3 +153,34 @@ def build_talent_pool_match_email(*, company_name: str, job_url: str) -> tuple[s
         f"Log in to see the details and decide whether to apply:\n{job_url}"
     )
     return subject, body
+
+
+def build_new_message_email(*, company_name: str, message_url: str) -> tuple[str, str]:
+    # Deliberately no message content in the email itself -- same reasoning as every other
+    # notification in this module, the body stays behind login.
+    subject = f"New message from {company_name}"
+    body = (
+        f"{company_name} sent you a new message on Phantom about your application.\n\n"
+        f"Read and reply:\n{message_url}"
+    )
+    return subject, body
+
+
+def build_reveal_request_email(*, company_name: str, application_url: str) -> tuple[str, str]:
+    subject = f"{company_name} has requested to reveal your identity"
+    body = (
+        f"{company_name} would like to reveal your identity for the role you applied to.\n\n"
+        f"Review the request and decide whether to approve it:\n{application_url}"
+    )
+    return subject, body
+
+
+def build_interview_scheduled_email(
+    *, company_name: str, scheduled_at_display: str, interviews_url: str
+) -> tuple[str, str]:
+    subject = f"Interview scheduled with {company_name}"
+    body = (
+        f"{company_name} has scheduled an interview with you for {scheduled_at_display}.\n\n"
+        f"View the details:\n{interviews_url}"
+    )
+    return subject, body

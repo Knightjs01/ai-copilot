@@ -1,12 +1,16 @@
+import logging
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.modules.audit.service import AuditService
+from app.modules.auth.email import EmailSender, build_new_message_email
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.candidate_auth.repository import CandidateUserRepository
 from app.modules.companies.models import Company
 from app.modules.messages.exceptions import ApplicationNotFoundError
 from app.modules.messages.models import Message, MessageThread
@@ -15,15 +19,20 @@ from app.modules.messages.schemas import MessageRead, MessageThreadRead, Message
 from app.modules.shadow_jobs.models import ShadowApplication
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 
+logger = logging.getLogger("app.messages.service")
+
 
 class MessageService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, email_sender: EmailSender | None = None) -> None:
         self._session = session
         self._threads = MessageThreadRepository(session)
         self._messages = MessageRepository(session)
         self._applications = ShadowApplicationRepository(session)
         self._jobs = ShadowJobRepository(session)
+        self._candidate_users = CandidateUserRepository(session)
         self._audit = AuditService(session)
+        self._email_sender = email_sender
+        self._settings = get_settings()
 
     # --- Candidate side ----------------------------------------------------------------------
 
@@ -146,9 +155,31 @@ class MessageService:
             target_id=application.id,
             extra_data={"sender_type": "company"},
         )
+        await self._notify_candidate_of_new_message(actor=actor, application=application)
         return await self._build_thread_read(
             thread=thread, application=application, viewer_is_candidate=False
         )
+
+    async def _notify_candidate_of_new_message(
+        self, *, actor: User, application: ShadowApplication
+    ) -> None:
+        if self._email_sender is None:
+            return
+        candidate = await self._candidate_users.get_by_id(application.candidate_user_id)
+        company = await self._session.get(Company, actor.company_id)
+        if candidate is None or company is None:
+            return
+        message_url = f"{self._settings.frontend_base_url}/shadow/messages/{application.id}"
+        subject, body = build_new_message_email(company_name=company.name, message_url=message_url)
+        try:
+            await self._email_sender.send(to=candidate.email, subject=subject, body=body)
+        except Exception:
+            # A send failure must never fail the message-send request it's riding along with.
+            logger.exception(
+                "Failed to send new-message email to candidate %s for application %s",
+                candidate.id,
+                application.id,
+            )
 
     async def get_thread_for_company(
         self, *, actor: User, job_id: uuid.UUID, application_id: uuid.UUID

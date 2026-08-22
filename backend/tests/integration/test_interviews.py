@@ -123,6 +123,31 @@ async def test_company_schedules_and_candidate_sees_it(client: AsyncClient) -> N
     assert len(company_list.json()) == 1
 
 
+async def test_schedule_emails_the_candidate(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(
+        client, email="owner@interviews-notify.com", company_name="Notify Interviews Co"
+    )
+    owner_headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=owner_headers)
+    application, _candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="candidate@interviews-notify.com"
+    )
+
+    schedule_response = await client.post(
+        f"/api/v1/interviews/mine/{job['id']}/applicants/{application['id']}",
+        json={"scheduled_at": _future_iso(), "location": "Zoom"},
+        headers=owner_headers,
+    )
+    assert schedule_response.status_code == 201, schedule_response.text
+
+    assert len(sent_emails.sent) == 1
+    email = sent_emails.sent[0]
+    assert email["to"] == "candidate@interviews-notify.com"
+    assert "Notify Interviews Co" in email["subject"]
+
+
 async def test_reschedule_updates_time_for_both_sides(client: AsyncClient) -> None:
     owner = await signup(client, email="owner@interviews-reschedule.com")
     owner_headers = auth_headers(owner["access_token"])

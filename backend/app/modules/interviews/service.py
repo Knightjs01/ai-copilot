@@ -1,13 +1,17 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.modules.audit.service import AuditService
+from app.modules.auth.email import EmailSender, build_interview_scheduled_email
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.auth.service.user_service import UserService
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.candidate_auth.repository import CandidateUserRepository
 from app.modules.companies.models import Company
 from app.modules.interviews.exceptions import (
     ApplicationNotFoundError,
@@ -27,16 +31,21 @@ from app.modules.interviews.schemas import (
 from app.modules.shadow_jobs.models import ShadowApplication
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 
+logger = logging.getLogger("app.interviews.service")
+
 
 class InterviewService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, email_sender: EmailSender | None = None) -> None:
         self._session = session
         self._interviews = InterviewRepository(session)
         self._participants = InterviewParticipantRepository(session)
         self._applications = ShadowApplicationRepository(session)
         self._jobs = ShadowJobRepository(session)
+        self._candidate_users = CandidateUserRepository(session)
         self._audit = AuditService(session)
         self._users = UserService(session)
+        self._email_sender = email_sender
+        self._settings = get_settings()
 
     # --- Company side ------------------------------------------------------------------------
 
@@ -74,7 +83,33 @@ class InterviewService:
             target_id=application.id,
             extra_data={"interview_id": str(interview.id)},
         )
+        await self._notify_candidate_of_scheduled_interview(actor=actor, interview=interview)
         return await self._to_read(interview)
+
+    async def _notify_candidate_of_scheduled_interview(
+        self, *, actor: User, interview: Interview
+    ) -> None:
+        if self._email_sender is None:
+            return
+        candidate = await self._candidate_users.get_by_id(interview.candidate_user_id)
+        company = await self._session.get(Company, actor.company_id)
+        if candidate is None or company is None:
+            return
+        interviews_url = f"{self._settings.frontend_base_url}/shadow/interviews"
+        subject, body = build_interview_scheduled_email(
+            company_name=company.name,
+            scheduled_at_display=interview.scheduled_at.strftime("%A %d %B %Y, %H:%M UTC"),
+            interviews_url=interviews_url,
+        )
+        try:
+            await self._email_sender.send(to=candidate.email, subject=subject, body=body)
+        except Exception:
+            # A send failure must never fail the schedule request it's riding along with.
+            logger.exception(
+                "Failed to send interview-scheduled email to candidate %s for interview %s",
+                candidate.id,
+                interview.id,
+            )
 
     async def update(
         self,

@@ -1,10 +1,13 @@
+import logging
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.disclosure import SHADOW_TIER_FIELDS, DisclosureLevel, ShadowField
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
+from app.modules.auth.email import EmailSender, build_reveal_request_email
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.candidate_auth.repository import CandidateUserRepository
@@ -40,9 +43,11 @@ from app.modules.shadow_reveal.schemas import (
     RevealRequestRead,
 )
 
+logger = logging.getLogger("app.shadow_reveal.service")
+
 
 class ShadowRevealService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, email_sender: EmailSender | None = None) -> None:
         self._session = session
         self._requests = ShadowRevealRequestRepository(session)
         self._applications = ShadowApplicationRepository(session)
@@ -52,6 +57,8 @@ class ShadowRevealService:
         self._career_entries = PassportCareerEntryRepository(session)
         self._candidate_users = CandidateUserRepository(session)
         self._audit = AuditService(session)
+        self._email_sender = email_sender
+        self._settings = get_settings()
 
     # --- Company side: request a reveal ---------------------------------------------------
 
@@ -87,7 +94,31 @@ class ShadowRevealService:
             target_id=application.id,
             extra_data={"reveal_request_id": str(request.id)},
         )
+        await self._notify_candidate_of_reveal_request(actor=actor, application=application)
         return _to_request_read(request, callsign=application.callsign)
+
+    async def _notify_candidate_of_reveal_request(
+        self, *, actor: User, application: ShadowApplication
+    ) -> None:
+        if self._email_sender is None:
+            return
+        candidate = await self._candidate_users.get_by_id(application.candidate_user_id)
+        company = await self._session.get(Company, actor.company_id)
+        if candidate is None or company is None:
+            return
+        application_url = f"{self._settings.frontend_base_url}/shadow/applications/{application.id}"
+        subject, body = build_reveal_request_email(
+            company_name=company.name, application_url=application_url
+        )
+        try:
+            await self._email_sender.send(to=candidate.email, subject=subject, body=body)
+        except Exception:
+            # A send failure must never fail the reveal-request it's riding along with.
+            logger.exception(
+                "Failed to send reveal-request email to candidate %s for application %s",
+                candidate.id,
+                application.id,
+            )
 
     async def get_revealed_identity(
         self, *, company_id: uuid.UUID, job_id: uuid.UUID, application_id: uuid.UUID
