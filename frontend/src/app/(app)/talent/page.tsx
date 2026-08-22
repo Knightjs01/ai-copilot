@@ -23,7 +23,7 @@ export default function TalentHubPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Talent</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Discover Talent</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           People you may want to hire now or in the future — distinct from Candidates, who are
           currently interacting with your hiring process.
@@ -57,7 +57,7 @@ export default function TalentHubPage() {
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Search className="h-4 w-4 text-brand" />
-                  Search Candidates
+                  Phantom Smart Matches
                 </CardTitle>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </CardHeader>

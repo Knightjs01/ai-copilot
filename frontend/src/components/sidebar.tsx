@@ -9,6 +9,7 @@ import {
   Briefcase,
   ChevronsLeft,
   ChevronsRight,
+  Globe,
   Home,
   LogOut,
   Sparkles,
@@ -50,7 +51,7 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
     { label: "Home", href: "/home", icon: Home },
     { label: "Jobs", href: "/projects", icon: Briefcase },
     { label: "Candidates", href: "/pipeline", icon: Users, permission: "candidates.view" },
-    { label: "Talent", href: "/talent", icon: UsersRound },
+    { label: "Discover Talent", href: "/talent", icon: UsersRound },
     { label: "Interviews", href: "/interviews", icon: Video, permission: "interviews.view" },
     { label: "Phantom AI", href: "/phantom-ai", icon: Sparkles },
     { label: "Analytics", href: "/analytics", icon: BarChart3 },
@@ -169,6 +170,10 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
               <DropdownMenuLabel>{user.full_name}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => router.push("/settings")}>Settings</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => router.push("/")}>
+                <Globe className="h-3.5 w-3.5" />
+                Back to Phantom Hire
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleLogout}>
                 <LogOut className="h-3.5 w-3.5" />
