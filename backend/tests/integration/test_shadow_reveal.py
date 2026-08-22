@@ -407,3 +407,105 @@ async def test_my_history_spans_every_application_and_is_isolated_per_candidate(
         "/api/v1/shadow-reveal/my-history", headers=auth_headers(other_tokens["access_token"])
     )
     assert other_history.json() == []
+
+
+async def test_reveal_approval_emails_the_requester(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@shadowreveal-response-notify.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="applicant@shadowreveal-response-notify.com"
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={},
+        headers=headers,
+    )
+    sent_emails.sent.clear()  # drop the request-made email, only the response email matters here
+
+    respond_response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": True},
+        headers=candidate_headers,
+    )
+    assert respond_response.status_code == 200, respond_response.text
+
+    assert len(sent_emails.sent) == 1
+    email = sent_emails.sent[0]
+    assert email["to"] == "owner@shadowreveal-response-notify.com"
+    assert application["callsign"] in email["subject"]
+    assert "approved" in email["subject"]
+
+
+async def test_reveal_decline_emails_the_requester(
+    client: AsyncClient, sent_emails: CapturingEmailSender
+) -> None:
+    owner = await signup(client, email="owner@shadowreveal-decline-notify.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="applicant@shadowreveal-decline-notify.com"
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={},
+        headers=headers,
+    )
+    sent_emails.sent.clear()
+
+    respond_response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": False},
+        headers=candidate_headers,
+    )
+    assert respond_response.status_code == 200, respond_response.text
+
+    assert len(sent_emails.sent) == 1
+    email = sent_emails.sent[0]
+    assert email["to"] == "owner@shadowreveal-decline-notify.com"
+    assert "declined" in email["subject"]
+
+
+async def test_reveal_response_is_unseen_until_applicant_card_is_opened(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@shadowreveal-unseen.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="applicant@shadowreveal-unseen.com"
+    )
+    await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={},
+        headers=headers,
+    )
+    # Mark the application itself viewed first, so only the reveal-response flag is under test.
+    await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application['id']}/mark-viewed",
+        headers=headers,
+    )
+
+    await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": True},
+        headers=candidate_headers,
+    )
+
+    unseen = await client.get(f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers)
+    assert unseen.status_code == 200, unseen.text
+    assert unseen.json()[0]["reveal_response_is_new"] is True
+
+    mark_viewed = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application['id']}/mark-viewed",
+        headers=headers,
+    )
+    assert mark_viewed.status_code == 200, mark_viewed.text
+    assert mark_viewed.json()["reveal_response_is_new"] is False
+
+    seen_again = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert seen_again.json()[0]["reveal_response_is_new"] is False

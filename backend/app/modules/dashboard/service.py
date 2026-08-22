@@ -9,6 +9,10 @@ from app.modules.hiring_manager_alignment.repository import HiringManagerAlignme
 from app.modules.prescreen_assessment.repository import PrescreenAssessmentRepository
 from app.modules.projects.models import Project, ProjectStatus
 from app.modules.projects.repository import ProjectRepository
+from app.modules.shadow_jobs.models import ShadowApplication, ShadowJob
+from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
+from app.modules.shadow_reveal.models import RevealRequestStatus, ShadowRevealRequest
+from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 
 # A company's live pipeline is at most a few hundred projects/candidates in practice — same
 # unpaginated-read reasoning as analytics.service._MAX_CANDIDATES.
@@ -47,6 +51,9 @@ class DashboardService:
         self._candidates = CandidateRepository(session)
         self._assessments = PrescreenAssessmentRepository(session)
         self._alignments = HiringManagerAlignmentRepository(session)
+        self._shadow_applications = ShadowApplicationRepository(session)
+        self._shadow_jobs = ShadowJobRepository(session)
+        self._reveal_requests = ShadowRevealRequestRepository(session)
 
     async def get_dashboard_stats(
         self, *, company_id: uuid.UUID, project_id: uuid.UUID | None = None
@@ -69,6 +76,10 @@ class DashboardService:
         assessed_candidate_ids = {a.candidate_id for a in assessments}
         aligned_project_ids = await self._alignments.list_project_ids_by_company(company_id)
 
+        unseen_reveals = await self._resolve_unseen_reveal_responses(
+            company_id=company_id, project_id=project_id
+        )
+
         action_items = self._build_action_items(
             projects=projects,
             project_by_id=project_by_id,
@@ -76,6 +87,7 @@ class DashboardService:
             hiring_manager_stage=hiring_manager_stage,
             assessed_candidate_ids=assessed_candidate_ids,
             aligned_project_ids=aligned_project_ids,
+            unseen_reveals=unseen_reveals,
         )
 
         max_items = len(action_items) if project_id is not None else _MAX_ACTION_ITEMS
@@ -88,6 +100,26 @@ class DashboardService:
             action_items=action_items[:max_items],
         )
 
+    async def _resolve_unseen_reveal_responses(
+        self, *, company_id: uuid.UUID, project_id: uuid.UUID | None
+    ) -> list[tuple[ShadowRevealRequest, ShadowApplication, ShadowJob]]:
+        """Every reveal response nobody's opened the applicant's card for since, resolved down
+        to (request, application, job) triples so _build_action_items has everything it needs
+        without its own lookups. Scoped to project_id when given, same as every other stat here."""
+        requests = await self._reveal_requests.list_unseen_responses_by_company(company_id)
+        resolved: list[tuple[ShadowRevealRequest, ShadowApplication, ShadowJob]] = []
+        for request in requests:
+            application = await self._shadow_applications.get_by_id(request.shadow_application_id)
+            if application is None:
+                continue
+            job = await self._shadow_jobs.get_by_id(application.shadow_job_id)
+            if job is None:
+                continue
+            if project_id is not None and job.project_id != project_id:
+                continue
+            resolved.append((request, application, job))
+        return resolved
+
     def _build_action_items(
         self,
         *,
@@ -97,10 +129,29 @@ class DashboardService:
         hiring_manager_stage: list[Candidate],
         assessed_candidate_ids: set[uuid.UUID],
         aligned_project_ids: set[uuid.UUID],
+        unseen_reveals: list[tuple[ShadowRevealRequest, ShadowApplication, ShadowJob]],
     ) -> list[ActionItem]:
         items: list[ActionItem] = []
 
-        # Highest priority — an AI recommendation is sitting unactioned.
+        # Highest priority — a candidate is waiting on the other end of this decision.
+        for request, application, job in unseen_reveals:
+            verb = (
+                "approved" if request.status == RevealRequestStatus.APPROVED.value else "declined"
+            )
+            items.append(
+                ActionItem(
+                    type="reveal_response_needs_review",
+                    message=f"{application.callsign} {verb} your reveal request for {job.title}",
+                    project_id=job.project_id,
+                    project_title=job.title,
+                    candidate_id=None,
+                    candidate_callsign=application.callsign,
+                    shadow_job_id=job.id,
+                    application_id=application.id,
+                )
+            )
+
+        # Next priority — an AI recommendation is sitting unactioned.
         for c in prescreen_stage:
             if c.id in assessed_candidate_ids and c.prescreen_outcome == "advance":
                 project = project_by_id.get(c.project_id)

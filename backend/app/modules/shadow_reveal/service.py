@@ -7,8 +7,13 @@ from app.core.config import get_settings
 from app.core.disclosure import SHADOW_TIER_FIELDS, DisclosureLevel, ShadowField
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
-from app.modules.auth.email import EmailSender, build_reveal_request_email
+from app.modules.auth.email import (
+    EmailSender,
+    build_reveal_request_email,
+    build_reveal_response_email,
+)
 from app.modules.auth.models import User
+from app.modules.auth.repository.users import UserRepository
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.candidate_auth.repository import CandidateUserRepository
 from app.modules.companies.models import Company
@@ -56,6 +61,7 @@ class ShadowRevealService:
         self._personal_info = PassportPersonalInfoRepository(session)
         self._career_entries = PassportCareerEntryRepository(session)
         self._candidate_users = CandidateUserRepository(session)
+        self._users = UserRepository(session)
         self._audit = AuditService(session)
         self._email_sender = email_sender
         self._settings = get_settings()
@@ -241,6 +247,8 @@ class ShadowRevealService:
             },
         )
 
+        await self._notify_company_of_reveal_response(request=request, application=application)
+
         job = await self._jobs.get_by_id(application.shadow_job_id)
         company = await self._session.get(Company, job.company_id) if job else None
         return CandidateRevealRequestRead(
@@ -252,6 +260,32 @@ class ShadowRevealService:
             status=RevealRequestStatus(request.status),
             requested_at=request.created_at,
         )
+
+    async def _notify_company_of_reveal_response(
+        self, *, request: ShadowRevealRequest, application: ShadowApplication
+    ) -> None:
+        if self._email_sender is None:
+            return
+        requester = await self._users.get_by_id(request.requested_by_user_id)
+        if requester is None:
+            return
+        applicant_url = (
+            f"{self._settings.frontend_base_url}/shadow-jobs/{application.shadow_job_id}"
+        )
+        subject, body = build_reveal_response_email(
+            callsign=application.callsign,
+            approved=request.status == RevealRequestStatus.APPROVED.value,
+            applicant_url=applicant_url,
+        )
+        try:
+            await self._email_sender.send(to=requester.email, subject=subject, body=body)
+        except Exception:
+            # A send failure must never fail the response it's riding along with.
+            logger.exception(
+                "Failed to send reveal-response email to requester %s for application %s",
+                requester.id,
+                application.id,
+            )
 
     # --- Shared helpers ---------------------------------------------------------------------
 

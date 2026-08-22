@@ -175,6 +175,24 @@ def build_reveal_request_email(*, company_name: str, application_url: str) -> tu
     return subject, body
 
 
+def build_reveal_response_email(
+    *, callsign: str, approved: bool, applicant_url: str
+) -> tuple[str, str]:
+    if approved:
+        subject = f"{callsign} approved your reveal request"
+        body = (
+            f"{callsign} has approved your request to reveal their identity.\n\n"
+            f"View the details:\n{applicant_url}"
+        )
+    else:
+        subject = f"{callsign} declined your reveal request"
+        body = (
+            f"{callsign} has declined your request to reveal their identity.\n\n"
+            f"View the applicant:\n{applicant_url}"
+        )
+    return subject, body
+
+
 def build_talent_pool_request_email(
     *, company_name: str, role_title: str, requests_url: str
 ) -> tuple[str, str]:

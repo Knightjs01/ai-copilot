@@ -42,3 +42,9 @@ class ShadowRevealRequest(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # declined lifecycle as disclosure_level.
     disclosed_fields: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set once a recruiter opens this applicant's card after the candidate has responded --
+    # powers the "unseen reveal response" badge/action item. Null while pending (nothing to see
+    # yet) or after a response the company hasn't opened the card for since.
+    company_viewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

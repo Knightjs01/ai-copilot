@@ -1,10 +1,72 @@
 from httpx import AsyncClient
 
-from tests.integration.helpers import auth_headers, create_project, signup
+from tests.integration.helpers import auth_headers, candidate_signup, create_project, signup
 from tests.integration.test_prescreen_assessment import (
     _create_candidate_with_intelligence_pack,
     _setup_project_with_blueprint_and_alignment,
 )
+
+_JOB_PAYLOAD = {
+    "title": "Staff Product Designer",
+    "summary": "Own product design for our core platform.",
+    "description": "A full description of the role and its responsibilities.",
+}
+
+
+async def _create_and_publish_job(
+    client: AsyncClient, *, headers: dict, project_id: str | None = None
+) -> dict:
+    payload = {**_JOB_PAYLOAD, "project_id": project_id} if project_id else _JOB_PAYLOAD
+    response = await client.post("/api/v1/shadow-jobs", json=payload, headers=headers)
+    assert response.status_code == 201, response.text
+    job = response.json()
+    publish_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
+    )
+    assert publish_response.status_code == 200, publish_response.text
+    return publish_response.json()
+
+
+async def _apply_and_get_reveal_response(
+    client: AsyncClient, *, headers: dict, job_id: str, email: str, approve: bool
+) -> dict:
+    tokens = await candidate_signup(client, email=email, full_name="Jamie Candidate")
+    candidate_headers = auth_headers(tokens["access_token"])
+    save_response = await client.put(
+        "/api/v1/phantom-passport/me",
+        json={
+            "headline": "Senior Product Leader",
+            "summary": "A senior product leader.",
+            "personal_info": {"legal_name": "Jamie Candidate"},
+            "career_entries": [],
+        },
+        headers=candidate_headers,
+    )
+    assert save_response.status_code == 200, save_response.text
+    approve_response = await client.post(
+        "/api/v1/phantom-passport/me/approve", headers=candidate_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_id}/apply", headers=candidate_headers
+    )
+    assert apply_response.status_code == 201, apply_response.text
+    application = apply_response.json()
+
+    request_response = await client.post(
+        f"/api/v1/shadow-reveal/mine/{job_id}/applicants/{application['id']}/request",
+        json={},
+        headers=headers,
+    )
+    assert request_response.status_code == 201, request_response.text
+
+    respond_response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": approve},
+        headers=candidate_headers,
+    )
+    assert respond_response.status_code == 200, respond_response.text
+    return application
 
 
 async def _create_candidate(
@@ -198,3 +260,74 @@ async def test_dashboard_is_scoped_to_company(client: AsyncClient) -> None:
 
     assert data["live_projects"] == 0
     assert data["action_items"] == []
+
+
+async def test_dashboard_surfaces_unseen_reveal_response_and_clears_once_viewed(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@dashboard-reveal.com", company_name="Reveal Dash Co")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application = await _apply_and_get_reveal_response(
+        client,
+        headers=headers,
+        job_id=job["id"],
+        email="candidate@dashboard-reveal.com",
+        approve=True,
+    )
+
+    response = await client.get("/api/v1/dashboard", headers=headers)
+    assert response.status_code == 200, response.text
+    items = response.json()["action_items"]
+    reveal_items = [i for i in items if i["type"] == "reveal_response_needs_review"]
+    assert len(reveal_items) == 1
+    item = reveal_items[0]
+    assert item["shadow_job_id"] == job["id"]
+    assert item["application_id"] == application["id"]
+    assert application["callsign"] in item["message"]
+    assert "approved" in item["message"]
+
+    mark_viewed = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application['id']}/mark-viewed",
+        headers=headers,
+    )
+    assert mark_viewed.status_code == 200, mark_viewed.text
+
+    after_viewed = await client.get("/api/v1/dashboard", headers=headers)
+    remaining = [
+        i
+        for i in after_viewed.json()["action_items"]
+        if i["type"] == "reveal_response_needs_review"
+    ]
+    assert remaining == []
+
+
+async def test_dashboard_reveal_action_item_scoped_to_project(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@dashboard-reveal-scope.com")
+    headers = auth_headers(owner["access_token"])
+    project_a = await create_project(client, headers=headers, title="Project A")
+    project_b = await create_project(client, headers=headers, title="Project B")
+    job_a = await _create_and_publish_job(client, headers=headers, project_id=project_a["id"])
+    job_b = await _create_and_publish_job(client, headers=headers, project_id=project_b["id"])
+    await _apply_and_get_reveal_response(
+        client,
+        headers=headers,
+        job_id=job_a["id"],
+        email="candidate@dashboard-reveal-scope-a.com",
+        approve=True,
+    )
+    await _apply_and_get_reveal_response(
+        client,
+        headers=headers,
+        job_id=job_b["id"],
+        email="candidate@dashboard-reveal-scope-b.com",
+        approve=False,
+    )
+
+    scoped = await client.get(f"/api/v1/dashboard?project_id={project_a['id']}", headers=headers)
+    assert scoped.status_code == 200, scoped.text
+    reveal_items = [
+        i for i in scoped.json()["action_items"] if i["type"] == "reveal_response_needs_review"
+    ]
+    assert len(reveal_items) == 1
+    assert reveal_items[0]["shadow_job_id"] == job_a["id"]

@@ -45,9 +45,12 @@ export function ApplicantCard({
 
   // Opening this list is a real "the recruiter looked at their applicants" signal -- each card
   // clears its own "new" flag once it's actually rendered here, not just when the list loads.
+  // Covers both a brand-new application and an unseen reveal-request response.
   React.useEffect(() => {
-    if (profile.is_new) markViewedRef.current(profile.application_id);
-  }, [profile.is_new, profile.application_id]);
+    if (profile.is_new || profile.reveal_response_is_new) {
+      markViewedRef.current(profile.application_id);
+    }
+  }, [profile.is_new, profile.reveal_response_is_new, profile.application_id]);
   const canRequestTalentPool =
     hasPermission("talent_pool.request") &&
     (jobStatus === "closed" || profile.status === "declined" || profile.status === "withdrawn");
@@ -66,13 +69,16 @@ export function ApplicantCard({
   };
 
   return (
-    <Card className={cn(profile.is_new && "border-brand/50 bg-brand/5")}>
+    <Card
+      className={cn((profile.is_new || profile.reveal_response_is_new) && "border-brand/50 bg-brand/5")}
+    >
       <CardContent className="flex flex-col gap-3 py-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-0.5">
             <h3 className="flex items-center gap-1.5 text-base font-semibold text-foreground">
               {profile.callsign}
               {profile.is_new && <Badge variant="success">New application</Badge>}
+              {profile.reveal_response_is_new && <Badge variant="info">Reveal response</Badge>}
             </h3>
             {profile.headline && (
               <p className="text-sm text-muted-foreground">{profile.headline}</p>

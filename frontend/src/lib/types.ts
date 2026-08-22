@@ -305,6 +305,7 @@ export interface PurgeCertificate {
 }
 
 export type ActionItemType =
+  | "reveal_response_needs_review"
   | "ready_to_advance"
   | "needs_interview_scheduling"
   | "needs_prescreen"
@@ -313,10 +314,15 @@ export type ActionItemType =
 export interface ActionItem {
   type: ActionItemType;
   message: string;
-  project_id: string;
-  project_title: string;
+  // Null for a reveal-response item whose Shadow Job isn't linked to a project.
+  project_id: string | null;
+  project_title: string | null;
   candidate_id: string | null;
   candidate_callsign: string | null;
+  // Only set for reveal_response_needs_review items -- links straight to the real applicant
+  // card, which has no ATS Candidate/project route equivalent.
+  shadow_job_id: string | null;
+  application_id: string | null;
 }
 
 export interface DashboardStats {
@@ -882,6 +888,9 @@ export interface ShadowProfile {
   effective_stage: ShadowEffectiveStage;
   // True until a recruiter opens this applicant's card for the first time.
   is_new: boolean;
+  // True when the candidate has responded (approved/declined) to a reveal request and nobody's
+  // opened this applicant's card since. Independent of is_new.
+  reveal_response_is_new: boolean;
 }
 
 // Same shape as ShadowProfile, plus which job/project this application belongs to -- powers the

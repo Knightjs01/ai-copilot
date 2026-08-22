@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { AlertCircle, CalendarClock, ClipboardCheck, type LucideIcon, TrendingUp } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarClock,
+  ClipboardCheck,
+  Eye,
+  type LucideIcon,
+  TrendingUp,
+} from "lucide-react";
 
 import type { ActionItem, ActionItemType } from "@/lib/types";
 
 export const ACTION_ITEM_ICON: Record<ActionItemType, LucideIcon> = {
+  reveal_response_needs_review: Eye,
   ready_to_advance: TrendingUp,
   needs_interview_scheduling: CalendarClock,
   needs_prescreen: ClipboardCheck,
@@ -12,9 +20,11 @@ export const ACTION_ITEM_ICON: Record<ActionItemType, LucideIcon> = {
 
 export function ActionItemRow({ item }: { item: ActionItem }) {
   const Icon = ACTION_ITEM_ICON[item.type];
-  const href = item.candidate_id
-    ? `/projects/${item.project_id}/candidates/${item.candidate_id}`
-    : `/projects/${item.project_id}`;
+  const href = item.shadow_job_id
+    ? `/shadow-jobs/${item.shadow_job_id}`
+    : item.candidate_id
+      ? `/projects/${item.project_id}/candidates/${item.candidate_id}`
+      : `/projects/${item.project_id}`;
 
   return (
     <Link

@@ -174,17 +174,23 @@ export function MergedPipelineKanban({
                     key={applicant.application_id}
                     href={`/shadow-jobs/${shadowJobId}`}
                     onClick={() => {
-                      if (applicant.is_new) markViewed.mutate(applicant.application_id);
+                      if (applicant.is_new || applicant.reveal_response_is_new) {
+                        markViewed.mutate(applicant.application_id);
+                      }
                     }}
                   >
                     <KanbanCard
                       id={shadowDragId(applicant.application_id)}
-                      className={applicant.is_new ? "border-brand/50 bg-brand/5" : undefined}
+                      className={
+                        applicant.is_new || applicant.reveal_response_is_new
+                          ? "border-brand/50 bg-brand/5"
+                          : undefined
+                      }
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="relative shrink-0">
                           <Avatar name={applicant.callsign} className="h-7 w-7 text-[10px]" />
-                          {applicant.is_new && (
+                          {(applicant.is_new || applicant.reveal_response_is_new) && (
                             <span
                               className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success"
                               aria-hidden
@@ -197,6 +203,11 @@ export function MergedPipelineKanban({
                             {applicant.is_new && (
                               <Badge variant="success" className="shrink-0 text-[10px]">
                                 New application
+                              </Badge>
+                            )}
+                            {applicant.reveal_response_is_new && (
+                              <Badge variant="info" className="shrink-0 text-[10px]">
+                                Reveal response
                               </Badge>
                             )}
                           </p>

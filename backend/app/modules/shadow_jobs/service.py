@@ -16,6 +16,7 @@ from app.modules.companies.service import is_profile_publicly_visible
 from app.modules.interviews.repository import InterviewRepository
 from app.modules.messages.models import Message
 from app.modules.messages.repository import MessageRepository, MessageThreadRepository
+from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 from app.modules.talent_pool.repository import TalentPoolGrantRepository
 from app.modules.phantom_passport.exceptions import PassportNotApprovedError, PassportNotFoundError
 from app.modules.phantom_passport.repository import (
@@ -82,6 +83,7 @@ class ShadowJobService:
         self._messages_repo = MessageRepository(session)
         self._interviews = InterviewRepository(session)
         self._talent_pool_grants = TalentPoolGrantRepository(session)
+        self._reveal_requests = ShadowRevealRequestRepository(session)
         self._email_sender = email_sender
         self._settings = get_settings()
 
@@ -184,6 +186,7 @@ class ShadowJobService:
         talent_pool_grants = await self._talent_pool_grants.list_latest_by_company_and_candidates(
             company_id=company_id, candidate_user_ids=[a.candidate_user_id for a in applications]
         )
+        reveal_unseen = await self._reveal_response_unseen_for_applications(application_ids)
         return [
             await self._to_shadow_profile(
                 a,
@@ -194,6 +197,7 @@ class ShadowJobService:
                     if (grant := talent_pool_grants.get(a.candidate_user_id)) is not None
                     else None
                 ),
+                reveal_response_is_new=a.id in reveal_unseen,
             )
             for a in applications
         ]
@@ -216,6 +220,7 @@ class ShadowJobService:
         )
         job_ids = {a.shadow_job_id for a in applications}
         jobs = {job_id: await self._jobs.get_by_id(job_id) for job_id in job_ids}
+        reveal_unseen = await self._reveal_response_unseen_for_applications(application_ids)
 
         results: list[ShadowProfileCompanyWide] = []
         for a in applications:
@@ -231,6 +236,7 @@ class ShadowJobService:
                     if (grant := talent_pool_grants.get(a.candidate_user_id)) is not None
                     else None
                 ),
+                reveal_response_is_new=a.id in reveal_unseen,
             )
             results.append(
                 ShadowProfileCompanyWide(
@@ -277,6 +283,7 @@ class ShadowJobService:
         talent_pool_grants = await self._talent_pool_grants.list_latest_by_company_and_candidates(
             company_id=actor.company_id, candidate_user_ids=[application.candidate_user_id]
         )
+        reveal_unseen = await self._reveal_response_unseen_for_applications([application.id])
         return await self._to_shadow_profile(
             application,
             unread_count=unread_counts.get(application.id, 0),
@@ -286,6 +293,7 @@ class ShadowJobService:
                 if (grant := talent_pool_grants.get(application.candidate_user_id)) is not None
                 else None
             ),
+            reveal_response_is_new=application.id in reveal_unseen,
         )
 
     async def mark_applicant_viewed(
@@ -297,6 +305,14 @@ class ShadowJobService:
             raise ShadowApplicationNotFoundError()
 
         application = await self._applications.mark_viewed(application)
+
+        # Opening the card acknowledges everything about it -- also clears an unseen reveal
+        # response, if one's sitting there, rather than requiring a separate "mark viewed" action.
+        # A still-pending request has nothing to acknowledge yet, so it's deliberately left alone
+        # (marking it now would make a later real response wrongly start out already "seen").
+        reveal_request = await self._reveal_requests.get_by_application_id(application.id)
+        if reveal_request is not None and reveal_request.status != "pending":
+            await self._reveal_requests.mark_company_viewed(reveal_request)
 
         unread_counts = await self._unread_counts_for_applications([application.id])
         upcoming_interview_ids = {
@@ -315,6 +331,7 @@ class ShadowJobService:
                 if (grant := talent_pool_grants.get(application.candidate_user_id)) is not None
                 else None
             ),
+            reveal_response_is_new=False,
         )
 
     async def _unread_counts_for_applications(
@@ -347,6 +364,19 @@ class ShadowJobService:
             )
         return counts
 
+    async def _reveal_response_unseen_for_applications(
+        self, application_ids: list[uuid.UUID]
+    ) -> set[uuid.UUID]:
+        """One bulk lookup for the whole applicant list -- which applications have a reveal
+        response (approved/declined) nobody's opened the card for since. Same shape as
+        _unread_counts_for_applications."""
+        requests = await self._reveal_requests.list_by_application_ids(application_ids)
+        return {
+            r.shadow_application_id
+            for r in requests
+            if r.status != "pending" and r.company_viewed_at is None
+        }
+
     async def _to_shadow_profile(
         self,
         application: ShadowApplication,
@@ -354,6 +384,7 @@ class ShadowJobService:
         unread_count: int = 0,
         has_upcoming_interview: bool = False,
         talent_pool_status: str | None = None,
+        reveal_response_is_new: bool = False,
     ) -> ShadowProfile:
         effective_stage = (
             ShadowApplicationStatus.WITHDRAWN.value
@@ -395,6 +426,7 @@ class ShadowJobService:
                     pipeline_stage=application.pipeline_stage,
                     effective_stage=effective_stage,
                     is_new=application.viewed_at is None,
+                    reveal_response_is_new=reveal_response_is_new,
                 )
 
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
@@ -436,6 +468,7 @@ class ShadowJobService:
             pipeline_stage=application.pipeline_stage,
             effective_stage=effective_stage,
             is_new=application.viewed_at is None,
+            reveal_response_is_new=reveal_response_is_new,
         )
 
     # --- Public job board ---------------------------------------------------------------------

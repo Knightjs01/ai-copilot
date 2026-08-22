@@ -147,6 +147,11 @@ class ShadowProfile(BaseModel):
     # True until a recruiter opens this applicant's card for the first time (viewed_at is None).
     # Powers the "New application" badge on the Kanban/applicant-list surfaces.
     is_new: bool = False
+    # True when the candidate has responded (approved/declined) to a reveal request and nobody
+    # has opened this applicant's card since -- see shadow_reveal.models.ShadowRevealRequest.
+    # company_viewed_at. Independent of is_new (a reveal response can go unseen long after the
+    # application itself was first opened).
+    reveal_response_is_new: bool = False
 
 
 class ShadowApplicantPipelineUpdate(BaseModel):

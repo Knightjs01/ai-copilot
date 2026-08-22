@@ -93,7 +93,8 @@ async def respond_to_reveal_request(
     body: RevealDecision,
     candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
     session: AsyncSession = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
 ) -> CandidateRevealRequestRead:
-    return await ShadowRevealService(session).respond_to_reveal_request(
+    return await ShadowRevealService(session, email_sender=email_sender).respond_to_reveal_request(
         candidate=candidate, application_id=application_id, body=body
     )
