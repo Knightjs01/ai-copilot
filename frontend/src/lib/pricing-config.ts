@@ -156,83 +156,23 @@ export const MARKETPLACE_FEE = {
   description: "Pay nothing upfront. 7.5% of first-year base salary, invoiced only once you hire.",
 };
 
-export type VerificationTierId = "bronze" | "silver" | "gold" | "platinum";
-
-export interface VerificationTier {
-  id: VerificationTierId;
-  name: string;
-  badge: string;
-  description: string;
-  checksIncluded: string[];
-  badgeColorClass: string;
-}
-
-export const VERIFICATION_TIERS: VerificationTier[] = [
-  {
-    id: "bronze",
-    name: "Profile",
-    badge: "BRONZE — PROFILE CREATED",
-    description: "Self-declared professional information.",
-    checksIncluded: [
-      "Career history",
-      "Skills",
-      "Experience",
-      "Achievements",
-      "Preferences",
-      "Job matching",
-      "Anonymous applications",
-    ],
-    badgeColorClass: "border-orange-200 bg-orange-50 text-orange-700",
-  },
-  {
-    id: "silver",
-    name: "Verified",
-    badge: "SILVER — PROFESSIONALLY VERIFIED",
-    description: "Professionally verified.",
-    checksIncluded: [
-      "Identity verification",
-      "Employment history",
-      "Qualifications",
-      "Professional profile verification",
-      "Email verification",
-    ],
-    badgeColorClass: "border-slate-300 bg-slate-100 text-slate-700",
-  },
-  {
-    id: "gold",
-    name: "Enhanced Verified",
-    badge: "GOLD — ENHANCED VERIFIED",
-    description: "Enhanced verification.",
-    checksIncluded: [
-      "Identity",
-      "Employment history",
-      "Qualifications",
-      "Right to work",
-      "Enhanced background checks where appropriate",
-      "KYC",
-      "Professional references",
-    ],
-    badgeColorClass: "border-yellow-300 bg-yellow-50 text-yellow-700",
-  },
-  {
-    id: "platinum",
-    name: "Security Verified",
-    badge: "PLATINUM — SECURITY VERIFIED",
-    description: "High-assurance professional verification.",
-    checksIncluded: [
-      "Enhanced identity",
-      "Enhanced employment verification",
-      "Security clearance status where legitimately verifiable",
-      "Regulated-industry verification",
-      "Advanced professional credentials",
-      "High-assurance checks",
-    ],
-    badgeColorClass: "border-brand/30 bg-brand/10 text-brand",
-  },
+// The real backend field (VerificationStatus, phantom_passport/models.py) is a single
+// unverified/pending/verified state -- no automated identity/employment/KYC/background-check
+// pipeline exists yet (confirmed: the field is only ever read, never written, anywhere in the
+// backend). The items below are the direction real verification is headed, not a live, tiered
+// product today -- rendered as an explicitly "Preview"-badged roadmap, same convention as
+// intelligence-roadmap-section.tsx and talent-memory-roadmap-section.tsx use for the same reason.
+export const VERIFICATION_ROADMAP: string[] = [
+  "Identity verification",
+  "Employment history checks",
+  "Qualification checks",
+  "Right to work verification",
+  "Enhanced background checks, where appropriate",
+  "Professional references",
 ];
 
 export const VERIFICATION_DISCLAIMER =
-  "Verification confirms the checks listed above were completed — it is not a ranking boost, a compliance certification, or a security clearance guarantee. Specific verification availability depends on the implementation, jurisdiction and verification provider.";
+  "Verification is a real field on every Passport, free for every candidate, and never a ranking boost — matching always considers skills, experience, and role fit first. The checks above are the direction we're building toward, not live today; specific availability will depend on jurisdiction and verification provider.";
 
 export type FeatureCategory =
   | "Platform"

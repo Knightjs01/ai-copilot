@@ -19,14 +19,14 @@ const FAQS: { question: string; answer: string }[] = [
       "No. Phantom's commercial model is built entirely around companies paying for hiring infrastructure, AI, talent intelligence, verification and security. Candidates are the supply side of the marketplace and are never charged.",
   },
   {
-    question: "What's the difference between Bronze, Silver, Gold and Platinum?",
+    question: "What does Passport verification check?",
     answer:
-      "They're candidate verification levels, not subscription tiers. Bronze is a self-declared professional profile. Silver adds identity and employment verification. Gold adds enhanced background and right-to-work checks. Platinum adds high-assurance checks for regulated or security-sensitive roles. All four are free.",
+      "Every Passport carries a real verification status (Not verified / Verification pending / Verified), free for every candidate. Deeper checks — identity, employment history, right to work, background checks — are the direction we're building toward, not live today.",
   },
   {
-    question: "Do verification levels affect candidate ranking?",
+    question: "Does verification affect candidate ranking?",
     answer:
-      "No. Verification is a trust signal, not a ranking boost. Matching primarily considers skills, experience, role requirements, candidate preferences, career fit and availability. A well-matched Bronze candidate can outrank an irrelevant Platinum candidate.",
+      "No. Verification is a trust signal, not a ranking boost. Matching primarily considers skills, experience, role requirements, candidate preferences, career fit and availability.",
   },
   {
     question: "How does Phantom make money?",
