@@ -1,18 +1,16 @@
 import Image from "next/image";
-import { Check, Copy } from "lucide-react";
+import { Copy } from "lucide-react";
 
 // A standalone "ID card" visual — deliberately NOT wrapped in BrowserFrame, a different visual
 // language from every other (browser-screenshot-style) mockup on the site, reserved for this one
-// flagship focal moment. Light theme with a gold outline glow. Per explicit direction, this card
-// features a Gold-tier "Authentication Level" badge, an Identity/Employment/Credentials/Right to
-// Work checklist, and a Passport ID + QR block — content that goes beyond the real product's
-// current single-state VerificationStatus field (unverified/pending/verified only). Illustrative
-// sample data (Pulse-78, kept consistent with every other Passport mockup on the site), same
-// convention as every mockup on this page.
+// flagship focal moment. Light theme with a gold outline glow. Verification is shown as a single
+// gold "Verified" badge -- matching the real product's actual single-state VerificationStatus
+// field (unverified/pending/verified) -- not the fabricated 4-tier Identity/Employment/
+// Credentials/Right-to-Work checklist this card used to show, which claimed more than the real
+// product ever verifies. Illustrative sample data (Pulse-78, kept consistent with every other
+// Passport mockup on the site), same convention as every mockup on this page.
 
 const SKILLS = ["Senior Leadership", "Product", "FinTech", "Payments"];
-
-const CHECKS = ["Identity", "Employment", "Credentials", "Right to Work"];
 
 const DISSOLVE_DOTS = [
   { top: "4%", left: "88%", size: 6, opacity: 0.7 },
@@ -111,38 +109,16 @@ export function PassportIdCardMockup() {
           ))}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-border pt-4">
-          <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            Authentication Level
-          </p>
-          <div className="flex items-center gap-3">
-            <GoldHexBadge size={52} />
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xl font-extrabold uppercase tracking-wide text-[#8a6a1f]">Gold</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#8a6a1f]/80">
-                Verified
-              </p>
-            </div>
-            <p className="text-[10px] leading-snug text-muted-foreground">
-              You have completed advanced verification. Your profile is trusted and highly
-              credible.
+        <div className="flex items-center gap-3 border-t border-border pt-4">
+          <GoldHexBadge size={44} />
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+              Verification
+            </p>
+            <p className="text-lg font-extrabold uppercase tracking-wide text-[#8a6a1f]">
+              Verified
             </p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-x-2 border-t border-border pt-4">
-          {CHECKS.map((check) => (
-            <div key={check} className="flex flex-col items-center gap-1.5 text-center">
-              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#d4af6a]">
-                <Check className="h-3 w-3 text-[#100b1f]" strokeWidth={4} />
-              </div>
-              <p className="text-[9px] leading-tight text-foreground/80">
-                {check}
-                <br />
-                <span className="font-semibold text-foreground">Verified</span>
-              </p>
-            </div>
-          ))}
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-secondary/30 p-3">
