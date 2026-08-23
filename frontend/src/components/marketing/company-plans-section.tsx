@@ -12,7 +12,7 @@ import { annualSavingsPercent, COMPANY_PLANS, type BillingPeriod } from "@/lib/p
 const CARD_FEATURE_COUNT = 8;
 
 export function CompanyPlansSection() {
-  const [billingPeriod, setBillingPeriod] = React.useState<BillingPeriod>("annual");
+  const [billingPeriod, setBillingPeriod] = React.useState<BillingPeriod>("monthly");
 
   return (
     <section className="border-t border-border">
