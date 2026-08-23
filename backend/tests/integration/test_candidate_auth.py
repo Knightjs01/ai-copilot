@@ -13,7 +13,8 @@ async def test_candidate_signup_and_me(client: AsyncClient) -> None:
     assert me_response.status_code == 200, me_response.text
     body = me_response.json()
     assert body["email"] == "jamie@example.com"
-    assert body["full_name"] == "Jamie Candidate"
+    assert body["first_name"] == "Jamie"
+    assert body["last_name"] == "Candidate"
     assert body["is_email_verified"] is False
 
 
@@ -24,7 +25,8 @@ async def test_candidate_signup_duplicate_email_rejected(client: AsyncClient) ->
         json={
             "email": "dup@example.com",
             "password": "correct horse battery staple",
-            "full_name": "Someone Else",
+            "first_name": "Someone",
+            "last_name": "Else",
         },
     )
     assert response.status_code == 409
@@ -55,7 +57,8 @@ async def test_candidate_refresh_rotates_cookie(client: AsyncClient) -> None:
         json={
             "email": "refresh@example.com",
             "password": "correct horse battery staple",
-            "full_name": "Refresh Candidate",
+            "first_name": "Refresh",
+            "last_name": "Candidate",
         },
     )
     assert signup_response.status_code == 201
@@ -71,7 +74,8 @@ async def test_candidate_logout_clears_session(client: AsyncClient) -> None:
         json={
             "email": "logout@example.com",
             "password": "correct horse battery staple",
-            "full_name": "Logout Candidate",
+            "first_name": "Logout",
+            "last_name": "Candidate",
         },
     )
     logout_response = await client.post("/api/v1/candidate-auth/logout")

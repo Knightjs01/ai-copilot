@@ -16,8 +16,15 @@ class CandidateUserRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self, *, email: str, hashed_password: str, full_name: str) -> CandidateUser:
-        candidate = CandidateUser(email=email, hashed_password=hashed_password, full_name=full_name)
+    async def create(
+        self, *, email: str, hashed_password: str, first_name: str, last_name: str | None
+    ) -> CandidateUser:
+        candidate = CandidateUser(
+            email=email,
+            hashed_password=hashed_password,
+            first_name=first_name,
+            last_name=last_name,
+        )
         self._session.add(candidate)
         await self._session.flush()
         return candidate

@@ -73,7 +73,8 @@ async def signup(
     _, tokens = await CandidateAuthService(session).signup(
         email=body.email,
         password=body.password,
-        full_name=body.full_name,
+        first_name=body.first_name,
+        last_name=body.last_name,
         user_agent=user_agent,
         ip_address=ip_address,
     )
@@ -154,7 +155,8 @@ async def me(candidate: CandidateUser = Depends(get_current_candidate)) -> Candi
     return CandidateMeResponse(
         id=candidate.id,
         email=candidate.email,
-        full_name=candidate.full_name,
+        first_name=candidate.first_name,
+        last_name=candidate.last_name,
         is_email_verified=candidate.is_email_verified,
         mfa_enabled=candidate.mfa_enabled,
     )

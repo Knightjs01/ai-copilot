@@ -10,11 +10,8 @@ import { useShadowCommandPalette } from "@/components/shadow/shadow-command-pale
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 import { useMyMessageThreads } from "@/lib/queries/messages";
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return (first + last).toUpperCase();
+function initials(firstName: string, lastName: string | null): string {
+  return ((firstName[0] ?? "") + (lastName?.[0] ?? "")).toUpperCase();
 }
 
 export function ShadowTopNav() {
@@ -131,10 +128,10 @@ export function ShadowTopNav() {
               </kbd>
             </button>
             <span className="hidden text-sm text-muted-foreground lg:inline">
-              {candidate.full_name}
+              {candidate.first_name} {candidate.last_name}
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
-              {initials(candidate.full_name)}
+              {initials(candidate.first_name, candidate.last_name)}
             </div>
             <button
               type="button"

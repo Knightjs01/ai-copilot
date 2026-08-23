@@ -381,7 +381,8 @@ export interface HistoricVaultOverview {
 export interface CandidateMeResponse {
   id: string;
   email: string;
-  full_name: string;
+  first_name: string;
+  last_name: string | null;
   is_email_verified: boolean;
 }
 

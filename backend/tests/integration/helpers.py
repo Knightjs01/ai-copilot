@@ -84,9 +84,19 @@ async def step_up_headers(
 async def candidate_signup(
     client: AsyncClient, *, email: str, full_name: str = "Jamie Candidate"
 ) -> dict:
+    # Kept as a single full_name kwarg so the ~40 existing call sites across this test suite
+    # don't need to change -- split into first_name/last_name here, at the one real choke point,
+    # to match the real signup schema.
+    parts = full_name.split(" ", 1)
+    first_name, last_name = parts[0], (parts[1] if len(parts) > 1 else None)
     response = await client.post(
         "/api/v1/candidate-auth/signup",
-        json={"email": email, "password": "correct horse battery staple", "full_name": full_name},
+        json={
+            "email": email,
+            "password": "correct horse battery staple",
+            "first_name": first_name,
+            "last_name": last_name,
+        },
     )
     assert response.status_code == 201, response.text
     return response.json()

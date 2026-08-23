@@ -57,7 +57,8 @@ class CandidateAuthService:
         *,
         email: str,
         password: str,
-        full_name: str,
+        first_name: str,
+        last_name: str | None = None,
         user_agent: str | None = None,
         ip_address: str | None = None,
     ) -> tuple[CandidateUser, IssuedCandidateTokens]:
@@ -67,7 +68,8 @@ class CandidateAuthService:
         candidate = await self._candidates.create(
             email=email,
             hashed_password=security.hash_password(password),
-            full_name=full_name,
+            first_name=first_name,
+            last_name=last_name,
         )
         tokens = await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
         return candidate, tokens

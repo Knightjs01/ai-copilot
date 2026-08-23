@@ -10,20 +10,29 @@ from app.db.mixins import SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class CandidateUser(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
-    """Deliberately has no company_id — see this module's __init__.py. full_name is collected at
-    signup (mirrors auth.User) specifically so phantom_passport's CV-parsing pipeline always has
-    a known_full_name to hand to the existing redact_text() before any resume text reaches an
-    LLM — the candidate never has to re-type their name for redaction to work."""
+    """Deliberately has no company_id — see this module's __init__.py. first_name/last_name are
+    collected at signup specifically so phantom_passport's CV-parsing pipeline always has a
+    known_full_name to hand to the existing redact_text() before any resume text reaches an LLM —
+    the candidate never has to re-type their name for redaction to work (see the full_name
+    property below, which reconstructs that single string for every internal caller that still
+    wants one, e.g. WebAuthn's display name)."""
 
     __tablename__ = "candidate_users"
 
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
-    full_name: Mapped[str] = mapped_column(String(255))
+    first_name: Mapped[str] = mapped_column(String(255))
+    # Nullable -- a candidate genuinely may have only one name (a mononym); never force a value
+    # here that isn't real.
+    last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     mfa_secret_encrypted: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip() if self.last_name else self.first_name
 
 
 class CandidateMfaBackupCode(UUIDPrimaryKeyMixin, Base):

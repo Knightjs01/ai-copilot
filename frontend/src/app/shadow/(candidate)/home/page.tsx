@@ -20,10 +20,6 @@ const TERMINAL_STATUSES = new Set(["declined", "withdrawn"]);
 const HOME_MATCH_PREVIEW = 24;
 const TOP_MATCHES_SHOWN = 3;
 
-function firstName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? fullName;
-}
-
 // Built from data that's real today -- Passport completion, active application count, saved job
 // count, and (once a Passport is approved) the top real AI matches from the board. See
 // passport_matching for the matching engine this section is built on.
@@ -67,7 +63,7 @@ export default function ShadowHomePage() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          {candidate ? `Good to see you, ${firstName(candidate.full_name)}.` : "Welcome back."}
+          {candidate ? `Good to see you, ${candidate.first_name}.` : "Welcome back."}
         </h1>
         <p className="text-sm text-muted-foreground">{subheading}</p>
       </div>

@@ -13,7 +13,12 @@ interface CandidateAuthContextValue {
   candidate: CandidateMeResponse | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, fullName: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName?: string | null
+  ) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -55,10 +60,10 @@ export function CandidateAuthProvider({ children }: { children: React.ReactNode 
   );
 
   const signup = React.useCallback(
-    async (email: string, password: string, fullName: string) => {
+    async (email: string, password: string, firstName: string, lastName?: string | null) => {
       const res = await candidateApiClient.post<CandidateTokenResponse>(
         "/candidate-auth/signup",
-        { email, password, full_name: fullName }
+        { email, password, first_name: firstName, last_name: lastName || null }
       );
       setCandidateAccessToken(res.access_token);
       await loadMe();

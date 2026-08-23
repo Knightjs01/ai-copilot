@@ -167,9 +167,8 @@ export function PassportWizard() {
       setLoadedOnce(true);
     } else if (passport === null && candidate) {
       // No Passport yet, pre-fill the name from signup so it's one less field to type.
-      const { first, last } = splitFullName(candidate.full_name);
-      setFirstName(first);
-      setLastName(last);
+      setFirstName(candidate.first_name);
+      setLastName(candidate.last_name ?? "");
       setLoadedOnce(true);
     }
   }, [passport, candidate, loadedOnce]);

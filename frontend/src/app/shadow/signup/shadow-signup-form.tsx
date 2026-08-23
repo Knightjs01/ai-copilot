@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 
 const schema = z.object({
-  fullName: z.string().min(1, "Your name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().optional(),
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
@@ -35,7 +36,7 @@ export function ShadowSignupForm() {
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
     try {
-      await signup(values.email, values.password, values.fullName);
+      await signup(values.email, values.password, values.firstName, values.lastName);
       router.push("/shadow/passport");
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Couldn't create your Passport.");
@@ -59,9 +60,14 @@ export function ShadowSignupForm() {
       }
     >
       <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-        <Field label="Your full name" htmlFor="fullName" error={errors.fullName?.message}>
-          <Input id="fullName" autoComplete="name" {...register("fullName")} />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First name" htmlFor="firstName" error={errors.firstName?.message}>
+            <Input id="firstName" autoComplete="given-name" {...register("firstName")} />
+          </Field>
+          <Field label="Last name" htmlFor="lastName" error={errors.lastName?.message}>
+            <Input id="lastName" autoComplete="family-name" {...register("lastName")} />
+          </Field>
+        </div>
         <Field label="Email" htmlFor="email" error={errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" {...register("email")} />
         </Field>
