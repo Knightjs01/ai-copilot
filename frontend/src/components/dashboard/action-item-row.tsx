@@ -22,11 +22,14 @@ export const ACTION_ITEM_ICON: Record<ActionItemType, LucideIcon> = {
 
 export function ActionItemRow({ item }: { item: ActionItem }) {
   const Icon = ACTION_ITEM_ICON[item.type];
-  const href = item.shadow_job_id
-    ? `/shadow-jobs/${item.shadow_job_id}`
-    : item.candidate_id
-      ? `/projects/${item.project_id}/candidates/${item.candidate_id}`
-      : `/projects/${item.project_id}`;
+  const href =
+    item.shadow_job_id && item.application_id
+      ? `/shadow-jobs/${item.shadow_job_id}/applicants/${item.application_id}`
+      : item.shadow_job_id
+        ? `/shadow-jobs/${item.shadow_job_id}`
+        : item.candidate_id
+          ? `/projects/${item.project_id}/candidates/${item.candidate_id}`
+          : `/projects/${item.project_id}`;
 
   return (
     <Link

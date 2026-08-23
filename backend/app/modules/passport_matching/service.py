@@ -17,6 +17,8 @@ from app.modules.hiring_blueprint.repository import HiringBlueprintRepository
 from app.modules.hiring_manager_alignment.models import HiringManagerAlignment
 from app.modules.hiring_manager_alignment.repository import HiringManagerAlignmentRepository
 from app.modules.passport_matching.exceptions import (
+    ApplicationHasNoPassportVersionError,
+    ApplicationNotFoundError,
     PassportMatchGenerationError,
     PassportNotApprovedError,
     ShadowJobNotFoundError,
@@ -259,6 +261,49 @@ class PassportMatchingService:
                     fresh[row.shadow_job_id] = row
 
         return [self._to_read(fresh[job.id]) for job in jobs if job.id in fresh]
+
+    # --- Company side (single applicant, already applied) -----------------------------------------
+
+    async def get_or_compute_match_for_applicant(
+        self, *, actor: User, job_id: uuid.UUID, application_id: uuid.UUID
+    ) -> PassportJobMatchRead:
+        """Company-side sibling of get_or_compute_match -- scores the one applicant already on
+        this page against the job they applied to, using the passport_version_id frozen on their
+        ShadowApplication at apply time (never their live, possibly-since-edited Passport), same
+        "frozen snapshot" discipline _to_shadow_profile already applies everywhere else a company
+        views an applicant."""
+        job = await self._jobs.get_by_id(job_id)
+        if job is None or job.company_id != actor.company_id or job.deleted_at is not None:
+            raise ShadowJobNotFoundError()
+
+        application = await self._applications.get_by_id(application_id)
+        if application is None or application.shadow_job_id != job_id:
+            raise ApplicationNotFoundError()
+        if application.passport_version_id is None:
+            raise ApplicationHasNoPassportVersionError()
+
+        cached = await self._matches.get_by_passport_version_and_job(
+            application.passport_version_id, job.id
+        )
+        if cached is not None and cached.shadow_job_updated_at == job.updated_at:
+            return self._to_read(cached)
+
+        blueprint: HiringBlueprint | None = None
+        alignment: HiringManagerAlignment | None = None
+        if job.project_id is not None:
+            blueprint = await self._blueprints.get_by_project_id(job.project_id)
+            alignment = await self._alignments.get_by_project_id(job.project_id)
+
+        version = await self._versions.get_by_id(application.passport_version_id)
+        if version is None:
+            raise ApplicationHasNoPassportVersionError()
+        draft = await self._score_via_llm(
+            passport_snapshot=version.snapshot, job=job, blueprint=blueprint, alignment=alignment
+        )
+        match = await self._persist_match(
+            passport_version_id=application.passport_version_id, job=job, draft=draft
+        )
+        return self._to_read(match)
 
     # --- Company side (candidate search) --------------------------------------------------------
 

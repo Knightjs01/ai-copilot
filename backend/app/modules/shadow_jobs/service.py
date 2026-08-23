@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.modules.audit.schemas import AuditEntryRead
 from app.modules.audit.service import AuditService
 from app.modules.auth.email import EmailSender, build_added_to_pipeline_email
 from app.modules.auth.models import User
@@ -201,6 +202,56 @@ class ShadowJobService:
             )
             for a in applications
         ]
+
+    async def get_applicant(
+        self, *, company_id: uuid.UUID, job_id: uuid.UUID, application_id: uuid.UUID
+    ) -> ShadowProfile:
+        """Single-item sibling of list_applicants -- powers the dedicated per-applicant
+        workspace page. Pure read, no side effect (mark-viewed stays its own explicit action,
+        triggered client-side, same as it already is for the card-list view)."""
+        await self.get_job_for_company(company_id=company_id, job_id=job_id)
+        application = await self._applications.get_by_id(application_id)
+        if application is None or application.shadow_job_id != job_id:
+            raise ShadowApplicationNotFoundError()
+
+        unread_counts = await self._unread_counts_for_applications([application.id])
+        upcoming_interview_ids = {
+            i.shadow_application_id
+            for i in await self._interviews.list_upcoming_by_application_ids([application.id])
+        }
+        talent_pool_grants = await self._talent_pool_grants.list_latest_by_company_and_candidates(
+            company_id=company_id, candidate_user_ids=[application.candidate_user_id]
+        )
+        reveal_unseen = await self._reveal_response_unseen_for_applications([application.id])
+        return await self._to_shadow_profile(
+            application,
+            unread_count=unread_counts.get(application.id, 0),
+            has_upcoming_interview=application.id in upcoming_interview_ids,
+            talent_pool_status=(
+                grant.status
+                if (grant := talent_pool_grants.get(application.candidate_user_id)) is not None
+                else None
+            ),
+            reveal_response_is_new=application.id in reveal_unseen,
+        )
+
+    async def list_applicant_activity(
+        self, *, actor: User, job_id: uuid.UUID, application_id: uuid.UUID
+    ) -> list[AuditEntryRead]:
+        """Real audit trail for one applicant -- every shadow_application-targeted AuditLog row
+        (application submitted/added/withdrawn/pipeline-stage-updated, reveal requested/
+        approved/declined, message sent, interview scheduled/rescheduled/cancelled/completed).
+        Deliberately excludes talent_pool.* events, which target the grant row, not the
+        application -- a real, small scope cut rather than a join worth adding for one edge case."""
+        await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)
+        application = await self._applications.get_by_id(application_id)
+        if application is None or application.shadow_job_id != job_id:
+            raise ShadowApplicationNotFoundError()
+        return await self._audit.list_by_target(
+            company_id=actor.company_id,
+            target_type="shadow_application",
+            target_id=application.id,
+        )
 
     async def list_applicants_for_company(self, *, actor: User) -> list[ShadowProfileCompanyWide]:
         """Every applicant across every one of this company's Shadow Jobs, not scoped to one job

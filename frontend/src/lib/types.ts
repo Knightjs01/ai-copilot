@@ -904,6 +904,28 @@ export interface ShadowProfileCompanyWide extends ShadowProfile {
   project_id: string | null;
 }
 
+// Real audit trail entry for one applicant -- see backend audit/schemas.py::AuditEntryRead.
+// actor_email is null for candidate-initiated actions (reveal response, application withdrawal).
+export interface AuditEntry {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  extra_data: Record<string, unknown>;
+  created_at: string;
+}
+
+// A private, recruiter-team-only note on a Shadow applicant -- never candidate-visible. See
+// backend applicant_notes/schemas.py.
+export interface ApplicantNote {
+  id: string;
+  author_user_id: string;
+  author_email: string;
+  body: string;
+  created_at: string;
+}
+
 export type MessageSenderType = "company" | "candidate";
 
 // is_mine/sender_label are resolved server-side per the requesting principal -- the frontend

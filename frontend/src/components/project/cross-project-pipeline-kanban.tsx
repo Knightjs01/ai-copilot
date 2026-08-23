@@ -182,7 +182,10 @@ export function CrossProjectPipelineKanban({
                 ))}
 
                 {stageApplicants.map((applicant) => (
-                  <Link key={applicant.application_id} href={`/shadow-jobs/${applicant.shadow_job_id}`}>
+                  <Link
+                    key={applicant.application_id}
+                    href={`/shadow-jobs/${applicant.shadow_job_id}/applicants/${applicant.application_id}`}
+                  >
                     <KanbanCard
                       id={shadowDragId(applicant.application_id)}
                       className={

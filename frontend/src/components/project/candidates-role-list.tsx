@@ -112,7 +112,7 @@ const columns = [
         const href =
           row.kind === "candidate"
             ? `/projects/${row.candidate.project_id}/candidates/${row.candidate.id}`
-            : `/shadow-jobs/${info.table.options.meta?.shadowJobId}`;
+            : `/shadow-jobs/${info.table.options.meta?.shadowJobId}/applicants/${row.applicant.application_id}`;
         return (
           <Link href={href} className="font-medium text-foreground hover:underline">
             {info.getValue()}

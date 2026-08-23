@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.modules.audit.schemas import AuditEntryRead
 from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
@@ -145,6 +146,34 @@ async def list_applicants(
 ) -> list[ShadowProfile]:
     return await ShadowJobService(session).list_applicants(
         company_id=actor.company_id, job_id=job_id
+    )
+
+
+@router.get("/mine/{job_id}/applicants/{application_id}", response_model=ShadowProfile)
+async def get_applicant(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ShadowProfile:
+    return await ShadowJobService(session).get_applicant(
+        company_id=actor.company_id, job_id=job_id, application_id=application_id
+    )
+
+
+@router.get(
+    "/mine/{job_id}/applicants/{application_id}/activity", response_model=list[AuditEntryRead]
+)
+async def list_applicant_activity(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[AuditEntryRead]:
+    return await ShadowJobService(session).list_applicant_activity(
+        actor=actor, job_id=job_id, application_id=application_id
     )
 
 

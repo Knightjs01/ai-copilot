@@ -28,7 +28,7 @@ import { INTERVIEW_STATUS_LABEL, INTERVIEW_STATUS_VARIANT } from "@/lib/status-d
 import { useToast } from "@/lib/toast-context";
 import type { Interview, UserRead } from "@/lib/types";
 
-function InterviewRow({
+export function InterviewRow({
   interview,
   jobId,
   applicationId,

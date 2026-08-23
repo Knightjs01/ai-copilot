@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import health
 from app.modules.analytics.api import router as analytics_router
+from app.modules.applicant_notes.api import router as applicant_notes_router
 from app.modules.auth.api import router as auth_router
 from app.modules.candidate_auth.api import router as candidate_auth_router
 from app.modules.candidates.api import router as candidates_router
@@ -63,6 +64,7 @@ api_router.include_router(saved_shadow_jobs_router)
 api_router.include_router(passport_matching_router)
 api_router.include_router(messages_router)
 api_router.include_router(interviews_router)
+api_router.include_router(applicant_notes_router)
 api_router.include_router(copilot_router)
 api_router.include_router(job_alerts_router)
 api_router.include_router(phantom_passport_public_router)

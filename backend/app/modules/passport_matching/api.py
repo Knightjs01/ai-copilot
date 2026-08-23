@@ -80,6 +80,23 @@ async def search_jobs(
     )
 
 
+# --- Company side (single applicant, already applied) -------------------------------------------
+
+
+@router.get("/mine/{job_id}/applicants/{application_id}", response_model=PassportJobMatchRead)
+async def get_applicant_match(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+    llm_client: PassportMatchingLLMClient = Depends(get_passport_matching_llm_client),
+) -> PassportJobMatchRead:
+    return await PassportMatchingService(
+        session, llm_client=llm_client
+    ).get_or_compute_match_for_applicant(actor=actor, job_id=job_id, application_id=application_id)
+
+
 # --- Company side (candidate search) ------------------------------------------------------------
 
 

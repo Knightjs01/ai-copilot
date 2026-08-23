@@ -76,7 +76,12 @@ export function ApplicantCard({
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-0.5">
             <h3 className="flex items-center gap-1.5 text-base font-semibold text-foreground">
-              {profile.callsign}
+              <Link
+                href={`/shadow-jobs/${jobId}/applicants/${profile.application_id}`}
+                className="hover:underline"
+              >
+                {profile.callsign}
+              </Link>
               {profile.is_new && <Badge variant="success">New application</Badge>}
               {profile.reveal_response_is_new && <Badge variant="info">Reveal response</Badge>}
             </h3>

@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api-client";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
 import type {
+  AuditEntry,
   CompanyInterviewSummary,
   Interview,
   MessageThread,
@@ -85,6 +86,26 @@ export function useShadowJobApplicants(jobId: string | undefined) {
     queryKey: ["shadow-jobs", "applicants", jobId],
     queryFn: () => apiClient.get<ShadowProfile[]>(`/shadow-jobs/mine/${jobId}/applicants`),
     enabled: !!jobId,
+  });
+}
+
+// Single-applicant fetch for the dedicated candidate workspace page -- distinct from the
+// list-then-filter-client-side approach every other consumer of this data uses today.
+export function useApplicant(jobId: string | undefined, applicationId: string | undefined) {
+  return useQuery({
+    queryKey: ["shadow-jobs", "applicants", jobId, applicationId],
+    queryFn: () =>
+      apiClient.get<ShadowProfile>(`/shadow-jobs/mine/${jobId}/applicants/${applicationId}`),
+    enabled: !!jobId && !!applicationId,
+  });
+}
+
+export function useApplicantActivity(jobId: string | undefined, applicationId: string | undefined) {
+  return useQuery({
+    queryKey: ["shadow-jobs", "applicants", jobId, applicationId, "activity"],
+    queryFn: () =>
+      apiClient.get<AuditEntry[]>(`/shadow-jobs/mine/${jobId}/applicants/${applicationId}/activity`),
+    enabled: !!jobId && !!applicationId,
   });
 }
 

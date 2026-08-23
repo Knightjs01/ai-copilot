@@ -24,3 +24,13 @@ class TooManyJobsRequestedError(PassportMatchingError):
 class PassportMatchGenerationError(PassportMatchingError):
     status_code = 502
     detail = "Could not compute match scores — the AI provider request failed"
+
+
+class ApplicationNotFoundError(PassportMatchingError):
+    status_code = 404
+    detail = "Applicant not found"
+
+
+class ApplicationHasNoPassportVersionError(PassportMatchingError):
+    status_code = 400
+    detail = "This application predates Passport versioning and has no snapshot to score"
