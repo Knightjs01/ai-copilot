@@ -66,7 +66,7 @@ export function AppHeader() {
               <DropdownMenuLabel>{user.full_name}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => router.push("/settings")}>Settings</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => router.push("/")}>
+              <DropdownMenuItem onSelect={() => router.push("/?view=marketing")}>
                 <Globe className="h-3.5 w-3.5" />
                 Back to Phantom Hire
               </DropdownMenuItem>
