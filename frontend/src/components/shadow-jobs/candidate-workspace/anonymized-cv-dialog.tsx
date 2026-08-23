@@ -22,12 +22,22 @@ function formatSalary(min: number | null, max: number | null): string | null {
   return fmt((min ?? max) as number);
 }
 
+function formatDateRange(start: string | null, end: string | null, isCurrent: boolean): string | null {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  if (!start && !end) return null;
+  const startLabel = start ? fmt(start) : "?";
+  const endLabel = isCurrent ? "Present" : end ? fmt(end) : "?";
+  return `${startLabel} – ${endLabel}`;
+}
+
 // Read-only, company-facing sibling of the candidate's own anonymised-cv-dialog.tsx -- same
 // "exactly what a company sees" promise, but no Approve/Decline actions (nothing to review here,
 // this already IS what was submitted). Upgrades to the real, revealed name and employer names
-// once `identity` is passed in -- only ever set this session after the recruiter has completed
-// step-up and actually fetched RevealedIdentity, never just because the application is eligible
-// (see PassportCard's own revealedName prop for the identical discipline).
+// once revealed -- either this session's freshly step-up-fetched `identity`, or the persisted
+// profile.revealed_full_name/revealed_career_entries from an earlier reveal (never just because
+// the application is eligible; see PassportCard's own revealedName prop for the identical
+// discipline).
 export function AnonymizedCvDialog({
   profile,
   identity,
@@ -35,7 +45,10 @@ export function AnonymizedCvDialog({
   profile: ShadowProfile;
   identity?: RevealedIdentity | null;
 }) {
-  const isRevealed = identity != null;
+  // A revealed identity persists on the application (profile.revealed_full_name) the first time
+  // anyone on the team reveals it -- treat that as "revealed" here too, not just a fresh
+  // this-session step-up fetch, so the CV doesn't quietly downgrade back to anonymized on reload.
+  const isRevealed = identity != null || profile.revealed_full_name != null;
 
   const factsLine = [
     profile.seniority,
@@ -47,22 +60,32 @@ export function AnonymizedCvDialog({
     .filter(Boolean)
     .join(" · ");
 
+  const revealedName = identity?.full_name ?? profile.revealed_full_name;
+  const revealedEmail = identity?.email ?? profile.revealed_email;
+  const revealedPhone = identity?.phone ?? profile.revealed_phone;
+
   const careerEntries = isRevealed
-    ? identity.career_entries.map((entry) => ({
+    ? (identity?.career_entries ?? profile.revealed_career_entries ?? []).map((entry) => ({
         title: entry.title,
         company: entry.company_name,
         isCurrent: entry.is_current,
+        dateRange: formatDateRange(entry.start_date, entry.end_date, entry.is_current),
+        responsibilities: entry.responsibilities,
+        achievements: entry.achievements,
       }))
     : profile.career_entries.map((entry) => ({
         title: entry.title,
         company: entry.company_name_anonymized,
         isCurrent: entry.is_current,
+        dateRange: formatDateRange(entry.start_date, entry.end_date, entry.is_current),
+        responsibilities: entry.responsibilities,
+        achievements: entry.achievements,
       }));
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant="secondary" size="sm">
+        <Button type="button" variant="brand" size="sm">
           <FileText className="h-3.5 w-3.5" />
           {isRevealed ? "View CV" : "View anonymised CV"}
         </Button>
@@ -70,7 +93,7 @@ export function AnonymizedCvDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isRevealed ? `${identity.full_name}'s CV` : `${profile.callsign}'s anonymised CV`}
+            {isRevealed ? `${revealedName}'s CV` : `${profile.callsign}'s anonymised CV`}
           </DialogTitle>
           <DialogDescription>
             {isRevealed
@@ -85,9 +108,9 @@ export function AnonymizedCvDialog({
               {profile.headline || "Untitled role"}
             </p>
             {factsLine && <p className="text-sm text-muted-foreground">{factsLine}</p>}
-            {isRevealed && (identity.email || identity.phone) && (
+            {isRevealed && (revealedEmail || revealedPhone) && (
               <p className="text-sm text-muted-foreground">
-                {[identity.email, identity.phone].filter(Boolean).join(" · ")}
+                {[revealedEmail, revealedPhone].filter(Boolean).join(" · ")}
               </p>
             )}
           </div>
@@ -129,21 +152,27 @@ export function AnonymizedCvDialog({
               Career history
             </p>
             {careerEntries.length > 0 ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {careerEntries.map((entry, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-card p-3"
-                  >
-                    <p className="text-sm font-medium text-foreground">{entry.title}</p>
+                  <div key={index} className="flex flex-col gap-1.5 rounded-lg bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground">{entry.title}</p>
+                      {entry.isCurrent && <Badge variant="success">Current</Badge>}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {entry.company}
-                      {entry.isCurrent && (
-                        <Badge variant="success" className="ml-1.5">
-                          Current
-                        </Badge>
-                      )}
+                      {entry.dateRange && ` · ${entry.dateRange}`}
                     </p>
+                    {entry.responsibilities && (
+                      <p className="text-sm text-foreground">{entry.responsibilities}</p>
+                    )}
+                    {entry.achievements.length > 0 && (
+                      <ul className="list-disc pl-4 text-sm text-foreground">
+                        {entry.achievements.map((achievement, achievementIndex) => (
+                          <li key={achievementIndex}>{achievement}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 ))}
               </div>

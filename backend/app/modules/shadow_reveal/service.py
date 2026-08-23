@@ -152,6 +152,11 @@ class ShadowRevealService:
                 full_name=identity.full_name,
                 email=identity.email,
                 phone=identity.phone,
+                career_entries=(
+                    [entry.model_dump(mode="json") for entry in identity.career_entries]
+                    if identity.career_entries
+                    else None
+                ),
             )
             await self._audit.record(
                 company_id=company_id,
@@ -363,6 +368,10 @@ class ShadowRevealService:
                     title=entry.title,
                     company_name=security.decrypt_secret(entry.company_name_encrypted),
                     is_current=entry.is_current,
+                    start_date=entry.start_date,
+                    end_date=entry.end_date,
+                    responsibilities=entry.responsibilities,
+                    achievements=list(entry.achievements),
                 )
                 for entry in await self._career_entries.list_by_passport_id(passport.id)
             ]

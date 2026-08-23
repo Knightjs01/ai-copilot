@@ -307,6 +307,10 @@ class PhantomPassportService:
                     "title": entry.title,
                     "company_name_anonymized": entry.company_name_anonymized,
                     "is_current": entry.is_current,
+                    "start_date": entry.start_date.isoformat() if entry.start_date else None,
+                    "end_date": entry.end_date.isoformat() if entry.end_date else None,
+                    "responsibilities": entry.responsibilities,
+                    "achievements": list(entry.achievements),
                 }
                 for entry in career_entries
             ],

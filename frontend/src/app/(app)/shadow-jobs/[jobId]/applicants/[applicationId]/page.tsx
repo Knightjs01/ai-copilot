@@ -243,9 +243,14 @@ export default function CandidateWorkspacePage() {
             </div>
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <AnonymizedCvDialog profile={profile} identity={identity} />
               {isRevealable ? (
-                !identity && (
+                // Once revealed_career_entries is persisted (or confirmed empty — career history
+                // simply wasn't part of this candidate's approved disclosure), there's nothing
+                // left to fetch: the underlying disclosure is deterministic, re-fetching would
+                // return the exact same result every time. Only show the follow-up button while
+                // that first fetch genuinely hasn't happened yet.
+                !identity &&
+                profile.revealed_career_entries == null && (
                   <Button
                     type="button"
                     variant={profile.revealed_full_name ? "secondary" : "brand"}
@@ -290,6 +295,10 @@ export default function CandidateWorkspacePage() {
                 </Button>
               )}
             </div>
+          </div>
+
+          <div className="flex justify-end">
+            <AnonymizedCvDialog profile={profile} identity={identity} />
           </div>
 
           {(identity?.email ??

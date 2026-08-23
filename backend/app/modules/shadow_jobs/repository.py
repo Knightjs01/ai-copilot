@@ -147,12 +147,14 @@ class ShadowApplicationRepository:
         full_name: str | None,
         email: str | None,
         phone: str | None,
+        career_entries: list[dict[str, Any]] | None = None,
     ) -> ShadowApplication:
         """Called exactly once, by ShadowRevealService on first successful reveal -- the
         idempotency check (has this already been persisted?) lives in the service, not here."""
         application.revealed_full_name = full_name
         application.revealed_email = email
         application.revealed_phone = phone
+        application.revealed_career_entries = career_entries
         await self._session.flush()
         return application
 

@@ -127,3 +127,6 @@ class ShadowApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     revealed_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     revealed_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     revealed_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Same one-time-persist pattern as the three fields above, populated only when career history
+    # was part of the approved disclosure. See migration 0057.
+    revealed_career_entries: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)

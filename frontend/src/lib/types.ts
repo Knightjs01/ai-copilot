@@ -765,6 +765,10 @@ export interface ShadowCareerEntrySummary {
   title: string;
   company_name_anonymized: string;
   is_current: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  responsibilities: string | null;
+  achievements: string[];
 }
 
 export type MatchTier = "Excellent Match" | "Strong Match" | "Potential Match" | "Weak Match";
@@ -889,8 +893,8 @@ export interface CopilotChatResponse {
 
 // The recruiter-facing applicant card — anonymous (callsign only) until the candidate reveals
 // their identity for this specific application, at which point revealed_full_name/_email/_phone
-// populate and stay populated (never re-anonymized). Never carries a real employer name for
-// career_entries -- that stays behind its own separate, per-session reveal (see RevealedIdentity).
+// (and, when career history was part of the disclosure, revealed_career_entries) populate and
+// stay populated (never re-anonymized). career_entries itself always stays anonymized.
 export interface ShadowProfile {
   application_id: string;
   callsign: string;
@@ -928,6 +932,9 @@ export interface ShadowProfile {
   revealed_full_name: string | null;
   revealed_email: string | null;
   revealed_phone: string | null;
+  // Same one-time-persist pattern as the three fields above -- real employer names, populated
+  // only when career history was part of the approved disclosure.
+  revealed_career_entries: RevealedCareerEntry[] | null;
 }
 
 // Same shape as ShadowProfile, plus which job/project this application belongs to -- powers the
@@ -1154,6 +1161,10 @@ export interface RevealedCareerEntry {
   title: string;
   company_name: string;
   is_current: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  responsibilities: string | null;
+  achievements: string[];
 }
 
 // The minimum-necessary disclosure snapshot, only reachable after the candidate has approved a

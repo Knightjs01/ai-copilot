@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -71,6 +71,10 @@ class RevealedCareerEntry(BaseModel):
     title: str
     company_name: str
     is_current: bool
+    start_date: date | None = None
+    end_date: date | None = None
+    responsibilities: str | None = None
+    achievements: list[str] = Field(default_factory=list)
 
 
 class RevealedIdentity(BaseModel):

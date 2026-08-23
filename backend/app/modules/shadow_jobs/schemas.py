@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -107,6 +107,25 @@ class ShadowCareerEntrySummary(BaseModel):
     title: str
     company_name_anonymized: str
     is_current: bool
+    # None/[] defaults so entries frozen into a snapshot before these fields existed still parse.
+    start_date: date | None = None
+    end_date: date | None = None
+    responsibilities: str | None = None
+    achievements: list[str] = Field(default_factory=list)
+
+
+class RevealedCareerEntrySummary(BaseModel):
+    """Mirrors shadow_reveal.schemas.RevealedCareerEntry -- duplicated here rather than imported,
+    same "don't reach into another module's internals" convention as this file's other small
+    cross-module helpers. Real employer name, not anonymized."""
+
+    title: str
+    company_name: str
+    is_current: bool
+    start_date: date | None = None
+    end_date: date | None = None
+    responsibilities: str | None = None
+    achievements: list[str] = Field(default_factory=list)
 
 
 class ShadowProfile(BaseModel):
@@ -159,6 +178,9 @@ class ShadowProfile(BaseModel):
     revealed_full_name: str | None = None
     revealed_email: str | None = None
     revealed_phone: str | None = None
+    # Same one-time-persist pattern as the three fields above -- populated only when career
+    # history was part of the approved disclosure. Real employer names, not anonymized ones.
+    revealed_career_entries: list[RevealedCareerEntrySummary] | None = None
 
 
 class ShadowApplicantPipelineUpdate(BaseModel):

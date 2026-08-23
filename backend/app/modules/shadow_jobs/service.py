@@ -481,6 +481,7 @@ class ShadowJobService:
                     revealed_full_name=application.revealed_full_name,
                     revealed_email=application.revealed_email,
                     revealed_phone=application.revealed_phone,
+                    revealed_career_entries=application.revealed_career_entries,
                 )
 
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
@@ -513,6 +514,10 @@ class ShadowJobService:
                     title=entry.title,
                     company_name_anonymized=entry.company_name_anonymized,
                     is_current=entry.is_current,
+                    start_date=entry.start_date,
+                    end_date=entry.end_date,
+                    responsibilities=entry.responsibilities,
+                    achievements=list(entry.achievements),
                 )
                 for entry in career_entries
             ],
@@ -526,6 +531,7 @@ class ShadowJobService:
             revealed_full_name=application.revealed_full_name,
             revealed_email=application.revealed_email,
             revealed_phone=application.revealed_phone,
+            revealed_career_entries=application.revealed_career_entries,
         )
 
     # --- Public job board ---------------------------------------------------------------------
