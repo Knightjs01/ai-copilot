@@ -39,30 +39,26 @@ function matchesFilter(interview: CompanyInterviewSummary, filter: Filter): bool
 }
 
 function InterviewRow({ interview }: { interview: CompanyInterviewSummary }) {
-  const href = interview.project_id
-    ? `/projects/${interview.project_id}?tab=interviews`
-    : undefined;
-
-  const content = (
-    <Card className="transition-colors hover:border-brand">
-      <CardContent className="flex flex-col gap-1 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{interview.job_title}</p>
-          <p className="truncate text-xs text-muted-foreground">{interview.callsign}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <span className="text-xs text-muted-foreground">
-            {format(new Date(interview.scheduled_at), "EEE d MMM, HH:mm")}
-          </span>
-          <Badge variant={INTERVIEW_STATUS_VARIANT[interview.status]}>
-            {INTERVIEW_STATUS_LABEL[interview.status]}
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
+  return (
+    <Link href={`/interviews/${interview.id}`}>
+      <Card className="transition-colors hover:border-brand">
+        <CardContent className="flex flex-col gap-1 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">{interview.job_title}</p>
+            <p className="truncate text-xs text-muted-foreground">{interview.callsign}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(interview.scheduled_at), "EEE d MMM, HH:mm")}
+            </span>
+            <Badge variant={INTERVIEW_STATUS_VARIANT[interview.status]}>
+              {INTERVIEW_STATUS_LABEL[interview.status]}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
-
-  return href ? <Link href={href}>{content}</Link> : content;
 }
 
 export default function InterviewsPage() {

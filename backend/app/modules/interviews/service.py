@@ -276,6 +276,7 @@ class InterviewService:
                     job_title=job.title if job else "Unknown role",
                     callsign=application.callsign,
                     project_id=job.project_id if job else None,
+                    shadow_job_id=application.shadow_job_id,
                 )
             )
         return summaries

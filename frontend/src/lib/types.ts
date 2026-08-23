@@ -1011,11 +1011,13 @@ export interface CandidateInterviewSummary extends Interview {
 }
 
 // Company-wide "Interviews" nav destination -- omits company_name (every row is already this
-// company's own) and adds project_id so a row can deep-link into a linked Project's Interviews tab.
+// company's own). project_id lets a row deep-link into a linked Project's Interviews tab;
+// shadow_job_id is always present and is what actually powers this interview's own detail page.
 export interface CompanyInterviewSummary extends Interview {
   job_title: string;
   callsign: string;
   project_id: string | null;
+  shadow_job_id: string;
 }
 
 export interface ProjectActivityEntry {

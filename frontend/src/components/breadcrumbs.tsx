@@ -3,10 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 
 import { useCandidate } from "@/lib/queries/candidates";
 import { useProject } from "@/lib/queries/projects";
+import type { CompanyInterviewSummary } from "@/lib/types";
 
 interface Crumb {
   label: string;
@@ -47,8 +49,9 @@ const TAB_LABEL: Record<string, string> = {
 
 export function Breadcrumbs() {
   const pathname = usePathname() ?? "";
-  const params = useParams<{ id?: string; candidateId?: string; jobId?: string }>();
+  const params = useParams<{ id?: string; candidateId?: string; jobId?: string; interviewId?: string }>();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { data: project } = useProject(
     pathname.startsWith("/projects/") ? params?.id : undefined
   );
@@ -56,6 +59,20 @@ export function Breadcrumbs() {
 
   const crumbs = React.useMemo<Crumb[]>(() => {
     if (STATIC_CRUMBS[pathname]) return STATIC_CRUMBS[pathname];
+
+    if (pathname.startsWith("/interviews/") && params?.interviewId) {
+      // Reads the already-fetched company-wide interviews list from cache -- no extra fetch,
+      // same convention as the command palette's dynamic groups.
+      const interviews = queryClient.getQueryData<CompanyInterviewSummary[]>([
+        "interviews",
+        "mine-company",
+      ]);
+      const interview = interviews?.find((i) => i.id === params.interviewId);
+      return [
+        { label: "Interviews", href: "/interviews" },
+        { label: interview?.callsign ?? "Interview" },
+      ];
+    }
 
     if (pathname.startsWith("/projects/") && params?.candidateId) {
       return [
@@ -76,7 +93,7 @@ export function Breadcrumbs() {
     }
 
     return [];
-  }, [pathname, params, project, candidate, searchParams]);
+  }, [pathname, params, project, candidate, searchParams, queryClient]);
 
   if (crumbs.length === 0) return <div />;
 

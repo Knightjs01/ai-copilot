@@ -40,13 +40,15 @@ class CandidateInterviewSummary(InterviewRead):
 
 class CompanyInterviewSummary(InterviewRead):
     """Powers the company-wide Interviews nav destination -- unlike CandidateInterviewSummary,
-    company_name is omitted (every row is already this company's own) and project_id is included
-    so the frontend can deep-link into the job's linked Project (?tab=interviews) when one
-    exists."""
+    company_name is omitted (every row is already this company's own). project_id lets the
+    frontend deep-link into the job's linked Project when one exists; shadow_job_id is always
+    present and is what the frontend actually needs to reach this interview's own detail page
+    and act on it (scorecard/cancel/complete), independent of whether a Project link exists."""
 
     job_title: str
     callsign: str
     project_id: uuid.UUID | None
+    shadow_job_id: uuid.UUID
 
 
 CompetencyRating = Literal["Strong", "Moderate", "Weak"]
