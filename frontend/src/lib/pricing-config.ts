@@ -1,323 +1,156 @@
-// Single source of truth for everything the /pricing page renders. Company plans and candidate
-// verification tiers are deliberately separate shapes — verification is a trust signal, never a
-// paid upsell or a ranking boost (see VERIFICATION_DISCLAIMER).
+// Single source of truth for everything the /pricing page renders. Change a price or a feature
+// here, not in the components that render it.
 
 export type BillingPeriod = "monthly" | "annual";
 
-export type CompanyPlanId = "free" | "pro" | "scale" | "enterprise";
-
-export interface AiAllowance {
-  label: string;
-  monthlyCredits: number | "unlimited";
-}
+export type CompanyPlanId = "core" | "network" | "intelligence" | "enterprise";
 
 export interface CompanyPlan {
   id: CompanyPlanId;
   name: string;
   tagline: string;
-  idealFor: string;
-  /** null = "Custom" pricing (Enterprise). annualMonthlyEquivalent is the discounted rate shown
-   *  by default ("Save 20%"); monthly is the higher pay-as-you-go rate shown when the Monthly
-   *  toggle is selected. */
-  price: { monthly: number | null; annualMonthlyEquivalent: number | null };
+  /** null = "Custom" pricing (Enterprise). `annual` is the real flat yearly price shown when the
+   *  Annual toggle is selected (e.g. "£10,000/year") -- not a monthly-equivalent restatement. */
+  price: { monthly: number | null; annual: number | null };
   mostPopular?: boolean;
-  seats: string;
-  roles: string;
-  aiAllowance: AiAllowance;
-  talentMemory: "not_included" | "included" | "included_extended";
-  analyticsLevel: "basic" | "advanced" | "phantom_intelligence";
+  /** The 7-8 highlights shown on the plan card itself. See FEATURE_COMPARISON_ROWS for the full,
+   *  categorised feature list shown further down the page. */
   features: string[];
   cta: { label: string; href: string };
 }
 
+/** Computed, never hardcoded, so the "Save ~X%" badge always matches the real numbers above. */
+export function annualSavingsPercent(plan: CompanyPlan): number | null {
+  if (plan.price.monthly === null || plan.price.annual === null) return null;
+  return Math.round((1 - plan.price.annual / (plan.price.monthly * 12)) * 100);
+}
+
 export const COMPANY_PLANS: CompanyPlan[] = [
   {
-    id: "free",
-    name: "Individual",
-    tagline: "For teams exploring Phantom",
-    idealFor: "Teams running their first anonymous hire",
-    price: { monthly: 0, annualMonthlyEquivalent: 0 },
-    seats: "2 recruiter seats",
-    roles: "1 active role",
-    aiAllowance: { label: "Limited AI usage", monthlyCredits: 25 },
-    talentMemory: "not_included",
-    analyticsLevel: "basic",
+    id: "core",
+    name: "Phantom Core",
+    tagline: "Everything you need to run your hiring process.",
+    price: { monthly: 499, annual: 5000 },
     features: [
-      "1 active role",
-      "2 recruiter seats",
-      "Shadow job posting",
-      "Anonymous candidates",
-      "Candidate Passport matching",
-      "Basic ATS",
-      "Limited AI screening",
-      "Basic pipeline",
-      "Basic analytics",
-    ],
-    cta: { label: "Start Free", href: "/signup" },
-  },
-  {
-    id: "pro",
-    name: "Scale Up",
-    tagline: "Full hiring infrastructure for modern TA teams",
-    idealFor: "Growing TA teams running multiple live roles",
-    price: { monthly: 624, annualMonthlyEquivalent: 499 },
-    mostPopular: true,
-    seats: "5 recruiter seats",
-    roles: "Up to 10 active roles",
-    aiAllowance: { label: "500 AI candidate analyses / month", monthlyCredits: 500 },
-    talentMemory: "included",
-    analyticsLevel: "advanced",
-    features: [
-      "Up to 10 active roles",
-      "5 recruiter seats",
-      "Unlimited candidate applications",
       "Full Phantom ATS",
-      "Shadow marketplace",
-      "AI screening & evidence-based fit assessment",
-      "Interview transcription & summaries",
-      "Talent Memory & candidate rediscovery (Preview)",
-      "Reveal Requests",
-      "Project Vault & Zero-Retention Purge",
-      "Standard ATS integrations",
+      "Hiring projects & candidate pipeline",
+      "Candidate profiles",
+      "Candidate Passport integration",
+      "Interview management",
+      "Candidate messaging",
+      "Team collaboration",
+      "Basic candidate matching",
     ],
-    cta: { label: "Start Scale Up", href: "/signup" },
+    cta: { label: "Start with Phantom", href: "/signup" },
   },
   {
-    id: "scale",
-    name: "High Growth",
-    tagline: "For scaling TA teams and talent organisations",
-    idealFor: "Organisations hiring at volume across multiple teams",
-    price: { monthly: 1874, annualMonthlyEquivalent: 1499 },
-    seats: "25 recruiter seats",
-    roles: "Unlimited active roles",
-    aiAllowance: { label: "Expanded AI capacity", monthlyCredits: 2000 },
-    talentMemory: "included_extended",
-    analyticsLevel: "phantom_intelligence",
+    id: "network",
+    name: "Phantom Network",
+    tagline: "Find and hire from Phantom's private talent network.",
+    price: { monthly: 999, annual: 10000 },
+    mostPopular: true,
     features: [
-      "Unlimited active roles",
-      "25 recruiter seats",
-      "Advanced AI screening & evidence-based fit intelligence",
-      "AI Talent Rediscovery (Preview)",
-      "Advanced analytics & hiring intelligence",
-      "Advanced retention controls",
-      "Custom workflows",
-      "API access",
-      "Advanced integrations & security",
+      "Everything in Core",
+      "Shadow Job Board",
+      "Verified talent network",
+      "Anonymous candidate discovery",
+      "Advanced candidate matching",
+      "Phantom Passport intelligence",
+      "Identity reveal workflow",
+      "Talent recommendations",
+    ],
+    cta: { label: "Start Hiring", href: "/signup" },
+  },
+  {
+    id: "intelligence",
+    name: "Phantom Intelligence",
+    tagline: "Turn your hiring data into hiring intelligence.",
+    price: { monthly: 1999, annual: 20000 },
+    features: [
+      "Everything in Network",
+      "Advanced AI matching",
+      "AI candidate ranking",
+      "Match explanations",
+      "Role & candidate intelligence",
+      "Advanced hiring analytics",
+      "Hiring recommendations",
       "Priority support",
     ],
     cta: {
       label: "Talk to Phantom",
-      href: "mailto:sales@phantomhire.com?subject=Phantom%20High%20Growth",
+      href: "mailto:sales@phantomhire.com?subject=Phantom%20Intelligence",
     },
   },
   {
     id: "enterprise",
-    name: "Enterprise",
-    tagline: "For organisations where security, scale and control come first",
-    idealFor: "Enterprises needing SSO, SCIM, custom retention and dedicated support",
-    price: { monthly: null, annualMonthlyEquivalent: null },
-    seats: "Custom",
-    roles: "Unlimited / negotiated usage",
-    aiAllowance: { label: "Custom AI capacity", monthlyCredits: "unlimited" },
-    talentMemory: "included_extended",
-    analyticsLevel: "phantom_intelligence",
+    name: "Phantom Enterprise",
+    tagline: "Phantom infrastructure for complex organisations.",
+    price: { monthly: null, annual: null },
     features: [
-      "Enterprise-scale hiring",
-      "SSO & SCIM",
-      "Advanced RBAC & audit controls",
-      "Custom data retention policies",
-      "Data residency options where supported",
-      "Dedicated implementation & enterprise support",
-      "SLA options",
-      "Security review & procurement support",
+      "Everything in Intelligence",
+      "Multiple teams & business units",
+      "Advanced permissions",
+      "SSO",
+      "Enterprise security",
+      "API access",
+      "Custom workflows",
+      "Dedicated support",
     ],
     cta: {
-      label: "Talk to Enterprise",
+      label: "Contact Phantom",
       href: "mailto:sales@phantomhire.com?subject=Phantom%20Enterprise",
     },
   },
 ];
 
-export interface AiCreditPack {
-  id: "small" | "medium" | "large";
-  credits: number;
-  price: number;
-}
-
-export const AI_CREDIT_PACKS: AiCreditPack[] = [
-  { id: "small", credits: 250, price: 49 },
-  { id: "medium", credits: 600, price: 99 },
-  { id: "large", credits: 1500, price: 199 },
-];
-
-export const MARKETPLACE_FEE = {
-  percentOfFirstYearSalary: 7.5,
-  upfrontCost: 0,
-  description: "Pay nothing upfront. 7.5% of first-year base salary, invoiced only once you hire.",
-};
-
-// The real backend field (VerificationStatus, phantom_passport/models.py) is a single
-// unverified/pending/verified state -- no automated identity/employment/KYC/background-check
-// pipeline exists yet (confirmed: the field is only ever read, never written, anywhere in the
-// backend). The items below are the direction real verification is headed, not a live, tiered
-// product today -- rendered as an explicitly "Preview"-badged roadmap, same convention as
-// intelligence-roadmap-section.tsx and talent-memory-roadmap-section.tsx use for the same reason.
-export const VERIFICATION_ROADMAP: string[] = [
-  "Identity verification",
-  "Employment history checks",
-  "Qualification checks",
-  "Right to work verification",
-  "Enhanced background checks, where appropriate",
-  "Professional references",
-];
-
-export const VERIFICATION_DISCLAIMER =
-  "Verification is a real field on every Passport, free for every candidate, and never a ranking boost — matching always considers skills, experience, and role fit first. The checks above are the direction we're building toward, not live today; specific availability will depend on jurisdiction and verification provider.";
-
-export type FeatureCategory =
-  | "Platform"
-  | "Candidate Management"
-  | "AI"
-  | "Security"
-  | "Analytics"
-  | "Integrations";
+export type FeatureCategory = "Hiring" | "Candidate" | "Shadow" | "Intelligence" | "Enterprise";
 
 export interface FeatureRow {
   category: FeatureCategory;
   label: string;
   values: Record<CompanyPlanId, boolean | string>;
-  /** No row uses this today -- reusable for a real future gated feature, never for something with
-   * no live backend (Talent Memory previously used this and no longer does: nothing is real to
-   * upgrade into, so it must never be shown as a paid unlock). */
-  proOnly?: boolean;
 }
 
+// "Talent rediscovery"/"Talent insights" rows are deliberately never a plain checkmark, even on
+// plans where the brief's own copy lists them as included -- Talent Memory and the wider "Phantom
+// Intelligence" market/scarcity/salary-benchmark analytics both have zero real backend today
+// (confirmed exhaustively this session). Shown as "Preview" in every column that includes them,
+// never sold as a live, paid-for feature. See PricingTrustSection/TalentMemorySection for the
+// same rule applied elsewhere.
 export const FEATURE_COMPARISON_ROWS: FeatureRow[] = [
-  {
-    category: "Platform",
-    label: "Shadow anonymous job board",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Platform",
-    label: "Phantom Passport matching",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Platform",
-    label: "Phantom ATS",
-    values: { free: "Basic", pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Platform",
-    label: "Phantom AI co-pilot",
-    values: { free: false, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Candidate Management",
-    label: "Anonymous applications",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Candidate Management",
-    label: "Candidate Callsigns",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Candidate Management",
-    label: "Reveal Requests",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Candidate Management",
-    label: "AI candidate matching",
-    values: { free: "Basic", pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Candidate Management",
-    label: "Talent Memory (Preview)",
-    // Not available on any plan today -- shown as "Preview" everywhere, never gated behind an
-    // upgrade (there is nothing real to upgrade into yet).
-    values: { free: "Preview", pro: "Preview", scale: "Preview", enterprise: "Preview" },
-  },
-  {
-    category: "AI",
-    label: "AI screening",
-    values: { free: "Limited", pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "AI",
-    label: "Evidence-based fit assessment",
-    values: { free: false, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "AI",
-    label: "Interview transcription & summaries",
-    values: { free: false, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "AI",
-    label: "AI Talent Rediscovery (Preview)",
-    values: { free: false, pro: false, scale: true, enterprise: true },
-  },
-  {
-    category: "Security",
-    label: "Project Vault",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Security",
-    label: "Zero-Retention Project Purge",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Security",
-    label: "Advanced retention controls",
-    values: { free: false, pro: false, scale: true, enterprise: true },
-  },
-  {
-    category: "Security",
-    label: "Roles & permissions (RBAC)",
-    values: { free: "Basic", pro: true, scale: true, enterprise: "Advanced" },
-  },
-  {
-    category: "Security",
-    label: "SSO",
-    values: { free: false, pro: false, scale: false, enterprise: true },
-  },
-  {
-    category: "Security",
-    label: "SCIM",
-    values: { free: false, pro: false, scale: false, enterprise: true },
-  },
-  {
-    category: "Security",
-    label: "Audit controls",
-    values: { free: "Basic", pro: "Standard", scale: "Advanced", enterprise: "Custom" },
-  },
-  {
-    category: "Analytics",
-    label: "Basic analytics",
-    values: { free: true, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Analytics",
-    label: "Advanced analytics",
-    values: { free: false, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Analytics",
-    label: "Phantom Intelligence",
-    values: { free: false, pro: false, scale: true, enterprise: true },
-  },
-  {
-    category: "Integrations",
-    label: "ATS & calendar integrations",
-    values: { free: false, pro: true, scale: true, enterprise: true },
-  },
-  {
-    category: "Integrations",
-    label: "API access",
-    values: { free: false, pro: false, scale: true, enterprise: true },
-  },
+  // Hiring
+  { category: "Hiring", label: "ATS", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Hiring", label: "Jobs", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Hiring", label: "Hiring projects", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Hiring", label: "Candidate pipeline", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Hiring", label: "Interviews", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Hiring", label: "Messaging", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Hiring", label: "Team collaboration", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  // Candidate
+  { category: "Candidate", label: "Candidate Passport", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Candidate", label: "Candidate search", values: { core: true, network: true, intelligence: true, enterprise: true } },
+  { category: "Candidate", label: "Candidate matching", values: { core: "Basic", network: "Advanced", intelligence: "Advanced", enterprise: "Advanced" } },
+  { category: "Candidate", label: "Talent pools", values: { core: false, network: true, intelligence: true, enterprise: true } },
+  { category: "Candidate", label: "Talent rediscovery (Preview)", values: { core: false, network: "Preview", intelligence: "Preview", enterprise: "Preview" } },
+  // Shadow
+  { category: "Shadow", label: "Shadow Job Board", values: { core: false, network: true, intelligence: true, enterprise: true } },
+  { category: "Shadow", label: "Anonymous discovery", values: { core: false, network: true, intelligence: true, enterprise: true } },
+  { category: "Shadow", label: "Verified talent network", values: { core: false, network: true, intelligence: true, enterprise: true } },
+  { category: "Shadow", label: "Candidate recommendations", values: { core: false, network: true, intelligence: true, enterprise: true } },
+  { category: "Shadow", label: "Identity reveal", values: { core: false, network: true, intelligence: true, enterprise: true } },
+  // Intelligence
+  { category: "Intelligence", label: "AI matching", values: { core: false, network: "Basic", intelligence: true, enterprise: true } },
+  { category: "Intelligence", label: "Candidate intelligence", values: { core: false, network: false, intelligence: true, enterprise: true } },
+  { category: "Intelligence", label: "Role intelligence", values: { core: false, network: false, intelligence: true, enterprise: true } },
+  { category: "Intelligence", label: "Match explanations", values: { core: false, network: false, intelligence: true, enterprise: true } },
+  { category: "Intelligence", label: "Hiring analytics", values: { core: "Basic", network: "Basic", intelligence: "Advanced", enterprise: "Advanced" } },
+  { category: "Intelligence", label: "Talent insights (Preview)", values: { core: false, network: false, intelligence: "Preview", enterprise: "Preview" } },
+  { category: "Intelligence", label: "Advanced reporting", values: { core: false, network: false, intelligence: true, enterprise: true } },
+  // Enterprise
+  { category: "Enterprise", label: "SSO", values: { core: false, network: false, intelligence: false, enterprise: true } },
+  { category: "Enterprise", label: "API access", values: { core: false, network: false, intelligence: false, enterprise: true } },
+  { category: "Enterprise", label: "Integrations", values: { core: false, network: false, intelligence: false, enterprise: true } },
+  { category: "Enterprise", label: "Advanced permissions", values: { core: false, network: false, intelligence: false, enterprise: true } },
+  { category: "Enterprise", label: "Custom workflows", values: { core: false, network: false, intelligence: false, enterprise: true } },
+  { category: "Enterprise", label: "Dedicated support", values: { core: false, network: false, intelligence: "Priority", enterprise: "Dedicated" } },
 ];
