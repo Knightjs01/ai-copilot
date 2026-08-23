@@ -1,6 +1,20 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+
+const AUDIENCES = [
+  {
+    href: "/hiring-teams",
+    title: "For hiring teams",
+    description: "Hire privately, screen smart, leave no trace.",
+  },
+  {
+    href: "/job-seekers",
+    title: "For job seekers",
+    description: "Explore your next move, quietly.",
+  },
+];
 
 export function HomeFinalCtaSection() {
   return (
@@ -20,6 +34,22 @@ export function HomeFinalCtaSection() {
           <Button asChild variant="secondary" size="lg">
             <Link href="/shadow/signup">Create your Passport</Link>
           </Button>
+        </div>
+
+        <div className="relative grid w-full max-w-md grid-cols-1 gap-3 pt-6 sm:grid-cols-2">
+          {AUDIENCES.map((audience) => (
+            <Link
+              key={audience.href}
+              href={audience.href}
+              className="group flex flex-col gap-1 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-brand/40"
+            >
+              <span className="flex items-center justify-between gap-2 text-sm font-semibold text-foreground">
+                {audience.title}
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </span>
+              <span className="text-xs text-muted-foreground">{audience.description}</span>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

@@ -49,6 +49,10 @@ export function SecurityBeatSection() {
           <Lock className="h-3.5 w-3.5" />
           Identity locked at every step until a Reveal Request is approved
         </p>
+        <p className="max-w-xl text-sm text-muted-foreground">
+          When a project closes, Phantom can burn every trace and produce a Purge Certificate
+          proving what was destroyed.
+        </p>
 
         <Button asChild variant="secondary" size="lg">
           <Link href="/trust">See what&apos;s actually implemented</Link>

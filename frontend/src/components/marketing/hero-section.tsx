@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
+import { PassportIdCardMockup } from "@/components/marketing/mockups/passport-id-card-mockup";
 import { Button } from "@/components/ui/button";
 
 const SPECIALIST_SECTORS = [
@@ -15,7 +16,19 @@ const SPECIALIST_SECTORS = [
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
+      {/* Subtle Ghost watermark -- a brand signature, not a hero illustration. Placed first so it
+          sits behind every other element without an explicit z-index, per the brand guideline
+          that the Ghost is a discreet signature, never something competing with the Passport. */}
+      <Image
+        src="/phantom-icon.png"
+        alt=""
+        width={650}
+        height={826}
+        aria-hidden
+        className="pointer-events-none absolute -bottom-24 -right-24 h-[420px] w-auto select-none opacity-[0.04]"
+      />
+
+      <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="flex flex-col items-start gap-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3.5 py-1.5">
             <Sparkles className="h-3.5 w-3.5 text-brand" />
@@ -31,8 +44,9 @@ export function HeroSection() {
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Phantom Hire is the all-in-one platform for anonymous, evidence-based hiring, one
-            place to discover, assess, and hire people who aren&apos;t publicly job-searching.
+            Phantom Hire is the all-in-one platform for anonymous, evidence-based hiring, built
+            around the Candidate Passport: one reusable, verifiable, anonymous profile for people
+            who aren&apos;t publicly job-searching.
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -69,19 +83,9 @@ export function HeroSection() {
         </div>
 
         <div className="relative flex items-center justify-center">
-          <Image
-            src="/phantom-hero-image.png"
-            alt="Phantom Passport, Shadow, Phantom ATS, and Phantom AI working together around the Phantom ghost"
-            width={1536}
-            height={1024}
-            // Rendered box is at most max-w-xl (36rem/576px), so without an explicit sizes hint
-            // Next.js was picking a smaller srcset candidate and recompressing at the default
-            // quality (75) -- both compound into soft text on this graphic's dense, bold labels.
-            sizes="(max-width: 640px) 100vw, 576px"
-            quality={95}
-            className="relative w-full max-w-xl animate-float"
-            priority
-          />
+          <div className="animate-float">
+            <PassportIdCardMockup />
+          </div>
         </div>
       </div>
     </section>

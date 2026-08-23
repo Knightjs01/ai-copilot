@@ -16,15 +16,14 @@ interface NavGroup {
   links: { href: string; label: string }[];
 }
 
-// "Hire", "Intelligence", and part of "Trust" link to pages that don't exist yet — later phases
-// of the redesign build them one at a time. Left live now (not hidden) since the nav's own
-// information architecture is foundation work, not something to half-ship per page.
+// Every link below points at a real, shipped page — no placeholders.
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "Candidates",
     links: [
       { href: "/shadow-job-board", label: "Shadow Job Board" },
       { href: "/passport", label: "Candidate Passport" },
+      { href: "/job-seekers", label: "For Job Seekers" },
     ],
   },
   {
@@ -32,6 +31,7 @@ const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: "/ats", label: "Phantom ATS" },
       { href: "/ai", label: "Phantom AI" },
+      { href: "/hiring-teams", label: "For Hiring Teams" },
     ],
   },
   {

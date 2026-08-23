@@ -2,11 +2,17 @@ import { EyeOff, Flame, Vault } from "lucide-react";
 
 import { BrowserFrame } from "@/components/marketing/mockups/browser-frame";
 import { CornerMarks } from "@/components/marketing/mockups/corner-marks";
+import { Badge } from "@/components/ui/badge";
+import { FIT_RATING_VARIANT } from "@/lib/status-display";
+import type { FitRating } from "@/lib/types";
 
-const MATCHES = [
-  { title: "Senior Backend Engineer", match: 92 },
-  { title: "Staff Platform Engineer", match: 87 },
-  { title: "Principal Engineer, Payments", match: 81 },
+// No numeric "AI match %" -- the real product only ever computes the 4-tier FitRating
+// (Strong/Good/Possible/Weak Fit), never a percentage. See ats-app-shell-mockup.tsx's own
+// comment for the same rule, applied consistently here.
+const MATCHES: { title: string; fit: FitRating }[] = [
+  { title: "Senior Backend Engineer", fit: "Strong Fit" },
+  { title: "Staff Platform Engineer", fit: "Strong Fit" },
+  { title: "Principal Engineer, Payments", fit: "Good Fit" },
 ];
 
 export function CandidatePortalMockup() {
@@ -59,9 +65,9 @@ export function CandidatePortalMockup() {
                 className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3"
               >
                 <p className="text-sm font-medium text-foreground">{role.title}</p>
-                <span className="shrink-0 rounded-full bg-success/10 px-2.5 py-1 font-mono text-[11px] font-semibold tabular-nums text-success">
-                  {role.match}% match
-                </span>
+                <Badge variant={FIT_RATING_VARIANT[role.fit]} className="shrink-0">
+                  {role.fit}
+                </Badge>
               </div>
             ))}
           </div>
