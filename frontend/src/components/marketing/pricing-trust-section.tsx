@@ -23,8 +23,8 @@ const TRUST_POINTS = [
   },
   {
     icon: Puzzle,
-    title: "Talent Memory",
-    body: "Retain only the appropriate intelligence needed for future matching.",
+    title: "Talent Memory (Preview)",
+    body: "The direction we're building toward: retain only the appropriate intelligence needed for future matching. Not available today.",
   },
   {
     icon: ShieldCheck,

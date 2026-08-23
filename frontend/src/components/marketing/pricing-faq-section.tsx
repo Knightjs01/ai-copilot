@@ -36,17 +36,17 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "What happens when a hiring project closes?",
     answer:
-      "You can permanently remove project-specific recruitment data, according to your organisation's configured retention policy, while permitted talent intelligence can be preserved separately in Talent Memory.",
+      "You can permanently remove project-specific recruitment data, according to your organisation's configured retention policy. Preserving talent intelligence separately, through Talent Memory (Preview), is the direction we're building toward, not available today.",
   },
   {
     question: "What does \"Make This Project Disappear\" actually delete?",
     answer:
-      "Project-specific data: uploaded CVs, interview notes, transcripts, AI context and personal information tied to that project. It does not retroactively delete Talent Memory records that were separately preserved under your retention policy.",
+      "Project-specific data: uploaded CVs, interview notes, transcripts, AI context and personal information tied to that project. Talent Memory (Preview), a separate mechanism for preserving talent intelligence after a purge, isn't available today.",
   },
   {
     question: "Can companies still rediscover candidates after a project is purged?",
     answer:
-      "Where your organisation's retention policy permits it, yes, through Talent Memory: skills, experience and match profile, without the original project data or an exposed identity.",
+      "Not today. Talent Memory, a mechanism for rediscovering skills and match profile without the original project data or an exposed identity, is on our roadmap, not live yet.",
   },
   {
     question: "Can recruiters see a candidate's identity?",
@@ -61,7 +61,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Are AI credits required to use Phantom?",
     answer:
-      "No. Core ATS usage, candidates, applications and pipeline movement, is generous and not metered. AI credits meter compute-intensive features like deep screening, interview summaries and Talent Memory matching.",
+      "No. Core ATS usage, candidates, applications and pipeline movement, is generous and not metered. AI credits meter compute-intensive features like deep screening and interview summaries.",
   },
   {
     question: "Can I use Phantom as an ATS without using Shadow?",

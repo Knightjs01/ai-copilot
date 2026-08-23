@@ -9,7 +9,7 @@ const ROWS = [
   { label: "Talent Memory & future rediscovery (Preview)", traditional: false, phantom: true },
   { label: "Zero-Retention project purge", traditional: false, phantom: true },
   { label: "Project Vault", traditional: false, phantom: true },
-  { label: "Verification levels", traditional: false, phantom: true },
+  { label: "Passport verification", traditional: false, phantom: true },
   { label: "AI talent intelligence", traditional: false, phantom: true },
   { label: "Privacy-first architecture", traditional: false, phantom: true },
 ];

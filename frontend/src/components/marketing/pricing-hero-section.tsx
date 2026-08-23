@@ -7,7 +7,7 @@ const FLOW_STEPS = [
   { icon: EyeOff, label: "Shadow" },
   { icon: Briefcase, label: "Phantom ATS" },
   { icon: Sparkles, label: "Phantom AI" },
-  { icon: Brain, label: "Talent Memory" },
+  { icon: Brain, label: "Talent Memory (Preview)" },
   { icon: Flame, label: "Project Purge" },
 ];
 

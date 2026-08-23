@@ -27,7 +27,7 @@ const SECURITY_POINTS = [
   {
     icon: Users,
     title: "Role-based access",
-    body: "Owner, Admin and Member roles decide exactly what each person on your team can see and do.",
+    body: "Five distinct roles, from Owner to Interviewer, decide exactly what each person on your team can see and do.",
   },
   {
     icon: KeyRound,

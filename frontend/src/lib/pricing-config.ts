@@ -186,7 +186,9 @@ export interface FeatureRow {
   category: FeatureCategory;
   label: string;
   values: Record<CompanyPlanId, boolean | string>;
-  /** Only the Talent Memory row is wired to the single illustrative upgrade modal. */
+  /** No row uses this today -- reusable for a real future gated feature, never for something with
+   * no live backend (Talent Memory previously used this and no longer does: nothing is real to
+   * upgrade into, so it must never be shown as a paid unlock). */
   proOnly?: boolean;
 }
 
@@ -234,8 +236,9 @@ export const FEATURE_COMPARISON_ROWS: FeatureRow[] = [
   {
     category: "Candidate Management",
     label: "Talent Memory (Preview)",
-    values: { free: false, pro: true, scale: true, enterprise: true },
-    proOnly: true,
+    // Not available on any plan today -- shown as "Preview" everywhere, never gated behind an
+    // upgrade (there is nothing real to upgrade into yet).
+    values: { free: "Preview", pro: "Preview", scale: "Preview", enterprise: "Preview" },
   },
   {
     category: "AI",

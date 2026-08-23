@@ -36,16 +36,21 @@ export function TalentMemorySection() {
             <Spectre482Mockup />
           </div>
           <div className="order-1 flex flex-col gap-5 lg:order-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-              Phantom remembers great talent
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                Phantom remembers great talent
+              </p>
+              <Badge variant="outline" className="text-[10px]">
+                Preview
+              </Badge>
+            </div>
             <h3 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Open a role. Phantom already knows who fits.
+              Open a role. Phantom will already know who fits.
             </h3>
             <p className="text-lg leading-relaxed text-muted-foreground">
-              Candidates your organisation has previously assessed stay discoverable through
-              Talent Memory, without their project-specific data or identity ever being
-              retained. You see a match, not a file.
+              The direction we&apos;re building toward: candidates your organisation has
+              previously assessed stay discoverable through Talent Memory, without their
+              project-specific data or identity ever being retained. Not available today.
             </p>
           </div>
         </div>

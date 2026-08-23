@@ -8,7 +8,7 @@ const FLYWHEEL_STEPS = [
   "Companies",
   "Phantom ATS & AI screening",
   "Successful hiring",
-  "Talent Memory",
+  "Talent Memory (Preview)",
   "Future rediscovery",
   "More valuable platform",
 ];

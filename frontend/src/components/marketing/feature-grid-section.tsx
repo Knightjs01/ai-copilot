@@ -44,7 +44,7 @@ const FEATURES = [
   {
     icon: Users,
     title: "Team Roles & Permissions",
-    body: "Owner, Admin and Member roles decide who can reveal an identity, who can purge, and who just hires.",
+    body: "Five distinct roles decide who can reveal an identity, who can purge, and who just hires.",
   },
   {
     icon: LayoutDashboard,
