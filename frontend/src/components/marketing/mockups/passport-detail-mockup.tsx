@@ -36,8 +36,8 @@ export function PassportDetailMockup() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant={VERIFICATION_STATUS_VARIANT.pending}>
-            {VERIFICATION_STATUS_LABEL.pending}
+          <Badge variant={VERIFICATION_STATUS_VARIANT.verified}>
+            {VERIFICATION_STATUS_LABEL.verified}
           </Badge>
           <Badge variant="neutral">92% complete</Badge>
         </div>
