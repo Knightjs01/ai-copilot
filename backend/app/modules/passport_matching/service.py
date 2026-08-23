@@ -57,6 +57,99 @@ _MAX_SEARCH_RESULTS = 24
 _COMPUTE_CONCURRENCY = 5
 _NOTIFY_MIN_TIER = {"Excellent Match", "Strong Match", "Potential Match"}
 
+_LLM_DIMENSION_LABELS: dict[str, str] = {
+    "role_alignment": "Role alignment",
+    "industry_experience": "Industry experience",
+    "functional_experience": "Functional experience",
+}
+# Fixed display order for the merged breakdown -- must match DimensionRating consumers on the
+# frontend (Match tab renders in this exact order).
+_DIMENSION_ORDER = [
+    "Role alignment",
+    "Industry experience",
+    "Functional experience",
+    "Seniority",
+    "Location",
+    "Compensation",
+]
+
+
+def _deterministic_dimensions(
+    passport_snapshot: dict[str, Any], job: ShadowJob
+) -> list[dict[str, str]]:
+    """Location/Compensation/Seniority -- computed from real, on-file values only, zero LLM
+    involvement, zero variance run-to-run. 'Moderate' always means one side is genuinely unstated,
+    never a guess; every rating is traceable to the two actual values named in its evidence."""
+    dimensions: list[dict[str, str]] = []
+
+    # --- Location ---
+    candidate_location = passport_snapshot.get("location")
+    candidate_remote = passport_snapshot.get("remote_preference")
+    job_location = job.location
+    job_remote = job.remote_preference
+    if job_remote == "remote" or candidate_remote == "remote":
+        rating = "Strong"
+        if job_remote == "remote":
+            evidence = (
+                f"Job is fully remote (candidate location: {candidate_location or 'not stated'})"
+            )
+        else:
+            evidence = f"Candidate's remote preference is fully remote (job location: {job_location or 'not stated'})"
+    elif job_location and candidate_location:
+        rating = (
+            "Strong"
+            if job_location.strip().lower() == candidate_location.strip().lower()
+            else "Weak"
+        )
+        evidence = f"Job requires {job_location}; candidate is based in {candidate_location}"
+    else:
+        rating = "Moderate"
+        evidence = f"Job location: {job_location or 'not stated'}; candidate location: {candidate_location or 'not stated'}"
+    dimensions.append({"dimension": "Location", "rating": rating, "evidence": evidence})
+
+    # --- Compensation ---
+    job_min, job_max = job.salary_min, job.salary_max
+    cand_min, cand_max = passport_snapshot.get("salary_min"), passport_snapshot.get("salary_max")
+    if job_min is not None and job_max is not None and cand_min is not None:
+        overlaps = cand_min <= job_max and (cand_max is None or cand_max >= job_min)
+        rating = "Strong" if overlaps else "Weak"
+        cand_range = f"£{cand_min:,}" + (f"–£{cand_max:,}" if cand_max else "+")
+        evidence = f"Job offers £{job_min:,}–£{job_max:,}; candidate expects {cand_range}"
+    else:
+        rating = "Moderate"
+        evidence = "Salary range not fully stated on one side"
+    dimensions.append({"dimension": "Compensation", "rating": rating, "evidence": evidence})
+
+    # --- Seniority ---
+    job_seniority = job.seniority
+    cand_seniority = passport_snapshot.get("seniority")
+    if job_seniority and cand_seniority:
+        rating = (
+            "Strong" if job_seniority.strip().lower() == cand_seniority.strip().lower() else "Weak"
+        )
+        evidence = f"Job seniority: {job_seniority}; candidate seniority: {cand_seniority}"
+    else:
+        rating = "Moderate"
+        evidence = f"Job seniority: {job_seniority or 'not stated'}; candidate seniority: {cand_seniority or 'not stated'}"
+    dimensions.append({"dimension": "Seniority", "rating": rating, "evidence": evidence})
+
+    return dimensions
+
+
+def _merge_dimension_breakdown(
+    llm_dimensions: dict[str, dict[str, str]],
+    passport_snapshot: dict[str, Any],
+    job: ShadowJob,
+) -> list[dict[str, str]]:
+    by_name: dict[str, dict[str, str]] = {}
+    for key, label in _LLM_DIMENSION_LABELS.items():
+        entry = llm_dimensions.get(key)
+        if entry is not None:
+            by_name[label] = {"rating": entry["rating"], "evidence": entry["evidence"]}
+    for dim in _deterministic_dimensions(passport_snapshot, job):
+        by_name[dim["dimension"]] = {"rating": dim["rating"], "evidence": dim["evidence"]}
+    return [{"dimension": name, **by_name[name]} for name in _DIMENSION_ORDER if name in by_name]
+
 
 def _job_facts(
     job: ShadowJob,
@@ -157,6 +250,7 @@ class PassportMatchingService:
         *,
         passport_version_id: uuid.UUID,
         job: ShadowJob,
+        passport_snapshot: dict[str, Any],
         draft: PassportMatchDraft,
     ) -> PassportJobMatch:
         return await self._matches.upsert(
@@ -168,6 +262,9 @@ class PassportMatchingService:
             strengths=draft.strengths,
             gaps=draft.gaps,
             summary=draft.summary,
+            dimension_breakdown=_merge_dimension_breakdown(
+                draft.dimension_breakdown, passport_snapshot, job
+            ),
             shadow_job_updated_at=job.updated_at,
             model_used=self._settings.anthropic_model,
             generated_at=datetime.now(timezone.utc),
@@ -194,7 +291,10 @@ class PassportMatchingService:
         assert version is not None  # current_version_id always points at a real, immutable row
         draft = await self._score_via_llm(passport_snapshot=version.snapshot, job=job)
         match = await self._persist_match(
-            passport_version_id=passport_version_id, job=job, draft=draft
+            passport_version_id=passport_version_id,
+            job=job,
+            passport_snapshot=version.snapshot,
+            draft=draft,
         )
         return self._to_read(match)
 
@@ -256,7 +356,10 @@ class PassportMatchingService:
             for job, draft in scored:
                 if draft is not None:
                     row = await self._persist_match(
-                        passport_version_id=passport_version_id, job=job, draft=draft
+                        passport_version_id=passport_version_id,
+                        job=job,
+                        passport_snapshot=version.snapshot,
+                        draft=draft,
                     )
                     fresh[row.shadow_job_id] = row
 
@@ -301,7 +404,10 @@ class PassportMatchingService:
             passport_snapshot=version.snapshot, job=job, blueprint=blueprint, alignment=alignment
         )
         match = await self._persist_match(
-            passport_version_id=application.passport_version_id, job=job, draft=draft
+            passport_version_id=application.passport_version_id,
+            job=job,
+            passport_snapshot=version.snapshot,
+            draft=draft,
         )
         return self._to_read(match)
 
@@ -332,34 +438,41 @@ class PassportMatchingService:
 
         async def _score_one(
             passport: Any,
-        ) -> tuple[Any, PassportMatchDraft | None]:
+        ) -> tuple[Any, dict[str, Any] | None, PassportMatchDraft | None]:
             # Same "only the LLM call runs concurrently" discipline as batch_get_or_compute_
             # matches -- the DB write happens afterward, one at a time, back on the main
             # coroutine (see _score_via_llm's docstring).
             version = await self._versions.get_by_id(passport.current_version_id)
             if version is None:
-                return passport, None
+                return passport, None, None
             async with semaphore:
                 try:
-                    return passport, await self._score_via_llm(
-                        passport_snapshot=version.snapshot,
-                        job=job,
-                        blueprint=blueprint,
-                        alignment=alignment,
+                    return (
+                        passport,
+                        version.snapshot,
+                        await self._score_via_llm(
+                            passport_snapshot=version.snapshot,
+                            job=job,
+                            blueprint=blueprint,
+                            alignment=alignment,
+                        ),
                     )
                 except PassportMatchGenerationError:
                     # One candidate's score failing shouldn't blank out the whole search --
                     # same "fail open" discipline as the batch match endpoint.
-                    return passport, None
+                    return passport, None, None
 
         scored = await asyncio.gather(*(_score_one(p) for p in candidates))
 
         results: list[CandidateSearchResult] = []
-        for passport, draft in scored:
-            if draft is None:
+        for passport, passport_snapshot, draft in scored:
+            if draft is None or passport_snapshot is None:
                 continue
             match = await self._persist_match(
-                passport_version_id=passport.current_version_id, job=job, draft=draft
+                passport_version_id=passport.current_version_id,
+                job=job,
+                passport_snapshot=passport_snapshot,
+                draft=draft,
             )
             career_entries = await self._career_entries.list_by_passport_id(passport.id)
             results.append(
@@ -390,6 +503,7 @@ class PassportMatchingService:
                     match_summary=match.summary,
                     strengths=match.strengths,
                     gaps=match.gaps,
+                    dimension_breakdown=match.dimension_breakdown,
                 )
             )
 
@@ -425,18 +539,19 @@ class PassportMatchingService:
 
         async def _score_one(
             grant: TalentPoolGrant,
-        ) -> tuple[TalentPoolGrant, Any, PassportMatchDraft | None]:
+        ) -> tuple[TalentPoolGrant, Any, dict[str, Any] | None, PassportMatchDraft | None]:
             passport = await self._passports.get_by_candidate_user_id(grant.candidate_user_id)
             if passport is None or passport.current_version_id is None:
-                return grant, None, None
+                return grant, None, None, None
             version = await self._versions.get_by_id(passport.current_version_id)
             if version is None:
-                return grant, None, None
+                return grant, None, None, None
             async with semaphore:
                 try:
                     return (
                         grant,
                         passport,
+                        version.snapshot,
                         await self._score_via_llm(
                             passport_snapshot=version.snapshot,
                             job=job,
@@ -447,7 +562,7 @@ class PassportMatchingService:
                 except PassportMatchGenerationError:
                     # One candidate's score failing shouldn't blank the whole list -- same "fail
                     # open" discipline as search_candidates_for_job.
-                    return grant, passport, None
+                    return grant, passport, None, None
 
         scored = await asyncio.gather(*(_score_one(g) for g in grants))
 
@@ -455,11 +570,14 @@ class PassportMatchingService:
         job_url = f"{self._settings.frontend_base_url}/shadow/jobs/{job.id}"
 
         results: list[TalentPoolMatchResult] = []
-        for grant, passport, draft in scored:
-            if draft is None or passport is None:
+        for grant, passport, passport_snapshot, draft in scored:
+            if draft is None or passport is None or passport_snapshot is None:
                 continue
             match = await self._persist_match(
-                passport_version_id=passport.current_version_id, job=job, draft=draft
+                passport_version_id=passport.current_version_id,
+                job=job,
+                passport_snapshot=passport_snapshot,
+                draft=draft,
             )
             await self._maybe_notify_candidate_of_match(match, company=company, job_url=job_url)
             career_entries = await self._career_entries.list_by_passport_id(passport.id)
@@ -491,6 +609,7 @@ class PassportMatchingService:
                     match_summary=match.summary,
                     strengths=match.strengths,
                     gaps=match.gaps,
+                    dimension_breakdown=match.dimension_breakdown,
                     source_role_title=grant.source_role_title,
                     scope=TalentPoolScope(grant.scope),
                     granted_at=grant.responded_at or grant.created_at,
@@ -580,6 +699,7 @@ class PassportMatchingService:
                     match_summary=match.summary,
                     strengths=match.strengths,
                     gaps=match.gaps,
+                    dimension_breakdown=match.dimension_breakdown,
                     generated_at=match.generated_at,
                 )
             )
@@ -609,5 +729,6 @@ class PassportMatchingService:
             strengths=match.strengths,
             gaps=match.gaps,
             summary=match.summary,
+            dimension_breakdown=match.dimension_breakdown,
             generated_at=match.generated_at,
         )

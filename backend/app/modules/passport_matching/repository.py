@@ -47,6 +47,7 @@ class PassportJobMatchRepository:
         strengths: list[Any],
         gaps: list[Any],
         summary: str,
+        dimension_breakdown: list[Any],
         shadow_job_updated_at: datetime,
         model_used: str,
         generated_at: datetime,
@@ -58,6 +59,7 @@ class PassportJobMatchRepository:
             existing.strengths = strengths
             existing.gaps = gaps
             existing.summary = summary
+            existing.dimension_breakdown = dimension_breakdown
             existing.shadow_job_updated_at = shadow_job_updated_at
             existing.model_used = model_used
             existing.generated_at = generated_at
@@ -73,6 +75,7 @@ class PassportJobMatchRepository:
             strengths=strengths,
             gaps=gaps,
             summary=summary,
+            dimension_breakdown=dimension_breakdown,
             shadow_job_updated_at=shadow_job_updated_at,
             model_used=model_used,
             generated_at=generated_at,

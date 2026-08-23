@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { format } from "date-fns";
 import { ArrowLeft, Eye, Lock, MessageCircle, ShieldAlert, Sparkles } from "lucide-react";
 
 import { PassportCard } from "@/components/candidate/passport-wizard/passport-card";
@@ -35,11 +36,11 @@ import {
 import { useFetchRevealedIdentity } from "@/lib/queries/shadow-reveal";
 import {
   CAREER_INTENT_LABEL,
+  DIMENSION_RATING_VARIANT,
   MATCH_TIER_VARIANT,
   NOTICE_PERIOD_LABEL,
   REMOTE_PREFERENCE_LABEL,
   SHADOW_APPLICATION_STATUS_LABEL,
-  SHADOW_APPLICATION_STATUS_VARIANT,
   SHADOW_EFFECTIVE_STAGE_LABEL,
   SHADOW_EFFECTIVE_STAGE_VARIANT,
   TALENT_POOL_STATUS_LABEL,
@@ -67,6 +68,19 @@ const SHADOW_ASSIGNABLE_STAGES: ShadowPipelineStage[] = [
   "hired",
   "rejected",
 ];
+
+// This page's own copy for the stage selector only -- the shared SHADOW_EFFECTIVE_STAGE_LABEL map
+// still says "New"/"Interviewing" everywhere else (the merged ATS+Shadow Kanban board depends on
+// that exact wording matching CANDIDATE_STATUS_LABEL). "Applied"/"Interview" read better as a
+// recruiter's own next-action verb on this one page.
+const STAGE_SELECT_LABEL: Record<ShadowPipelineStage, string> = {
+  new: "Applied",
+  screening: "Screening",
+  interviewing: "Interview",
+  offer: "Offer",
+  hired: "Hired",
+  rejected: "Rejected",
+};
 
 function formatSalary(min: number | null, max: number | null): string | null {
   if (min == null && max == null) return null;
@@ -148,12 +162,15 @@ export default function CandidateWorkspacePage() {
     );
   };
 
+  // Practical hiring metadata only -- industries are already implied by headline/title (shown in
+  // the identity line above this) and repeated in full on the Experience tab, so they're
+  // deliberately left out here to avoid showing the same context twice.
   const factsLine = [
-    profile.industries.join(", ") || null,
     profile.location,
     profile.remote_preference ? REMOTE_PREFERENCE_LABEL[profile.remote_preference] : null,
     formatSalary(profile.salary_min, profile.salary_max),
     profile.notice_period ? `${NOTICE_PERIOD_LABEL[profile.notice_period]} notice` : null,
+    profile.applied_at ? `Applied ${format(new Date(profile.applied_at), "d MMM")}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -190,11 +207,6 @@ export default function CandidateWorkspacePage() {
                   <h1 className="text-xl font-semibold tracking-tight text-foreground">
                     {identity?.full_name ?? profile.callsign}
                   </h1>
-                  {identity && (
-                    <span className="text-sm text-muted-foreground">
-                      (Callsign: {profile.callsign})
-                    </span>
-                  )}
                   {match && (
                     <Badge variant={MATCH_TIER_VARIANT[match.match_tier]}>
                       {match.match_score}% Match
@@ -203,17 +215,17 @@ export default function CandidateWorkspacePage() {
                   <Badge variant={SHADOW_EFFECTIVE_STAGE_VARIANT[profile.effective_stage]}>
                     {SHADOW_EFFECTIVE_STAGE_LABEL[profile.effective_stage]}
                   </Badge>
-                  <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                  <Badge variant={isRevealable ? "success" : "neutral"}>
                     {isRevealable ? (
                       <>
-                        <Eye className="h-3 w-3" /> Revealed
+                        <Eye className="h-3 w-3" /> Identity revealed
                       </>
                     ) : (
                       <>
                         <Lock className="h-3 w-3" /> Anonymous
                       </>
                     )}
-                  </span>
+                  </Badge>
                 </div>
                 {profile.headline && (
                   <p className="text-sm font-medium text-foreground">{profile.headline}</p>
@@ -295,16 +307,11 @@ export default function CandidateWorkspacePage() {
               <SelectContent container={container}>
                 {SHADOW_ASSIGNABLE_STAGES.map((stage) => (
                   <SelectItem key={stage} value={stage}>
-                    {SHADOW_EFFECTIVE_STAGE_LABEL[stage]}
+                    {STAGE_SELECT_LABEL[stage]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {profile.effective_stage !== "withdrawn" && (
-              <Badge variant={SHADOW_APPLICATION_STATUS_VARIANT[profile.status]}>
-                {SHADOW_APPLICATION_STATUS_LABEL[profile.status]}
-              </Badge>
-            )}
 
             {canRequestTalentPool && (
               <div className="ml-auto flex items-center gap-2">
@@ -529,10 +536,28 @@ function OverviewTab({
               </p>
               {match ? (
                 <>
-                  <p className="text-2xl font-semibold text-foreground">{match.match_score}%</p>
-                  <Badge variant={MATCH_TIER_VARIANT[match.match_tier]} className="w-fit">
-                    {match.match_tier}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-semibold text-foreground">{match.match_score}%</p>
+                    <Badge variant={MATCH_TIER_VARIANT[match.match_tier]} className="w-fit">
+                      {match.match_tier}
+                    </Badge>
+                  </div>
+                  {match.summary && (
+                    <p className="text-xs text-muted-foreground">{match.summary}</p>
+                  )}
+                  {match.dimension_breakdown.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {match.dimension_breakdown.slice(0, 3).map((dim) => (
+                        <Badge
+                          key={dim.dimension}
+                          variant={DIMENSION_RATING_VARIANT[dim.rating]}
+                          className="font-normal"
+                        >
+                          {dim.dimension}: {dim.rating}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">View match details →</p>

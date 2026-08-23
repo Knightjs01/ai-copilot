@@ -5,6 +5,7 @@ import type {
   CareerIntent,
   CompanyProfileStatus,
   CompanySizeBand,
+  DimensionRatingValue,
   EmploymentType,
   FitRating,
   InterviewStatus,
@@ -133,6 +134,12 @@ export const MATCH_TIER_VARIANT: Record<MatchTier, Variant> = {
   "Strong Match": "info",
   "Potential Match": "warning",
   "Weak Match": "danger",
+};
+
+export const DIMENSION_RATING_VARIANT: Record<DimensionRatingValue, Variant> = {
+  Strong: "success",
+  Moderate: "warning",
+  Weak: "danger",
 };
 
 export const SHADOW_JOB_STATUS_LABEL: Record<ShadowJobStatus, string> = {

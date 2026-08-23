@@ -767,6 +767,17 @@ export interface ShadowCareerEntrySummary {
 }
 
 export type MatchTier = "Excellent Match" | "Strong Match" | "Potential Match" | "Weak Match";
+export type DimensionRatingValue = "Strong" | "Moderate" | "Weak";
+
+// One real, evidence-backed dimension of a match -- Role alignment/Industry experience/Functional
+// experience come from the LLM's own forced-tool-call response; Seniority/Location/Compensation
+// are computed deterministically from data already on file. Never a bare label -- `evidence`
+// always names the real values compared. See backend passport_matching/schemas.py::DimensionRating.
+export interface DimensionRating {
+  dimension: string;
+  rating: DimensionRatingValue;
+  evidence: string;
+}
 
 // A real, cached AI match score between the candidate's approved Passport and one job. Kept
 // separate from ShadowJobBoardListing (mirrors how SavedShadowJob wraps a `job:` field rather
@@ -779,6 +790,7 @@ export interface ShadowJobMatch {
   strengths: string[];
   gaps: string[];
   summary: string;
+  dimension_breakdown: DimensionRating[];
   generated_at: string;
 }
 
@@ -805,6 +817,7 @@ export interface CandidateSearchResult {
   match_summary: string;
   strengths: string[];
   gaps: string[];
+  dimension_breakdown: DimensionRating[];
 }
 
 // A Talent Pool candidate ranked against a NEW role -- same shape as CandidateSearchResult, plus
@@ -828,6 +841,7 @@ export interface TalentPoolOpportunity {
   match_summary: string;
   strengths: string[];
   gaps: string[];
+  dimension_breakdown: DimensionRating[];
   generated_at: string;
 }
 

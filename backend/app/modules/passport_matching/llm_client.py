@@ -9,6 +9,12 @@ from app.core.config import get_settings
 _MATCH_TIERS = ["Excellent Match", "Strong Match", "Potential Match", "Weak Match"]
 _REMOTE_PREFERENCES = ["remote", "hybrid", "onsite", "flexible"]
 _EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "fractional"]
+_DIMENSION_RATINGS = ["Strong", "Moderate", "Weak"]
+# The 3 dimensions the LLM judges (needs real evidence/nuance from career history and stated
+# profile) -- Location/Compensation/Seniority are computed deterministically in the service layer
+# instead, from data too objective to need an LLM opinion. Keys must match
+# PassportMatchingService._deterministic_dimensions' fixed dimension names exactly.
+_LLM_JUDGED_DIMENSIONS = ["role_alignment", "industry_experience", "functional_experience"]
 
 
 class LLMRequestError(Exception):
@@ -33,6 +39,10 @@ class PassportMatchDraft:
     strengths: list[str] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
     summary: str = ""
+    # The 3 LLM-judged dimension ratings only (role_alignment/industry_experience/
+    # functional_experience) -- each {"rating": ..., "evidence": ...}, keyed by
+    # _LLM_JUDGED_DIMENSIONS. The service merges in the 3 deterministic ones separately.
+    dimension_breakdown: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -59,7 +69,9 @@ _PASSPORT_MATCH_TOOL: dict[str, Any] = {
         "candidate didn't list, and do not penalize for information the job posting simply "
         "didn't provide. The tier is the primary signal a candidate sees; the numeric score is "
         "secondary and should be consistent with the tier (Excellent Match ~85-100, Strong Match "
-        "~65-84, Potential Match ~40-64, Weak Match ~0-39)."
+        "~65-84, Potential Match ~40-64, Weak Match ~0-39). Also rate the three named dimensions "
+        "individually, each grounded in a specific evidence sentence naming real fields from the "
+        "candidate's profile -- never rate a dimension with nothing behind it."
     ),
     "input_schema": {
         "type": "object",
@@ -92,8 +104,53 @@ _PASSPORT_MATCH_TOOL: dict[str, Any] = {
                 "type": "string",
                 "description": "One or two sentences explaining the match in plain language.",
             },
+            "role_alignment": {
+                "type": "object",
+                "description": "How well the candidate's stated role/title/responsibilities align with this job's title and responsibilities.",
+                "properties": {
+                    "rating": {"type": "string", "enum": _DIMENSION_RATINGS},
+                    "evidence": {
+                        "type": "string",
+                        "description": "One short sentence citing the specific real profile field(s) that justify this rating. Use 'Moderate' when evidence is genuinely mixed or absent -- never guess.",
+                    },
+                },
+                "required": ["rating", "evidence"],
+            },
+            "industry_experience": {
+                "type": "object",
+                "description": "How well the candidate's stated industries/career history align with this job's industry/domain.",
+                "properties": {
+                    "rating": {"type": "string", "enum": _DIMENSION_RATINGS},
+                    "evidence": {
+                        "type": "string",
+                        "description": "One short sentence citing specific real industries/employers from the candidate's profile. Use 'Moderate' when evidence is genuinely mixed or absent -- never guess.",
+                    },
+                },
+                "required": ["rating", "evidence"],
+            },
+            "functional_experience": {
+                "type": "object",
+                "description": "How well the candidate's stated skills/functional experience align with what this job requires.",
+                "properties": {
+                    "rating": {"type": "string", "enum": _DIMENSION_RATINGS},
+                    "evidence": {
+                        "type": "string",
+                        "description": "One short sentence citing specific real skills/experience from the candidate's profile. Use 'Moderate' when evidence is genuinely mixed or absent -- never guess.",
+                    },
+                },
+                "required": ["rating", "evidence"],
+            },
         },
-        "required": ["match_tier", "match_score", "strengths", "gaps", "summary"],
+        "required": [
+            "match_tier",
+            "match_score",
+            "strengths",
+            "gaps",
+            "summary",
+            "role_alignment",
+            "industry_experience",
+            "functional_experience",
+        ],
     },
 }
 
@@ -183,6 +240,14 @@ class AnthropicPassportMatchingLLMClient:
 
         try:
             data = tool_use_block.input
+            dimension_breakdown: dict[str, dict[str, str]] = {}
+            for key in _LLM_JUDGED_DIMENSIONS:
+                entry = data.get(key)
+                if isinstance(entry, dict) and "rating" in entry and "evidence" in entry:
+                    dimension_breakdown[key] = {
+                        "rating": str(entry["rating"]),
+                        "evidence": str(entry["evidence"]),
+                    }
             return PassportMatchDraft(
                 match_tier=str(data["match_tier"]),
                 match_score=int(data["match_score"]),
@@ -191,6 +256,7 @@ class AnthropicPassportMatchingLLMClient:
                 ],
                 gaps=[str(v) for v in _as_list(data.get("gaps", []), field_name="gaps")],
                 summary=str(data.get("summary", "")),
+                dimension_breakdown=dimension_breakdown,
             )
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             raise LLMRequestError(f"Malformed structured response from Claude: {exc}") from exc

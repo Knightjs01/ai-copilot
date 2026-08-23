@@ -253,6 +253,20 @@ class FakePassportMatchingLLMClient:
             strengths=["Fake strength: relevant skills overlap"],
             gaps=["Fake gap: limited seniority evidence"],
             summary="Fake summary: a solid, not perfect, fit.",
+            dimension_breakdown={
+                "role_alignment": {
+                    "rating": "Strong",
+                    "evidence": "Fake evidence: headline matches job title closely",
+                },
+                "industry_experience": {
+                    "rating": "Moderate",
+                    "evidence": "Fake evidence: adjacent but not identical industry",
+                },
+                "functional_experience": {
+                    "rating": "Strong",
+                    "evidence": "Fake evidence: skills overlap with job requirements",
+                },
+            },
         )
 
     async def parse_search_query(self, *, query: str) -> BoardFilterDraft:

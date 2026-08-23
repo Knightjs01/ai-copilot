@@ -7,6 +7,19 @@ from pydantic import BaseModel, Field
 from app.modules.talent_pool.models import TalentPoolScope
 
 MatchTier = Literal["Excellent Match", "Strong Match", "Potential Match", "Weak Match"]
+DimensionRatingValue = Literal["Strong", "Moderate", "Weak"]
+
+
+class DimensionRating(BaseModel):
+    """One row of the real per-dimension match breakdown -- always grounded in an evidence
+    sentence naming the actual values compared, never a bare label. Location/Compensation/
+    Seniority are computed deterministically (see PassportMatchingService._deterministic_
+    dimensions); Role alignment/Industry experience/Functional experience come from the LLM's own
+    forced-tool-call response, same discipline as strengths/gaps."""
+
+    dimension: str
+    rating: DimensionRatingValue
+    evidence: str
 
 
 class PassportJobMatchRead(BaseModel):
@@ -16,6 +29,7 @@ class PassportJobMatchRead(BaseModel):
     strengths: list[str]
     gaps: list[str]
     summary: str
+    dimension_breakdown: list[DimensionRating]
     generated_at: datetime
 
 
@@ -70,6 +84,7 @@ class CandidateSearchResult(BaseModel):
     match_summary: str
     strengths: list[str]
     gaps: list[str]
+    dimension_breakdown: list[DimensionRating]
 
 
 class TalentPoolMatchResult(CandidateSearchResult):
@@ -96,4 +111,5 @@ class TalentPoolOpportunity(BaseModel):
     match_summary: str
     strengths: list[str]
     gaps: list[str]
+    dimension_breakdown: list[DimensionRating]
     generated_at: datetime

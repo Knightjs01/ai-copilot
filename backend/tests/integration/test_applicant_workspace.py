@@ -106,6 +106,19 @@ async def test_applicant_match_computes_and_caches(client: AsyncClient) -> None:
     assert body["strengths"] == ["Fake strength: relevant skills overlap"]
     assert body["gaps"] == ["Fake gap: limited seniority evidence"]
 
+    dimensions = body["dimension_breakdown"]
+    assert [d["dimension"] for d in dimensions] == [
+        "Role alignment",
+        "Industry experience",
+        "Functional experience",
+        "Seniority",
+        "Location",
+        "Compensation",
+    ]
+    for dim in dimensions:
+        assert dim["rating"] in {"Strong", "Moderate", "Weak"}
+        assert dim["evidence"]
+
     # Second call must be a cache hit, not a second LLM call -- flip the fake to prove it.
     second = await client.get(
         f"/api/v1/matches/mine/{job['id']}/applicants/{application['id']}", headers=headers

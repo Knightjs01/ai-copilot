@@ -42,6 +42,11 @@ class PassportJobMatch(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     strengths: Mapped[list[Any]] = mapped_column(JSONB, default=list)
     gaps: Mapped[list[Any]] = mapped_column(JSONB, default=list)
     summary: Mapped[str] = mapped_column(Text)
+    # Real, evidence-backed per-dimension breakdown -- 3 entries computed deterministically in
+    # Python (Location/Compensation/Seniority, from data already on file) plus 3 from the LLM's
+    # own forced-tool-call response (Role alignment/Industry experience/Functional experience),
+    # merged by the service into one fixed-order list. See PassportMatchingService._persist_match.
+    dimension_breakdown: Mapped[list[Any]] = mapped_column(JSONB, default=list)
 
     shadow_job_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     model_used: Mapped[str] = mapped_column(String(100))
