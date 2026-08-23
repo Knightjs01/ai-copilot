@@ -7,7 +7,7 @@ import {
   SHADOW_EFFECTIVE_STAGE_LABEL,
   SHADOW_EFFECTIVE_STAGE_VARIANT,
 } from "@/lib/status-display";
-import type { ShadowProfile } from "@/lib/types";
+import type { RevealedIdentity, ShadowProfile } from "@/lib/types";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -21,13 +21,29 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export function ApplicationTab({
   jobTitle,
   profile,
+  identity,
 }: {
   jobTitle: string;
   profile: ShadowProfile;
+  identity?: RevealedIdentity | null;
 }) {
+  const isRevealed = identity != null;
+  const careerEntries = isRevealed
+    ? identity.career_entries.map((entry) => ({
+        title: entry.title,
+        company: entry.company_name,
+        isCurrent: entry.is_current,
+      }))
+    : profile.career_entries.map((entry) => ({
+        title: entry.title,
+        company: entry.company_name_anonymized,
+        isCurrent: entry.is_current,
+      }));
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Candidate">{isRevealed ? identity.full_name : profile.callsign}</Field>
         <Field label="Role applied for">{jobTitle}</Field>
         <Field label="Date applied">{format(new Date(profile.applied_at), "d MMM yyyy")}</Field>
         <Field label="Current stage">
@@ -63,14 +79,14 @@ export function ApplicationTab({
         </div>
       )}
 
-      {profile.career_entries.length > 0 && (
+      {careerEntries.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <h3 className="text-sm font-medium text-foreground">Relevant career history</h3>
           <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-            {profile.career_entries.map((entry, i) => (
+            {careerEntries.map((entry, i) => (
               <p key={i}>
-                {entry.title} · {entry.company_name_anonymized}
-                {entry.is_current ? " (current)" : ""}
+                {entry.title} · {entry.company}
+                {entry.isCurrent ? " (current)" : ""}
               </p>
             ))}
           </div>

@@ -18,6 +18,12 @@ interface PassportCardProps {
   completionPercentage?: number;
   versionNumber?: number;
   footnote?: string;
+  // Only ever set on the recruiter-facing workspace, only once this session's recruiter has
+  // completed step-up and actually fetched the decrypted identity (never persisted, never set
+  // just because the application is eligible for reveal) -- see RevealedIdentity. When present,
+  // the real name takes over as the primary heading and the Callsign becomes secondary context,
+  // since that's what the recruiter now actually cares about.
+  revealedName?: string | null;
 }
 
 // The final "digital credential" reveal — gold accents, used selectively here because this is
@@ -31,6 +37,7 @@ export function PassportCard({
   completionPercentage,
   versionNumber,
   footnote,
+  revealedName,
 }: PassportCardProps) {
   const verifyUrl =
     callsign && typeof window !== "undefined"
@@ -45,13 +52,19 @@ export function PassportCard({
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
             Phantom Passport
           </span>
-          {versionNumber != null && <Badge variant="gold">Version {versionNumber}</Badge>}
+          <div className="flex items-center gap-1.5">
+            {revealedName && <Badge variant="success">Identity revealed</Badge>}
+            {versionNumber != null && <Badge variant="gold">Version {versionNumber}</Badge>}
+          </div>
         </div>
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <p className="text-2xl font-semibold tracking-tight text-foreground">
-              {callsign ?? "—"}
+              {revealedName ?? callsign ?? "—"}
             </p>
+            {revealedName && callsign && (
+              <p className="text-xs text-muted-foreground">Callsign: {callsign}</p>
+            )}
             {headline && <p className="text-sm text-muted-foreground">{headline}</p>}
           </div>
           {verifyUrl && (

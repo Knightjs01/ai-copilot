@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { NOTICE_PERIOD_LABEL, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
-import type { ShadowProfile } from "@/lib/types";
+import type { RevealedIdentity, ShadowProfile } from "@/lib/types";
 
 function formatSalary(min: number | null, max: number | null): string | null {
   if (min == null && max == null) return null;
@@ -24,10 +24,19 @@ function formatSalary(min: number | null, max: number | null): string | null {
 
 // Read-only, company-facing sibling of the candidate's own anonymised-cv-dialog.tsx -- same
 // "exactly what a company sees" promise, but no Approve/Decline actions (nothing to review here,
-// this already IS what was submitted) and built from ShadowProfile's real, deliberately minimal
-// career_entries shape (title/company_name_anonymized/is_current only -- no responsibilities or
-// achievements, since those never leave the candidate's own frozen snapshot pre-reveal).
-export function AnonymizedCvDialog({ profile }: { profile: ShadowProfile }) {
+// this already IS what was submitted). Upgrades to the real, revealed name and employer names
+// once `identity` is passed in -- only ever set this session after the recruiter has completed
+// step-up and actually fetched RevealedIdentity, never just because the application is eligible
+// (see PassportCard's own revealedName prop for the identical discipline).
+export function AnonymizedCvDialog({
+  profile,
+  identity,
+}: {
+  profile: ShadowProfile;
+  identity?: RevealedIdentity | null;
+}) {
+  const isRevealed = identity != null;
+
   const factsLine = [
     profile.seniority,
     profile.location,
@@ -38,20 +47,35 @@ export function AnonymizedCvDialog({ profile }: { profile: ShadowProfile }) {
     .filter(Boolean)
     .join(" · ");
 
+  const careerEntries = isRevealed
+    ? identity.career_entries.map((entry) => ({
+        title: entry.title,
+        company: entry.company_name,
+        isCurrent: entry.is_current,
+      }))
+    : profile.career_entries.map((entry) => ({
+        title: entry.title,
+        company: entry.company_name_anonymized,
+        isCurrent: entry.is_current,
+      }));
+
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button type="button" variant="secondary" size="sm">
           <FileText className="h-3.5 w-3.5" />
-          View anonymised CV
+          {isRevealed ? "View CV" : "View anonymised CV"}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{profile.callsign}&apos;s anonymised CV</DialogTitle>
+          <DialogTitle>
+            {isRevealed ? `${identity.full_name}'s CV` : `${profile.callsign}'s anonymised CV`}
+          </DialogTitle>
           <DialogDescription>
-            Exactly what this candidate submitted — no name or real employer, until they approve a
-            Reveal Request.
+            {isRevealed
+              ? "This candidate approved your Reveal Request — real name and employer names below."
+              : "Exactly what this candidate submitted — no name or real employer, until they approve a Reveal Request."}
           </DialogDescription>
         </DialogHeader>
 
@@ -61,6 +85,11 @@ export function AnonymizedCvDialog({ profile }: { profile: ShadowProfile }) {
               {profile.headline || "Untitled role"}
             </p>
             {factsLine && <p className="text-sm text-muted-foreground">{factsLine}</p>}
+            {isRevealed && (identity.email || identity.phone) && (
+              <p className="text-sm text-muted-foreground">
+                {[identity.email, identity.phone].filter(Boolean).join(" · ")}
+              </p>
+            )}
           </div>
 
           {profile.summary && <p className="text-sm text-foreground">{profile.summary}</p>}
@@ -99,17 +128,17 @@ export function AnonymizedCvDialog({ profile }: { profile: ShadowProfile }) {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Career history
             </p>
-            {profile.career_entries.length > 0 ? (
+            {careerEntries.length > 0 ? (
               <div className="flex flex-col gap-2">
-                {profile.career_entries.map((entry, index) => (
+                {careerEntries.map((entry, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between gap-2 rounded-lg bg-card p-3"
                   >
                     <p className="text-sm font-medium text-foreground">{entry.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {entry.company_name_anonymized}
-                      {entry.is_current && (
+                      {entry.company}
+                      {entry.isCurrent && (
                         <Badge variant="success" className="ml-1.5">
                           Current
                         </Badge>

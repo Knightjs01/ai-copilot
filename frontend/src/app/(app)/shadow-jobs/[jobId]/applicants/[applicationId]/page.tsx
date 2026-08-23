@@ -184,12 +184,17 @@ export default function CandidateWorkspacePage() {
         <CardContent className="flex flex-col gap-4 py-5">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div className="flex items-start gap-3">
-              <Avatar name={profile.callsign} className="h-11 w-11 text-sm" />
+              <Avatar name={identity?.full_name ?? profile.callsign} className="h-11 w-11 text-sm" />
               <div className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                    {profile.callsign}
+                    {identity?.full_name ?? profile.callsign}
                   </h1>
+                  {identity && (
+                    <span className="text-sm text-muted-foreground">
+                      (Callsign: {profile.callsign})
+                    </span>
+                  )}
                   {match && (
                     <Badge variant={MATCH_TIER_VARIANT[match.match_tier]}>
                       {match.match_score}% Match
@@ -218,7 +223,7 @@ export default function CandidateWorkspacePage() {
             </div>
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <AnonymizedCvDialog profile={profile} />
+              <AnonymizedCvDialog profile={profile} identity={identity} />
               {isRevealable ? (
                 identity ? (
                   <Badge variant="success">Identity revealed</Badge>
@@ -264,15 +269,14 @@ export default function CandidateWorkspacePage() {
             </div>
           </div>
 
-          {identity && (
+          {identity && (identity.email || identity.phone) && (
             <div className="flex flex-col gap-1 rounded-xl border border-success/30 bg-success/5 p-3">
               <div className="flex items-center gap-1.5 text-sm font-medium text-success">
                 <Eye className="h-3.5 w-3.5" />
-                Identity revealed
+                Contact details
               </div>
-              {identity.full_name && <p className="text-sm text-foreground">{identity.full_name}</p>}
-              {identity.email && <p className="text-sm text-muted-foreground">{identity.email}</p>}
-              {identity.phone && <p className="text-sm text-muted-foreground">{identity.phone}</p>}
+              {identity.email && <p className="text-sm text-foreground">{identity.email}</p>}
+              {identity.phone && <p className="text-sm text-foreground">{identity.phone}</p>}
             </div>
           )}
 
@@ -340,9 +344,11 @@ export default function CandidateWorkspacePage() {
           {activeTab === "match" && (
             <MatchTab jobId={params.jobId} applicationId={profile.application_id} />
           )}
-          {activeTab === "experience" && <ExperienceTab profile={profile} />}
+          {activeTab === "experience" && (
+            <ExperienceTab profile={profile} identity={identity} />
+          )}
           {activeTab === "application" && (
-            <ApplicationTab jobTitle={job?.title ?? ""} profile={profile} />
+            <ApplicationTab jobTitle={job?.title ?? ""} profile={profile} identity={identity} />
           )}
           {activeTab === "interviews" && (
             <InterviewsTab jobId={params.jobId} applicationId={profile.application_id} />
@@ -357,7 +363,12 @@ export default function CandidateWorkspacePage() {
           <PassportCard
             callsign={profile.callsign}
             headline={profile.headline}
-            footnote="This is the identity this candidate is shown as until they personally approve a Reveal Request."
+            revealedName={identity?.full_name}
+            footnote={
+              identity
+                ? "This candidate approved your Reveal Request — their real name is shown above."
+                : "This is the identity this candidate is shown as until they personally approve a Reveal Request."
+            }
           />
           <Card>
             <CardContent className="flex flex-col gap-3 py-5">

@@ -1,9 +1,28 @@
 import { Briefcase } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type { ShadowProfile } from "@/lib/types";
+import type { RevealedIdentity, ShadowProfile } from "@/lib/types";
 
-export function ExperienceTab({ profile }: { profile: ShadowProfile }) {
+export function ExperienceTab({
+  profile,
+  identity,
+}: {
+  profile: ShadowProfile;
+  identity?: RevealedIdentity | null;
+}) {
+  const isRevealed = identity != null;
+  const careerEntries = isRevealed
+    ? identity.career_entries.map((entry) => ({
+        title: entry.title,
+        company: entry.company_name,
+        isCurrent: entry.is_current,
+      }))
+    : profile.career_entries.map((entry) => ({
+        title: entry.title,
+        company: entry.company_name_anonymized,
+        isCurrent: entry.is_current,
+      }));
+
   return (
     <div className="flex flex-col gap-6">
       {(profile.headline || profile.seniority || profile.years_experience != null) && (
@@ -47,15 +66,15 @@ export function ExperienceTab({ profile }: { profile: ShadowProfile }) {
 
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-foreground">Career history</h3>
-        {profile.career_entries.length > 0 ? (
+        {careerEntries.length > 0 ? (
           <div className="flex flex-col gap-3 border-l border-border pl-4">
-            {profile.career_entries.map((entry, i) => (
+            {careerEntries.map((entry, i) => (
               <div key={i} className="relative">
                 <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-brand" />
                 <p className="text-sm font-medium text-foreground">{entry.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {entry.company_name_anonymized}
-                  {entry.is_current && (
+                  {entry.company}
+                  {entry.isCurrent && (
                     <Badge variant="success" className="ml-1.5">
                       Current
                     </Badge>
@@ -71,7 +90,9 @@ export function ExperienceTab({ profile }: { profile: ShadowProfile }) {
           </div>
         )}
         <p className="text-xs text-muted-foreground">
-          Employer names are anonymized until this candidate&apos;s identity is revealed.
+          {isRevealed
+            ? "This candidate approved your Reveal Request — real employer names are shown above."
+            : "Employer names are anonymized until this candidate's identity is revealed."}
         </p>
       </div>
     </div>
