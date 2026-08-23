@@ -51,3 +51,7 @@ class CandidateRead(BaseModel):
     agency_name: str | None
     notice_period: NoticePeriod | None
     created_by_id: uuid.UUID
+    # True once at least one Identity Vault reveal event has ever fired for this candidate --
+    # not derived from a column on Candidate itself (see identity_vault module docstring), so
+    # this is always explicitly computed by the API layer, never left to default.
+    is_revealed: bool

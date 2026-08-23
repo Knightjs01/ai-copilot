@@ -127,3 +127,16 @@ class IdentityRevealEventRepository:
         await self._session.execute(
             delete(IdentityRevealEvent).where(IdentityRevealEvent.candidate_id.in_(candidate_ids))
         )
+
+    async def list_revealed_candidate_ids(self, candidate_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+        """Which of these candidates have ever had at least one reveal event -- a durable "has
+        this identity been seen" signal, distinct from the events themselves (which are
+        time-boxed, per-session records, not a standing "revealed" state on the candidate)."""
+        if not candidate_ids:
+            return set()
+        result = await self._session.execute(
+            select(IdentityRevealEvent.candidate_id)
+            .where(IdentityRevealEvent.candidate_id.in_(candidate_ids))
+            .distinct()
+        )
+        return set(result.scalars().all())

@@ -3,7 +3,13 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, create_project, invite_and_accept, signup
+from tests.integration.helpers import (
+    auth_headers,
+    create_project,
+    invite_and_accept,
+    signup,
+    step_up_headers,
+)
 
 _FAKE_PDF_CONTENT = b"%PDF-1.4 fake resume content for testing purposes only"
 
@@ -173,6 +179,58 @@ async def test_project_id_must_belong_to_same_company(client: AsyncClient) -> No
         headers=headers_a,
     )
     assert response.status_code == 404
+
+
+async def test_candidate_is_revealed_flips_true_once_identity_is_revealed(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@candidates-revealed.com", company_name="Reveal Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+
+    create_response = await client.post(
+        "/api/v1/candidates",
+        json={
+            "project_id": project["id"],
+            "full_name": "Not Yet Revealed",
+            "email": "not-yet@example.com",
+        },
+        headers=headers,
+    )
+    assert create_response.status_code == 201, create_response.text
+    candidate = create_response.json()
+    assert candidate["is_revealed"] is False
+
+    get_response = await client.get(f"/api/v1/candidates/{candidate['id']}", headers=headers)
+    assert get_response.json()["is_revealed"] is False
+
+    list_response = await client.get(
+        "/api/v1/candidates", params={"project_id": project["id"]}, headers=headers
+    )
+    listed = next(c for c in list_response.json() if c["id"] == candidate["id"])
+    assert listed["is_revealed"] is False
+
+    reveal_response = await client.post(
+        f"/api/v1/identity-vault/candidates/{candidate['id']}/reveal",
+        json={"reason": "Hiring Manager Interview"},
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert reveal_response.status_code == 200, reveal_response.text
+
+    after_reveal = await client.get(f"/api/v1/candidates/{candidate['id']}", headers=headers)
+    assert after_reveal.json()["is_revealed"] is True
+
+    after_reveal_list = await client.get(
+        "/api/v1/candidates", params={"project_id": project["id"]}, headers=headers
+    )
+    listed_after = next(c for c in after_reveal_list.json() if c["id"] == candidate["id"])
+    assert listed_after["is_revealed"] is True
+
+    # A status update after the reveal must not clobber is_revealed back to False.
+    update_response = await client.patch(
+        f"/api/v1/candidates/{candidate['id']}", json={"status": "screening"}, headers=headers
+    )
+    assert update_response.json()["is_revealed"] is True
 
 
 async def test_resume_upload_and_download_roundtrip(client: AsyncClient) -> None:

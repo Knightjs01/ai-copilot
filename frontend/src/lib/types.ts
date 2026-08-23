@@ -122,6 +122,8 @@ export interface Candidate {
   agency_name: string | null;
   notice_period: NoticePeriod | null;
   created_by_id: string;
+  // True once at least one Identity Vault reveal event has ever fired for this candidate.
+  is_revealed: boolean;
 }
 
 export interface SalaryStats {

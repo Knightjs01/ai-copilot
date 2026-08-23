@@ -14,14 +14,52 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidates.dependencies import get_file_storage, require_candidate_access
+from app.modules.candidates.models import (
+    Candidate,
+    CandidateSource,
+    CandidateStatus,
+    NoticePeriod,
+    PrescreenOutcome,
+)
 from app.modules.candidates.schemas import CandidateCreate, CandidateRead, CandidateUpdate
 from app.modules.candidates.service import CandidateService
 from app.modules.candidates.storage import FileStorage
+from app.modules.identity_vault.repository import IdentityRevealEventRepository
 from app.modules.projects.repository import ProjectMemberRepository
 
 router = APIRouter(
     prefix="/candidates", tags=["candidates"], dependencies=[Depends(require_mfa_enrolled)]
 )
+
+
+def _to_candidate_read(candidate: Candidate, *, is_revealed: bool) -> CandidateRead:
+    return CandidateRead(
+        id=candidate.id,
+        company_id=candidate.company_id,
+        project_id=candidate.project_id,
+        callsign=candidate.callsign,
+        candidate_ref=candidate.candidate_ref,
+        source=CandidateSource(candidate.source),
+        status=CandidateStatus(candidate.status),
+        resume_original_filename=candidate.resume_original_filename,
+        interview_scheduled_at=candidate.interview_scheduled_at,
+        prescreen_outcome=(
+            PrescreenOutcome(candidate.prescreen_outcome) if candidate.prescreen_outcome else None
+        ),
+        prescreen_notes=candidate.prescreen_notes,
+        expected_salary=candidate.expected_salary,
+        agency_name=candidate.agency_name,
+        notice_period=NoticePeriod(candidate.notice_period) if candidate.notice_period else None,
+        created_by_id=candidate.created_by_id,
+        is_revealed=is_revealed,
+    )
+
+
+async def _is_revealed(session: AsyncSession, candidate_id: uuid.UUID) -> bool:
+    revealed = await IdentityRevealEventRepository(session).list_revealed_candidate_ids(
+        [candidate_id]
+    )
+    return candidate_id in revealed
 
 
 @router.post("", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)
@@ -47,7 +85,8 @@ async def create_candidate(
         source=body.source,
         status=body.status,
     )
-    return CandidateRead.model_validate(candidate)
+    # A brand-new candidate can't have any reveal events yet -- no lookup needed.
+    return _to_candidate_read(candidate, is_revealed=False)
 
 
 @router.get("", response_model=list[CandidateRead])
@@ -75,7 +114,10 @@ async def list_candidates(
         limit=limit,
         offset=offset,
     )
-    return [CandidateRead.model_validate(c) for c in candidates]
+    revealed_ids = await IdentityRevealEventRepository(session).list_revealed_candidate_ids(
+        [c.id for c in candidates]
+    )
+    return [_to_candidate_read(c, is_revealed=c.id in revealed_ids) for c in candidates]
 
 
 @router.get("/{candidate_id}", response_model=CandidateRead)
@@ -89,7 +131,7 @@ async def get_candidate(
     candidate = await CandidateService(session).get_candidate(
         company_id=actor.company_id, candidate_id=candidate_id
     )
-    return CandidateRead.model_validate(candidate)
+    return _to_candidate_read(candidate, is_revealed=await _is_revealed(session, candidate_id))
 
 
 @router.patch("/{candidate_id}", response_model=CandidateRead)
@@ -113,7 +155,7 @@ async def update_candidate(
         agency_name=body.agency_name,
         notice_period=body.notice_period,
     )
-    return CandidateRead.model_validate(candidate)
+    return _to_candidate_read(candidate, is_revealed=await _is_revealed(session, candidate_id))
 
 
 @router.delete("/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -145,7 +187,7 @@ async def upload_resume(
         content_type=file.content_type or "application/octet-stream",
         original_filename=file.filename or "resume",
     )
-    return CandidateRead.model_validate(candidate)
+    return _to_candidate_read(candidate, is_revealed=await _is_revealed(session, candidate_id))
 
 
 @router.get("/{candidate_id}/resume")

@@ -165,7 +165,9 @@ export default function ProjectDetailPage() {
         </>
       )}
 
-      {activeTab === "candidates" && <CandidatesTabSection projectId={project.id} />}
+      {activeTab === "candidates" && (
+        <CandidatesTabSection projectId={project.id} projectTitle={project.title} />
+      )}
 
       {activeTab === "interviews" && <ProjectInterviewsTab projectId={project.id} />}
 
