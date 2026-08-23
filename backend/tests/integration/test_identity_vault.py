@@ -8,11 +8,62 @@ from app.modules.auth import security
 from tests.conftest import CapturingEmailSender
 from tests.integration.helpers import (
     auth_headers,
+    candidate_signup,
     create_project,
     invite_and_accept,
     signup,
     step_up_headers,
 )
+
+_SHADOW_JOB_PAYLOAD = {
+    "title": "Chief Revenue Officer",
+    "summary": "Own revenue strategy and execution.",
+    "description": "A full description of the role and its responsibilities.",
+}
+
+
+async def _create_and_publish_shadow_job(
+    client: AsyncClient, *, headers: dict, project_id: str
+) -> dict:
+    response = await client.post(
+        "/api/v1/shadow-jobs",
+        json={**_SHADOW_JOB_PAYLOAD, "project_id": project_id},
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    job = response.json()
+    publish_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
+    )
+    assert publish_response.status_code == 200, publish_response.text
+    return publish_response.json()
+
+
+async def _apply_with_new_candidate(
+    client: AsyncClient, *, job_id: str, email: str, full_name: str = "Jamie Candidate"
+) -> tuple[dict, dict]:
+    tokens = await candidate_signup(client, email=email, full_name=full_name)
+    candidate_headers = auth_headers(tokens["access_token"])
+    save_response = await client.put(
+        "/api/v1/phantom-passport/me",
+        json={
+            "headline": "Senior Revenue Leader",
+            "summary": "A senior revenue leader.",
+            "personal_info": {"legal_name": full_name},
+            "career_entries": [],
+        },
+        headers=candidate_headers,
+    )
+    assert save_response.status_code == 200, save_response.text
+    approve_response = await client.post(
+        "/api/v1/phantom-passport/me/approve", headers=candidate_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
+    apply_response = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_id}/apply", headers=candidate_headers
+    )
+    assert apply_response.status_code == 201, apply_response.text
+    return apply_response.json(), candidate_headers
 
 
 async def _create_candidate(
@@ -472,6 +523,77 @@ async def test_dashboard_audit_trail_includes_disclosed_fields(client: AsyncClie
     reveals = dashboard.json()["recent_reveals"]
     assert len(reveals) == 1
     assert reveals[0]["disclosed_fields"] == ["full_name"]
+
+
+async def test_shadow_applicant_appears_in_project_vault_list(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@vault-shadow.com", company_name="Vault Shadow Co")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+    job = await _create_and_publish_shadow_job(client, headers=headers, project_id=project["id"])
+    application, _ = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="candidate@vault-shadow.com"
+    )
+
+    response = await client.get(f"/api/v1/identity-vault/projects/{project['id']}", headers=headers)
+    assert response.status_code == 200, response.text
+    items = response.json()
+    shadow_items = [item for item in items if item["source"] == "shadow"]
+    assert len(shadow_items) == 1
+    assert shadow_items[0]["application_id"] == application["id"]
+    assert shadow_items[0]["shadow_job_id"] == job["id"]
+    assert shadow_items[0]["callsign"] == application["callsign"]
+    assert shadow_items[0]["candidate_id"] is None
+    assert shadow_items[0]["vault_populated"] is False
+
+    dashboard = await client.get(
+        f"/api/v1/identity-vault/projects/{project['id']}/dashboard", headers=headers
+    )
+    assert dashboard.status_code == 200, dashboard.text
+    assert dashboard.json()["total_candidates"] == 1
+
+
+async def test_shadow_reveal_approval_appears_in_vault_dashboard(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@vault-shadow-reveal.com")
+    headers = auth_headers(owner["access_token"])
+    project = await create_project(client, headers=headers)
+    job = await _create_and_publish_shadow_job(client, headers=headers, project_id=project["id"])
+    application, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="candidate@vault-shadow-reveal.com"
+    )
+
+    request_response = await client.post(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}/request",
+        json={"reason": "Hiring Manager Interview"},
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert request_response.status_code == 201, request_response.text
+
+    respond_response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application['id']}/respond",
+        json={"approve": True},
+        headers=candidate_headers,
+    )
+    assert respond_response.status_code == 200, respond_response.text
+
+    vault_list = await client.get(
+        f"/api/v1/identity-vault/projects/{project['id']}", headers=headers
+    )
+    assert vault_list.status_code == 200, vault_list.text
+    shadow_item = next(item for item in vault_list.json() if item["source"] == "shadow")
+    assert shadow_item["vault_populated"] is True
+    assert shadow_item["status"] == "revealed"
+
+    dashboard = await client.get(
+        f"/api/v1/identity-vault/projects/{project['id']}/dashboard", headers=headers
+    )
+    assert dashboard.status_code == 200, dashboard.text
+    stats = dashboard.json()
+    shadow_reveals = [r for r in stats["recent_reveals"] if r["source"] == "shadow"]
+    assert len(shadow_reveals) == 1
+    assert shadow_reveals[0]["application_id"] == application["id"]
+    assert shadow_reveals[0]["callsign"] == application["callsign"]
+    assert shadow_reveals[0]["actor_email"] == "owner@vault-shadow-reveal.com"
+    assert stats["active_vault_records"] >= 1
 
 
 async def test_app_auth_role_has_no_grants_on_identity_vault_tables() -> None:

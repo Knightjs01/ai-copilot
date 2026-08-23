@@ -15,14 +15,20 @@ import {
 import { RevealIdentityDialog } from "@/components/candidate/reveal-identity-dialog";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useProjectVault, useVaultDashboard } from "@/lib/queries/identity-vault";
-import { CANDIDATE_STATUS_LABEL, CANDIDATE_STATUS_VARIANT } from "@/lib/status-display";
-import type { VaultListItem } from "@/lib/types";
+import {
+  CANDIDATE_STATUS_LABEL,
+  CANDIDATE_STATUS_VARIANT,
+  SHADOW_APPLICATION_STATUS_LABEL,
+  SHADOW_APPLICATION_STATUS_VARIANT,
+} from "@/lib/status-display";
+import type { CandidateStatus, ShadowApplicationStatus, VaultListItem } from "@/lib/types";
 
 const columnHelper = createColumnHelper<VaultListItem>();
 
@@ -35,26 +41,41 @@ export function IdentityVaultTab({ projectId }: { projectId: string }) {
     () => [
       columnHelper.accessor("callsign", {
         header: "Callsign",
-        cell: (info) => (
-          <Link
-            href={`/projects/${projectId}/candidates/${info.row.original.candidate_id}`}
-            className="font-medium text-foreground hover:underline"
-          >
-            {info.getValue()}
-          </Link>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          const href =
+            row.source === "ats"
+              ? `/projects/${projectId}/candidates/${row.candidate_id}`
+              : `/shadow-jobs/${row.shadow_job_id}/applicants/${row.application_id}`;
+          return (
+            <Link href={href} className="font-medium text-foreground hover:underline">
+              {info.getValue()}
+            </Link>
+          );
+        },
       }),
       columnHelper.accessor("candidate_ref", {
         header: "Candidate ID",
-        cell: (info) => <span className="text-muted-foreground">{info.getValue()}</span>,
+        cell: (info) => (
+          <span className="text-muted-foreground">{info.getValue() ?? "—"}</span>
+        ),
       }),
       columnHelper.accessor("status", {
         header: "Status",
-        cell: (info) => (
-          <Badge variant={CANDIDATE_STATUS_VARIANT[info.getValue()]}>
-            {CANDIDATE_STATUS_LABEL[info.getValue()]}
-          </Badge>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return row.source === "ats" ? (
+            <Badge variant={CANDIDATE_STATUS_VARIANT[info.getValue() as CandidateStatus]}>
+              {CANDIDATE_STATUS_LABEL[info.getValue() as CandidateStatus]}
+            </Badge>
+          ) : (
+            <Badge
+              variant={SHADOW_APPLICATION_STATUS_VARIANT[info.getValue() as ShadowApplicationStatus]}
+            >
+              {SHADOW_APPLICATION_STATUS_LABEL[info.getValue() as ShadowApplicationStatus]}
+            </Badge>
+          );
+        },
       }),
       columnHelper.accessor("vault_populated", {
         header: "Vault",
@@ -68,11 +89,22 @@ export function IdentityVaultTab({ projectId }: { projectId: string }) {
       columnHelper.display({
         id: "actions",
         header: "",
-        cell: (info) => (
-          <div className="flex justify-end">
-            <RevealIdentityDialog candidateId={info.row.original.candidate_id} />
-          </div>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex justify-end">
+              {row.source === "ats" ? (
+                <RevealIdentityDialog candidateId={row.candidate_id as string} />
+              ) : (
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href={`/shadow-jobs/${row.shadow_job_id}/applicants/${row.application_id}`}>
+                    {row.vault_populated ? "View revealed identity" : "Open workspace"}
+                  </Link>
+                </Button>
+              )}
+            </div>
+          );
+        },
       }),
     ],
     [projectId]
@@ -173,7 +205,9 @@ export function IdentityVaultTab({ projectId }: { projectId: string }) {
                 <div key={event.id} className="flex flex-col gap-0.5 py-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">
-                      {event.actor_email} viewed identity · {event.callsign}
+                      {event.source === "ats"
+                        ? `${event.actor_email} viewed identity · ${event.callsign}`
+                        : `${event.actor_email}'s reveal request was approved · ${event.callsign}`}
                     </span>
                     <RelativeTime date={event.revealed_at} className="text-xs text-muted-foreground" />
                   </div>

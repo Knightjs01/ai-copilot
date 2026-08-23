@@ -349,9 +349,7 @@ async def test_dashboard_flags_revealed_applicant_needing_interview_arranged(
 
     response = await client.get("/api/v1/dashboard", headers=headers)
     assert response.status_code == 200, response.text
-    items = [
-        i for i in response.json()["action_items"] if i["type"] == "needs_interview_arranged"
-    ]
+    items = [i for i in response.json()["action_items"] if i["type"] == "needs_interview_arranged"]
     assert len(items) == 1
     item = items[0]
     assert item["shadow_job_id"] == job["id"]
@@ -406,7 +404,5 @@ async def test_dashboard_interview_arranged_item_excludes_declined_and_rejected(
 
     response = await client.get("/api/v1/dashboard", headers=headers)
     assert response.status_code == 200, response.text
-    items = [
-        i for i in response.json()["action_items"] if i["type"] == "needs_interview_arranged"
-    ]
+    items = [i for i in response.json()["action_items"] if i["type"] == "needs_interview_arranged"]
     assert items == []

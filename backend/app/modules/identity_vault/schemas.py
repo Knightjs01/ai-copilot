@@ -4,7 +4,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.core.disclosure import DisclosureLevel, IdentityField
-from app.modules.candidates.models import CandidateStatus
 
 
 class VaultFieldsUpdate(BaseModel):
@@ -53,25 +52,42 @@ class RevealCloseRequest(BaseModel):
 
 
 class VaultListItem(BaseModel):
-    candidate_id: uuid.UUID
+    """Covers both an ATS-added Candidate (identity_vault's own reveal flow) and a Shadow
+    marketplace applicant on this project's linked Shadow Job (shadow_reveal's consent-gated
+    flow) -- two structurally different identity systems, unified here only so an Owner has one
+    place to see every real person attached to this project, matching the same merge already
+    applied to the project's Candidates tab. `source` tells the frontend which reveal mechanism
+    (and which route) applies to this row."""
+
+    source: str  # "ats" | "shadow"
+    candidate_id: uuid.UUID | None = None
+    application_id: uuid.UUID | None = None
+    shadow_job_id: uuid.UUID | None = None
     callsign: str
-    candidate_ref: str
-    status: CandidateStatus
+    candidate_ref: str | None = None
+    status: str
     vault_populated: bool
 
 
 class RevealEventRead(BaseModel):
+    """Same ATS/Shadow merge as VaultListItem, applied to the audit trail -- only real reveals
+    (identity actually disclosed), never a pending or declined Shadow request, matching this
+    tab's stated promise that everything listed here is an actual disclosure event."""
+
     id: uuid.UUID
-    candidate_id: uuid.UUID
+    source: str  # "ats" | "shadow"
+    candidate_id: uuid.UUID | None = None
+    application_id: uuid.UUID | None = None
+    shadow_job_id: uuid.UUID | None = None
     callsign: str
-    candidate_ref: str
+    candidate_ref: str | None = None
     actor_email: str
     reason: str
     disclosure_level: DisclosureLevel
-    disclosed_fields: list[IdentityField] | None = None
+    disclosed_fields: list[str] | None = None
     revealed_at: datetime
-    closed_at: datetime | None
-    duration_seconds: int | None
+    closed_at: datetime | None = None
+    duration_seconds: int | None = None
 
 
 class VaultDashboardStats(BaseModel):

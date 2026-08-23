@@ -270,23 +270,34 @@ export interface CandidateIdentitySnapshot {
   original_cv_status: string;
 }
 
+// Covers both an ATS-added Candidate and a Shadow marketplace applicant on this project's
+// linked Shadow Job -- two different identity systems, merged here so the Vault tab shows every
+// real person attached to this project. `source` says which reveal mechanism/route applies.
+export type VaultItemSource = "ats" | "shadow";
+
 export interface VaultListItem {
-  candidate_id: string;
+  source: VaultItemSource;
+  candidate_id: string | null;
+  application_id: string | null;
+  shadow_job_id: string | null;
   callsign: string;
-  candidate_ref: string;
-  status: CandidateStatus;
+  candidate_ref: string | null;
+  status: CandidateStatus | ShadowApplicationStatus | string;
   vault_populated: boolean;
 }
 
 export interface RevealEventRead {
   id: string;
-  candidate_id: string;
+  source: VaultItemSource;
+  candidate_id: string | null;
+  application_id: string | null;
+  shadow_job_id: string | null;
   callsign: string;
-  candidate_ref: string;
+  candidate_ref: string | null;
   actor_email: string;
   reason: string;
   disclosure_level: DisclosureLevel;
-  disclosed_fields: IdentityField[] | null;
+  disclosed_fields: string[] | null;
   revealed_at: string;
   closed_at: string | null;
   duration_seconds: number | null;

@@ -73,7 +73,9 @@ async def test_get_applicant_404_wrong_job_application_pairing(client: AsyncClie
     job_b_response = await client.post("/api/v1/shadow-jobs", json=job_b_payload, headers=headers)
     assert job_b_response.status_code == 201
     job_b = job_b_response.json()
-    publish_b = await client.post(f"/api/v1/shadow-jobs/mine/{job_b['id']}/publish", headers=headers)
+    publish_b = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job_b['id']}/publish", headers=headers
+    )
     assert publish_b.status_code == 200
 
     application, _ = await _apply_with_new_candidate(

@@ -10,7 +10,6 @@ from app.core.disclosure import IDENTITY_TIER_FIELDS, DisclosureLevel, IdentityF
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
 from app.modules.auth.models import User
-from app.modules.candidates.models import CandidateStatus
 from app.modules.candidates.repository import CandidateRepository
 from app.modules.identity_vault.exceptions import (
     CallsignGenerationExhaustedError,
@@ -30,6 +29,9 @@ from app.modules.identity_vault.schemas import (
     VaultListItem,
 )
 from app.modules.projects.service import ProjectService
+from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
+from app.modules.shadow_reveal.models import RevealRequestStatus
+from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 
 _CALLSIGN_WORDS = [
     "Ghost", "Echo", "Shadow", "Phantom", "Nova", "Cipher", "Vector", "Pulse",
@@ -47,6 +49,9 @@ class IdentityVaultService:
         self._candidates_repo = CandidateRepository(session)
         self._projects = ProjectService(session)
         self._audit = AuditService(session)
+        self._shadow_jobs = ShadowJobRepository(session)
+        self._shadow_applications = ShadowApplicationRepository(session)
+        self._shadow_reveal_requests = ShadowRevealRequestRepository(session)
 
     async def generate_callsign(self, *, project_id: uuid.UUID) -> str:
         for _ in range(_MAX_CALLSIGN_ATTEMPTS):
@@ -226,7 +231,7 @@ class IdentityVaultService:
         vaults_by_candidate = {
             v.candidate_id: v for v in await self._vaults.list_by_project_id(project_id)
         }
-        items = []
+        items: list[VaultListItem] = []
         for candidate in candidates:
             vault = vaults_by_candidate.get(candidate.id)
             vault_populated = vault is not None and any(
@@ -241,12 +246,32 @@ class IdentityVaultService:
             )
             items.append(
                 VaultListItem(
+                    source="ats",
                     candidate_id=candidate.id,
                     callsign=candidate.callsign,
                     candidate_ref=candidate.candidate_ref,
-                    status=CandidateStatus(candidate.status),
+                    status=candidate.status,
                     vault_populated=vault_populated,
                 )
+            )
+
+        # This project's Shadow marketplace applicants -- a genuinely different identity system
+        # (consent-gated, see shadow_reveal/__init__.py), but the same real person attached to
+        # this project, and an Owner auditing "who can see what" needs to see them here too.
+        # Mirrors the merge already applied to the project's Candidates tab.
+        shadow_job = await self._shadow_jobs.get_by_project_id(project_id)
+        if shadow_job is not None:
+            applications = await self._shadow_applications.list_by_job(shadow_job.id)
+            items.extend(
+                VaultListItem(
+                    source="shadow",
+                    application_id=application.id,
+                    shadow_job_id=shadow_job.id,
+                    callsign=application.callsign,
+                    status=application.status,
+                    vault_populated=application.status == "revealed",
+                )
+                for application in applications
             )
         return items
 
@@ -269,9 +294,10 @@ class IdentityVaultService:
             actor = await self._session.get(User, event.actor_user_id)
             actor_emails[event.actor_user_id] = actor.email if actor else "Unknown"
 
-        recent_reveals = [
+        recent_reveals: list[RevealEventRead] = [
             RevealEventRead(
                 id=e.id,
+                source="ats",
                 candidate_id=e.candidate_id,
                 callsign=candidates_by_id[e.candidate_id].callsign,
                 candidate_ref=candidates_by_id[e.candidate_id].candidate_ref,
@@ -280,9 +306,7 @@ class IdentityVaultService:
                 ),
                 reason=e.reason,
                 disclosure_level=DisclosureLevel(e.disclosure_level),
-                disclosed_fields=(
-                    [IdentityField(f) for f in e.disclosed_fields] if e.disclosed_fields else None
-                ),
+                disclosed_fields=e.disclosed_fields,
                 revealed_at=e.created_at,
                 closed_at=e.closed_at,
                 duration_seconds=e.duration_seconds,
@@ -291,12 +315,54 @@ class IdentityVaultService:
             if e.candidate_id in candidates_by_id
         ]
 
+        # Same ATS/Shadow merge as list_vault_for_project -- a Shadow reveal only ever becomes a
+        # real disclosure event once the candidate approves; pending/declined requests aren't
+        # "reveals" in the sense this dashboard tracks, so only approved ones count here.
+        shadow_reveal_count = 0
+        shadow_job = await self._shadow_jobs.get_by_project_id(project_id)
+        shadow_applicant_count = 0
+        if shadow_job is not None:
+            applications = await self._shadow_applications.list_by_job(shadow_job.id)
+            shadow_applicant_count = len(applications)
+            applications_by_id = {a.id: a for a in applications}
+            reveal_requests = await self._shadow_reveal_requests.list_by_application_ids(
+                [a.id for a in applications]
+            )
+            for request in reveal_requests:
+                if request.status != RevealRequestStatus.APPROVED.value:
+                    continue
+                shadow_reveal_count += 1
+                application = applications_by_id.get(request.shadow_application_id)
+                if application is None or request.responded_at is None:
+                    continue
+                recent_reveals.append(
+                    RevealEventRead(
+                        id=request.id,
+                        source="shadow",
+                        application_id=application.id,
+                        shadow_job_id=shadow_job.id,
+                        callsign=application.callsign,
+                        actor_email=await self._actor_email(request.requested_by_user_id),
+                        reason=request.reason or "Not specified",
+                        disclosure_level=DisclosureLevel(request.disclosure_level or "full"),
+                        disclosed_fields=request.disclosed_fields,
+                        revealed_at=request.responded_at,
+                    )
+                )
+        recent_reveals.sort(key=lambda r: r.revealed_at, reverse=True)
+
         return VaultDashboardStats(
-            total_candidates=len(candidates),
-            active_vault_records=len(vault_records),
-            reveal_event_count=len(events),
-            recent_reveals=recent_reveals,
+            total_candidates=len(candidates) + shadow_applicant_count,
+            active_vault_records=len(vault_records) + shadow_reveal_count,
+            reveal_event_count=len(events) + shadow_reveal_count,
+            recent_reveals=recent_reveals[:20],
         )
+
+    async def _actor_email(self, user_id: uuid.UUID | None) -> str:
+        if user_id is None:
+            return "Unknown"
+        actor = await self._session.get(User, user_id)
+        return actor.email if actor else "Unknown"
 
     async def delete_by_candidate_ids(self, candidate_ids: list[uuid.UUID]) -> None:
         await self._vaults.delete_by_candidate_ids(candidate_ids)
