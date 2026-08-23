@@ -74,6 +74,11 @@ export function HeroSection() {
             alt="Phantom Passport, Shadow, Phantom ATS, and Phantom AI working together around the Phantom ghost"
             width={1536}
             height={1024}
+            // Rendered box is at most max-w-xl (36rem/576px), so without an explicit sizes hint
+            // Next.js was picking a smaller srcset candidate and recompressing at the default
+            // quality (75) -- both compound into soft text on this graphic's dense, bold labels.
+            sizes="(max-width: 640px) 100vw, 576px"
+            quality={95}
             className="relative w-full max-w-xl animate-float"
             priority
           />
