@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Archive, Building2, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Building2, ShieldCheck, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
@@ -9,8 +9,9 @@ import { useAuth } from "@/lib/auth-context";
 export default function SettingsHubPage() {
   const { hasPermission } = useAuth();
   const canManageCompany = hasPermission("company.manage_settings");
-  const canViewHistoricVault = hasPermission("historic_vault.view");
 
+  // Project Vault moved to the sidebar's own "Data" group -- no longer listed here, to avoid
+  // showing the same destination in two places (see sidebar.tsx).
   const items = [
     { title: "Team", description: "Manage teammates, roles, and invitations.", href: "/team", icon: Users, visible: true },
     {
@@ -26,13 +27,6 @@ export default function SettingsHubPage() {
       href: "/security",
       icon: ShieldCheck,
       visible: true,
-    },
-    {
-      title: "Historic Vault",
-      description: "Audit log of purged projects and destroyed data.",
-      href: "/historic-vault",
-      icon: Archive,
-      visible: canViewHistoricVault,
     },
   ].filter((item) => item.visible);
 

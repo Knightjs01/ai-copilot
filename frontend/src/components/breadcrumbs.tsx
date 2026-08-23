@@ -16,8 +16,9 @@ interface Crumb {
 }
 
 // Static top-level destinations, each with the parent hub it belongs to under the new IA (Talent
-// Pool/Phantom Smart Talent live under Discover Talent; Team/Company/Security/Historic Vault live
-// under Settings) -- purely presentational, no routing change.
+// Pool/Phantom Smart Talent live under Discover Talent; Team/Company/Security live under Settings;
+// Project Vault is its own flat entry, reached from the sidebar's Data group) -- purely
+// presentational, no routing change.
 const STATIC_CRUMBS: Record<string, Crumb[]> = {
   "/home": [{ label: "Home" }],
   "/projects": [{ label: "Jobs" }],
@@ -34,7 +35,7 @@ const STATIC_CRUMBS: Record<string, Crumb[]> = {
   "/team": [{ label: "Settings", href: "/settings" }, { label: "Team" }],
   "/company": [{ label: "Settings", href: "/settings" }, { label: "Company Profile" }],
   "/security": [{ label: "Settings", href: "/settings" }, { label: "Security" }],
-  "/historic-vault": [{ label: "Settings", href: "/settings" }, { label: "Historic Vault" }],
+  "/historic-vault": [{ label: "Project Vault" }],
   "/shadow-jobs": [{ label: "Jobs", href: "/projects" }, { label: "Shadow Jobs" }],
 };
 

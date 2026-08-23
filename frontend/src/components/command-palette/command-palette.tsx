@@ -40,7 +40,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Team", href: "/team", icon: Users },
   { label: "Security", href: "/security", icon: ShieldCheck },
-  { label: "Historic Vault", href: "/historic-vault", icon: Archive, permission: "historic_vault.view" },
+  { label: "Project Vault", href: "/historic-vault", icon: Archive, permission: "historic_vault.view" },
   { label: "Shadow Jobs", href: "/shadow-jobs", icon: LayoutGrid, permission: "shadow_jobs.view" },
   {
     label: "Phantom Smart Talent",

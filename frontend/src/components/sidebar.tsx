@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
+  Archive,
   BarChart3,
   Briefcase,
   ChevronsLeft,
@@ -40,12 +41,52 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
     { label: "Candidates", href: "/pipeline", icon: Users, permission: "candidates.view" },
     { label: "Discover Talent", href: "/phantom-ai", icon: Sparkles },
     { label: "Interviews", href: "/interviews", icon: Video, permission: "interviews.view" },
+  ];
+
+  // A separate, lower group -- reporting/governance destinations, not day-to-day hiring work.
+  // Project Vault is the same real audit/purge-log page previously reachable only from Settings
+  // (route and historic_vault.view permission code unchanged -- label-only rename, matching this
+  // app's established "rename the word, not the route" convention).
+  const dataItems: NavItem[] = [
     { label: "Analytics", href: "/analytics", icon: BarChart3 },
+    { label: "Project Vault", href: "/historic-vault", icon: Archive, permission: "historic_vault.view" },
   ];
 
   const visibleItems = items.filter((item) => !item.permission || hasPermission(item.permission));
+  const visibleDataItems = dataItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
+
+  const renderNavItem = (item: NavItem) => {
+    const active = isActive(item.href);
+    const link = (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          collapsed && "justify-center px-0",
+          active
+            ? "bg-brand/10 text-brand"
+            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        {!collapsed && item.label}
+      </Link>
+    );
+    if (!collapsed) return link;
+    return (
+      <Tooltip key={item.href}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent container={container} side="right">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -80,34 +121,19 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-          {visibleItems.map((item) => {
-            const active = isActive(item.href);
-            const link = (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-0",
-                  active
-                    ? "bg-brand/10 text-brand"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && item.label}
-              </Link>
-            );
-            if (!collapsed) return link;
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent container={container} side="right">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
+          {visibleItems.map((item) => renderNavItem(item))}
+
+          {visibleDataItems.length > 0 && (
+            <>
+              {!collapsed && (
+                <p className="mt-4 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Data
+                </p>
+              )}
+              {collapsed && <div className="my-2 border-t border-border" />}
+              {visibleDataItems.map((item) => renderNavItem(item))}
+            </>
+          )}
         </nav>
 
         <div className="flex flex-col gap-2 border-t border-border p-3">
