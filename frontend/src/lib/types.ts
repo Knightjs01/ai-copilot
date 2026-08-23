@@ -93,6 +93,15 @@ export interface Project {
   salary_max: number | null;
 }
 
+// Resource-level access grant, not a role -- a non-org-wide teammate (e.g. Hiring Manager) can
+// only see/act on a project if a row exists here for them. Carries no name/email/role of its own;
+// callers cross-reference user_id against the already-fetched team roster (see useTeam()).
+export interface ProjectMember {
+  id: string;
+  project_id: string;
+  user_id: string;
+}
+
 // A preview only -- nothing here is persisted until saved via PATCH /projects/{id}. See
 // CvParseResult for the identical convention this mirrors on the candidate side.
 export interface JdUploadResult {

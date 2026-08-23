@@ -3,7 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
-import type { JdUploadResult, Project, ProjectActivityEntry, ProjectStatus } from "@/lib/types";
+import type {
+  JdUploadResult,
+  Project,
+  ProjectActivityEntry,
+  ProjectMember,
+  ProjectStatus,
+} from "@/lib/types";
 
 export function useProjects() {
   return useQuery({
@@ -92,6 +98,36 @@ export function useProjectActivity(projectId: string | undefined) {
     queryKey: ["projects", projectId, "activity"],
     queryFn: () => apiClient.get<ProjectActivityEntry[]>(`/projects/${projectId}/activity`),
     enabled: !!projectId,
+  });
+}
+
+export function useProjectMembers(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ["projects", projectId, "members"],
+    queryFn: () => apiClient.get<ProjectMember[]>(`/projects/${projectId}/members`),
+    enabled: !!projectId,
+  });
+}
+
+export function useAddProjectMember(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiClient.post<ProjectMember>(`/projects/${projectId}/members`, { user_id: userId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "members"] });
+    },
+  });
+}
+
+export function useRemoveProjectMember(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiClient.delete<void>(`/projects/${projectId}/members/${userId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "members"] });
+    },
   });
 }
 

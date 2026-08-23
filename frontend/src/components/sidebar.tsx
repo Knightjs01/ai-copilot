@@ -12,6 +12,7 @@ import {
   ChevronsRight,
   Home,
   Sparkles,
+  UserCog,
   Users,
   Video,
 } from "lucide-react";
@@ -41,6 +42,7 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
     { label: "Candidates", href: "/pipeline", icon: Users, permission: "candidates.view" },
     { label: "Discover Talent", href: "/phantom-ai", icon: Sparkles },
     { label: "Interviews", href: "/interviews", icon: Video, permission: "interviews.view" },
+    { label: "Hiring Team", href: "/hiring-team", icon: UserCog, permission: "projects.view" },
   ];
 
   // A separate, lower group -- reporting/governance destinations, not day-to-day hiring work.

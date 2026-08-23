@@ -29,6 +29,7 @@ const STATIC_CRUMBS: Record<string, Crumb[]> = {
     { label: "Phantom Smart Talent" },
   ],
   "/interviews": [{ label: "Interviews" }],
+  "/hiring-team": [{ label: "Hiring Team" }],
   "/phantom-ai": [{ label: "Discover Talent" }],
   "/analytics": [{ label: "Analytics" }],
   "/settings": [{ label: "Settings" }],
