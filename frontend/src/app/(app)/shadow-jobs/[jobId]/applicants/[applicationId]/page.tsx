@@ -201,12 +201,20 @@ export default function CandidateWorkspacePage() {
         <CardContent className="flex flex-col gap-4 py-5">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div className="flex items-start gap-3">
-              <Avatar name={identity?.full_name ?? profile.callsign} className="h-11 w-11 text-sm" />
+              <Avatar
+                name={identity?.full_name ?? profile.revealed_full_name ?? profile.callsign}
+                className="h-11 w-11 text-sm"
+              />
               <div className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-baseline gap-2">
                   <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                    {identity?.full_name ?? profile.callsign}
+                    {identity?.full_name ?? profile.revealed_full_name ?? profile.callsign}
                   </h1>
+                  {(identity?.full_name ?? profile.revealed_full_name) && (
+                    <span className="text-sm text-muted-foreground">{profile.callsign}</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   {match && (
                     <Badge variant={MATCH_TIER_VARIANT[match.match_tier]}>
                       {match.match_score}% Match
@@ -237,18 +245,20 @@ export default function CandidateWorkspacePage() {
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <AnonymizedCvDialog profile={profile} identity={identity} />
               {isRevealable ? (
-                identity ? (
-                  <Badge variant="success">Identity revealed</Badge>
-                ) : (
+                !identity && (
                   <Button
                     type="button"
-                    variant="brand"
+                    variant={profile.revealed_full_name ? "secondary" : "brand"}
                     size="sm"
                     onClick={() => setStepUpOpen(true)}
                     disabled={fetchIdentity.isPending}
                   >
                     <Eye className="h-3.5 w-3.5" />
-                    {fetchIdentity.isPending ? "Verifying…" : "Reveal Identity"}
+                    {fetchIdentity.isPending
+                      ? "Verifying…"
+                      : profile.revealed_full_name
+                        ? "Load full employer history"
+                        : "Reveal Identity"}
                   </Button>
                 )
               ) : profile.status === "submitted" || profile.status === "under_review" ? (
@@ -263,6 +273,7 @@ export default function CandidateWorkspacePage() {
                   jobId={params.jobId}
                   applicationId={profile.application_id}
                   callsign={profile.callsign}
+                  displayName={identity?.full_name ?? profile.revealed_full_name ?? undefined}
                 />
               )}
               {hasPermission("messages.view") && (
@@ -281,14 +292,25 @@ export default function CandidateWorkspacePage() {
             </div>
           </div>
 
-          {identity && (identity.email || identity.phone) && (
+          {(identity?.email ??
+            profile.revealed_email ??
+            identity?.phone ??
+            profile.revealed_phone) && (
             <div className="flex flex-col gap-1 rounded-xl border border-success/30 bg-success/5 p-3">
               <div className="flex items-center gap-1.5 text-sm font-medium text-success">
                 <Eye className="h-3.5 w-3.5" />
                 Contact details
               </div>
-              {identity.email && <p className="text-sm text-foreground">{identity.email}</p>}
-              {identity.phone && <p className="text-sm text-foreground">{identity.phone}</p>}
+              {(identity?.email ?? profile.revealed_email) && (
+                <p className="text-sm text-foreground">
+                  {identity?.email ?? profile.revealed_email}
+                </p>
+              )}
+              {(identity?.phone ?? profile.revealed_phone) && (
+                <p className="text-sm text-foreground">
+                  {identity?.phone ?? profile.revealed_phone}
+                </p>
+              )}
             </div>
           )}
 
@@ -370,9 +392,9 @@ export default function CandidateWorkspacePage() {
           <PassportCard
             callsign={profile.callsign}
             headline={profile.headline}
-            revealedName={identity?.full_name}
+            revealedName={identity?.full_name ?? profile.revealed_full_name}
             footnote={
-              identity
+              identity ?? profile.revealed_full_name
                 ? "This candidate approved your Reveal Request — their real name is shown above."
                 : "This is the identity this candidate is shown as until they personally approve a Reveal Request."
             }
@@ -425,8 +447,8 @@ export default function CandidateWorkspacePage() {
       <StepUpDialog
         open={stepUpOpen}
         onOpenChange={setStepUpOpen}
-        title="Confirm it's you"
-        description="Viewing a revealed identity is a high-risk action — re-enter your password to continue."
+        title="Reveal candidate identity"
+        description={`${profile.callsign} has chosen to allow their identity to be revealed for this hiring process. Authorised members of your team will be able to see their identity and contact information from now on. This will be recorded in the application activity history.${job?.title ? ` Scope: ${job.title}.` : ""}`}
         onVerified={handleVerified}
       />
     </div>
@@ -591,6 +613,7 @@ function OverviewTab({
                 jobId={jobId}
                 applicationId={profile.application_id}
                 callsign={profile.callsign}
+                displayName={profile.revealed_full_name ?? undefined}
               />
             </div>
           )}

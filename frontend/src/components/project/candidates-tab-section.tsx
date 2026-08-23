@@ -37,7 +37,11 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
     if (!shadowApplicants) return [];
     const query = search.trim().toLowerCase();
     if (query.length === 0) return shadowApplicants;
-    return shadowApplicants.filter((applicant) => applicant.callsign.toLowerCase().includes(query));
+    return shadowApplicants.filter(
+      (applicant) =>
+        applicant.callsign.toLowerCase().includes(query) ||
+        (applicant.revealed_full_name?.toLowerCase().includes(query) ?? false)
+    );
   }, [shadowApplicants, search]);
 
   if (isLoading) {

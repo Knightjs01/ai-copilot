@@ -119,3 +119,11 @@ class ShadowApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     viewed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
+    # Populated exactly once, by ShadowRevealService.get_revealed_identity on the first
+    # successful step-up-gated reveal -- the single authoritative source every other surface
+    # (Kanban, applicant list, workspace, Passport, messages, interviews) reads from afterward,
+    # instead of each needing its own step-up-gated decrypt. NULL means never revealed (or
+    # revealed but a field wasn't part of the approved disclosure). See migration 0055.
+    revealed_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    revealed_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    revealed_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)

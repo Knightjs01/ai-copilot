@@ -80,11 +80,14 @@ export function ApplicantCard({
                 href={`/shadow-jobs/${jobId}/applicants/${profile.application_id}`}
                 className="hover:underline"
               >
-                {profile.callsign}
+                {profile.revealed_full_name ?? profile.callsign}
               </Link>
               {profile.is_new && <Badge variant="success">New application</Badge>}
               {profile.reveal_response_is_new && <Badge variant="info">Reveal response</Badge>}
             </h3>
+            {profile.revealed_full_name && (
+              <p className="text-xs text-muted-foreground">{profile.callsign}</p>
+            )}
             {profile.headline && (
               <p className="text-sm text-muted-foreground">{profile.headline}</p>
             )}
@@ -124,23 +127,43 @@ export function ApplicantCard({
           </div>
         )}
 
-        {identity ? (
+        {profile.revealed_full_name || identity ? (
           <div className="flex flex-col gap-1 rounded-xl border border-success/30 bg-success/5 p-3">
             <div className="flex items-center gap-1.5 text-sm font-medium text-success">
               <Eye className="h-3.5 w-3.5" />
               Identity revealed
             </div>
-            {identity.full_name && (
-              <p className="text-sm text-foreground">{identity.full_name}</p>
+            <p className="text-sm text-foreground">
+              {profile.revealed_full_name ?? identity?.full_name}
+            </p>
+            {(profile.revealed_email ?? identity?.email) && (
+              <p className="text-sm text-muted-foreground">
+                {profile.revealed_email ?? identity?.email}
+              </p>
             )}
-            {identity.email && <p className="text-sm text-muted-foreground">{identity.email}</p>}
-            {identity.phone && <p className="text-sm text-muted-foreground">{identity.phone}</p>}
-            {identity.career_entries.map((entry, i) => (
+            {(profile.revealed_phone ?? identity?.phone) && (
+              <p className="text-sm text-muted-foreground">
+                {profile.revealed_phone ?? identity?.phone}
+              </p>
+            )}
+            {identity?.career_entries.map((entry, i) => (
               <p key={i} className="text-xs text-muted-foreground">
                 {entry.title} · {entry.company_name}
                 {entry.is_current ? " (current)" : ""}
               </p>
             ))}
+            {!identity && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="mt-1 w-fit"
+                onClick={() => setStepUpOpen(true)}
+                disabled={fetchIdentity.isPending}
+              >
+                {fetchIdentity.isPending ? "Verifying…" : "Load full employer history"}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="flex justify-end">
@@ -153,7 +176,7 @@ export function ApplicantCard({
                 disabled={fetchIdentity.isPending}
               >
                 <Eye className="h-3.5 w-3.5" />
-                {fetchIdentity.isPending ? "Verifying…" : "View revealed identity"}
+                {fetchIdentity.isPending ? "Verifying…" : "Reveal Identity"}
               </Button>
             ) : profile.status === "submitted" || profile.status === "under_review" ? (
               <RequestRevealDialog
@@ -202,6 +225,7 @@ export function ApplicantCard({
                   jobId={jobId}
                   applicationId={profile.application_id}
                   callsign={profile.callsign}
+                  displayName={profile.revealed_full_name ?? undefined}
                 />
               </div>
             )}
@@ -224,8 +248,8 @@ export function ApplicantCard({
       <StepUpDialog
         open={stepUpOpen}
         onOpenChange={setStepUpOpen}
-        title="Confirm it's you"
-        description="Viewing a revealed identity is a high-risk action — re-enter your password to continue."
+        title="Reveal candidate identity"
+        description={`${profile.callsign} has chosen to allow their identity to be revealed for this hiring process. Authorised members of your team will be able to see their identity and contact information from now on. This will be recorded in the application activity history.`}
         onVerified={handleVerified}
       />
     </Card>

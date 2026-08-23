@@ -253,7 +253,11 @@ class MessageService:
             MessageRead(
                 id=m.id,
                 sender_type=m.sender_type,  # type: ignore[arg-type]
-                sender_label=application.callsign if m.sender_type == "candidate" else company_name,
+                sender_label=(
+                    (application.revealed_full_name or application.callsign)
+                    if m.sender_type == "candidate"
+                    else company_name
+                ),
                 body=m.body,
                 created_at=m.created_at,
                 is_mine=(m.sender_type == "candidate") == viewer_is_candidate,

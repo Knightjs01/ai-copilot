@@ -118,9 +118,13 @@ const columns = [
           row.kind === "candidate"
             ? `/projects/${row.candidate.project_id}/candidates/${row.candidate.id}`
             : `/shadow-jobs/${row.applicant.shadow_job_id}/applicants/${row.applicant.application_id}`;
+        const revealedName = row.kind === "shadow" ? row.applicant.revealed_full_name : null;
         return (
           <Link href={href} className="font-medium text-foreground hover:underline">
-            {info.getValue()}
+            {revealedName ?? info.getValue()}
+            {revealedName && (
+              <span className="ml-1.5 font-normal text-muted-foreground">{info.getValue()}</span>
+            )}
           </Link>
         );
       },

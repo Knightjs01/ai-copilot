@@ -509,3 +509,222 @@ async def test_reveal_response_is_unseen_until_applicant_card_is_opened(
         f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
     )
     assert seen_again.json()[0]["reveal_response_is_new"] is False
+
+
+async def _request_and_approve_reveal(
+    client: AsyncClient,
+    *,
+    job_id: str,
+    application_id: str,
+    headers: dict,
+    candidate_headers: dict,
+    disclosure_level: str = "full",
+) -> None:
+    request_response = await client.post(
+        f"/api/v1/shadow-reveal/mine/{job_id}/applicants/{application_id}/request",
+        json={"reason": "Ready to move forward"},
+        headers=headers,
+    )
+    assert request_response.status_code == 201, request_response.text
+    respond_response = await client.post(
+        f"/api/v1/shadow-reveal/applications/me/{application_id}/respond",
+        json={"approve": True, "disclosure_level": disclosure_level},
+        headers=candidate_headers,
+    )
+    assert respond_response.status_code == 200, respond_response.text
+
+
+async def test_first_reveal_persists_identity_onto_the_application(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowreveal-persist.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client,
+        job_id=job["id"],
+        email="applicant@shadowreveal-persist.com",
+        full_name="Persisted Applicant",
+    )
+    await _request_and_approve_reveal(
+        client,
+        job_id=job["id"],
+        application_id=application["id"],
+        headers=headers,
+        candidate_headers=candidate_headers,
+    )
+
+    revealed_response = await client.get(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert revealed_response.status_code == 200, revealed_response.text
+    assert revealed_response.json()["full_name"] == "Persisted Applicant"
+
+    # The persisted fields must now be readable straight off the applicant list -- no repeated
+    # step-up, no repeated decrypt.
+    applicants = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    assert applicants.status_code == 200, applicants.text
+    profile = applicants.json()[0]
+    assert profile["revealed_full_name"] == "Persisted Applicant"
+    assert profile["revealed_email"] == "applicant@shadowreveal-persist.com"
+    assert profile["revealed_phone"] == "+44 20 7946 0958"
+
+    activity_response = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application['id']}/activity",
+        headers=headers,
+    )
+    assert activity_response.status_code == 200, activity_response.text
+    actions = [entry["action"] for entry in activity_response.json()]
+    assert actions.count("shadow_reveal.identity_viewed") == 1
+
+
+async def test_second_reveal_view_does_not_re_persist_or_re_log(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowreveal-idempotent.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client, job_id=job["id"], email="applicant@shadowreveal-idempotent.com"
+    )
+    await _request_and_approve_reveal(
+        client,
+        job_id=job["id"],
+        application_id=application["id"],
+        headers=headers,
+        candidate_headers=candidate_headers,
+    )
+
+    step_up = await step_up_headers(client, headers=headers)
+    first = await client.get(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}", headers=step_up
+    )
+    assert first.status_code == 200, first.text
+
+    second = await client.get(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["full_name"] == first.json()["full_name"]
+
+    activity_response = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants/{application['id']}/activity",
+        headers=headers,
+    )
+    actions = [entry["action"] for entry in activity_response.json()]
+    assert actions.count("shadow_reveal.identity_viewed") == 1
+
+
+async def test_basic_disclosure_only_persists_name(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@shadowreveal-persist-basic.com")
+    headers = auth_headers(owner["access_token"])
+    job = await _create_and_publish_job(client, headers=headers)
+    application, candidate_headers = await _apply_with_new_candidate(
+        client,
+        job_id=job["id"],
+        email="applicant@shadowreveal-persist-basic.com",
+        full_name="Basic Applicant",
+    )
+    await _request_and_approve_reveal(
+        client,
+        job_id=job["id"],
+        application_id=application["id"],
+        headers=headers,
+        candidate_headers=candidate_headers,
+        disclosure_level="basic",
+    )
+
+    await client.get(
+        f"/api/v1/shadow-reveal/mine/{job['id']}/applicants/{application['id']}",
+        headers=await step_up_headers(client, headers=headers),
+    )
+
+    applicants = await client.get(
+        f"/api/v1/shadow-jobs/mine/{job['id']}/applicants", headers=headers
+    )
+    profile = applicants.json()[0]
+    assert profile["revealed_full_name"] == "Basic Applicant"
+    assert profile["revealed_email"] is None
+    assert profile["revealed_phone"] is None
+
+
+async def test_reveal_on_one_job_does_not_leak_to_another_job_for_the_same_candidate(
+    client: AsyncClient,
+) -> None:
+    owner = await signup(client, email="owner@shadowreveal-crossjob.com")
+    headers = auth_headers(owner["access_token"])
+    job_a = await _create_and_publish_job(client, headers=headers)
+    job_b_response = await client.post(
+        "/api/v1/shadow-jobs",
+        json={
+            "title": "Another Role",
+            "summary": "A second, unrelated role at the same company.",
+            "description": "Full role description.",
+        },
+        headers=headers,
+    )
+    assert job_b_response.status_code == 201, job_b_response.text
+    job_b = job_b_response.json()
+    publish_b = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job_b['id']}/publish", headers=headers
+    )
+    assert publish_b.status_code == 200, publish_b.text
+    job_b = publish_b.json()
+
+    tokens = await candidate_signup(
+        client, email="applicant@shadowreveal-crossjob.com", full_name="Cross Job Applicant"
+    )
+    candidate_headers = auth_headers(tokens["access_token"])
+    passport_payload = {
+        "headline": "Senior Product Leader",
+        "summary": "A senior product leader.",
+        "career_intent": "actively_looking",
+        "personal_info": {
+            "legal_name": "Cross Job Applicant",
+            "phone": "+44 20 7946 0958",
+        },
+    }
+    save_response = await client.put(
+        "/api/v1/phantom-passport/me", json=passport_payload, headers=candidate_headers
+    )
+    assert save_response.status_code == 200, save_response.text
+    approve_response = await client.post(
+        "/api/v1/phantom-passport/me/approve", headers=candidate_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
+
+    apply_a = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_a['id']}/apply", headers=candidate_headers
+    )
+    assert apply_a.status_code == 201, apply_a.text
+    application_a = apply_a.json()
+    apply_b = await client.post(
+        f"/api/v1/shadow-jobs/board/{job_b['id']}/apply", headers=candidate_headers
+    )
+    assert apply_b.status_code == 201, apply_b.text
+
+    # Reveal only on job A.
+    await _request_and_approve_reveal(
+        client,
+        job_id=job_a["id"],
+        application_id=application_a["id"],
+        headers=headers,
+        candidate_headers=candidate_headers,
+    )
+    await client.get(
+        f"/api/v1/shadow-reveal/mine/{job_a['id']}/applicants/{application_a['id']}",
+        headers=await step_up_headers(client, headers=headers),
+    )
+
+    profile_a = (
+        await client.get(f"/api/v1/shadow-jobs/mine/{job_a['id']}/applicants", headers=headers)
+    ).json()[0]
+    assert profile_a["revealed_full_name"] == "Cross Job Applicant"
+
+    # Job B's application for the SAME candidate must remain fully anonymous -- reveal is
+    # per-application, never global to the candidate.
+    profile_b = (
+        await client.get(f"/api/v1/shadow-jobs/mine/{job_b['id']}/applicants", headers=headers)
+    ).json()[0]
+    assert profile_b["revealed_full_name"] is None
+    assert profile_b["callsign"] != application_a["callsign"]

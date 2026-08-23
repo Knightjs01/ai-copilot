@@ -57,7 +57,10 @@ export default function PipelinePage() {
     if (!shadowApplicants || ownerFilter === "mine") return [];
     const query = search.trim().toLowerCase();
     return shadowApplicants.filter(
-      (applicant) => query.length === 0 || applicant.callsign.toLowerCase().includes(query)
+      (applicant) =>
+        query.length === 0 ||
+        applicant.callsign.toLowerCase().includes(query) ||
+        (applicant.revealed_full_name?.toLowerCase().includes(query) ?? false)
     );
   }, [shadowApplicants, search, ownerFilter]);
 

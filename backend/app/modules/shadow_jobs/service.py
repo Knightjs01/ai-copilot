@@ -478,6 +478,9 @@ class ShadowJobService:
                     effective_stage=effective_stage,
                     is_new=application.viewed_at is None,
                     reveal_response_is_new=reveal_response_is_new,
+                    revealed_full_name=application.revealed_full_name,
+                    revealed_email=application.revealed_email,
+                    revealed_phone=application.revealed_phone,
                 )
 
         # Reuses phantom_passport's own repositories rather than querying PhantomPassport
@@ -520,6 +523,9 @@ class ShadowJobService:
             effective_stage=effective_stage,
             is_new=application.viewed_at is None,
             reveal_response_is_new=reveal_response_is_new,
+            revealed_full_name=application.revealed_full_name,
+            revealed_email=application.revealed_email,
+            revealed_phone=application.revealed_phone,
         )
 
     # --- Public job board ---------------------------------------------------------------------

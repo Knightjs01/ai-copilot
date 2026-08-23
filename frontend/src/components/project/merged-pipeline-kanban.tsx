@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { MessageCircle, Tag } from "lucide-react";
+import { Calendar, Eye, Lock, MessageCircle, Tag } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { KanbanCard, KanbanColumn } from "@/components/ui/kanban";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
 import { useMarkApplicantViewed, useUpdateApplicantPipelineStage } from "@/lib/queries/shadow-jobs";
 import { useToast } from "@/lib/toast-context";
 import type { Candidate, CandidateStatus, ShadowEffectiveStage, ShadowProfile } from "@/lib/types";
@@ -42,6 +43,7 @@ export function MergedPipelineKanban({
 }) {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { hasPermission } = useAuth();
   const updatePipelineStage = useUpdateApplicantPipelineStage(shadowJobId);
   const markViewed = useMarkApplicantViewed(shadowJobId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -189,7 +191,10 @@ export function MergedPipelineKanban({
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="relative shrink-0">
-                          <Avatar name={applicant.callsign} className="h-7 w-7 text-[10px]" />
+                          <Avatar
+                            name={applicant.revealed_full_name ?? applicant.callsign}
+                            className="h-7 w-7 text-[10px]"
+                          />
                           {(applicant.is_new || applicant.reveal_response_is_new) && (
                             <span
                               className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success"
@@ -199,7 +204,7 @@ export function MergedPipelineKanban({
                         </span>
                         <div className="min-w-0">
                           <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
-                            {applicant.callsign}
+                            {applicant.revealed_full_name ?? applicant.callsign}
                             {applicant.is_new && (
                               <Badge variant="success" className="shrink-0 text-[10px]">
                                 New application
@@ -211,23 +216,23 @@ export function MergedPipelineKanban({
                               </Badge>
                             )}
                           </p>
+                          {applicant.revealed_full_name && (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {applicant.callsign}
+                            </p>
+                          )}
                           {applicant.headline && (
                             <p className="truncate text-xs text-muted-foreground">
                               {applicant.headline}
                             </p>
                           )}
+                          {applicant.industries.length > 0 && (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {applicant.industries.slice(0, 2).join(", ")}
+                            </p>
+                          )}
                         </div>
                       </div>
-
-                      {applicant.skills.length > 0 && (
-                        <div className="mt-2.5 flex flex-wrap gap-1">
-                          {applicant.skills.slice(0, 4).map((skill) => (
-                            <Badge key={skill} variant="neutral" className="text-[10px]">
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
 
                       {applicant.unread_message_count > 0 && (
                         <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-info">
@@ -237,16 +242,33 @@ export function MergedPipelineKanban({
                         </div>
                       )}
 
-                      {(applicant.status === "reveal_requested" ||
-                        applicant.status === "revealed" ||
-                        applicant.status === "declined") && (
-                        <Badge
-                          variant={SHADOW_APPLICATION_STATUS_VARIANT[applicant.status]}
-                          className="mt-2.5"
-                        >
-                          {SHADOW_APPLICATION_STATUS_LABEL[applicant.status]}
-                        </Badge>
-                      )}
+                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        {applicant.revealed_full_name ? (
+                          <Badge variant="success">
+                            <Eye className="h-3 w-3" /> Identity revealed
+                          </Badge>
+                        ) : (
+                          <Badge variant="neutral">
+                            <Lock className="h-3 w-3" /> Anonymous
+                          </Badge>
+                        )}
+                        {(applicant.status === "reveal_requested" ||
+                          applicant.status === "declined") && (
+                          <Badge variant={SHADOW_APPLICATION_STATUS_VARIANT[applicant.status]}>
+                            {SHADOW_APPLICATION_STATUS_LABEL[applicant.status]}
+                          </Badge>
+                        )}
+                        {hasPermission("interviews.view") &&
+                          (applicant.has_upcoming_interview ? (
+                            <Badge variant="info">
+                              <Calendar className="h-3 w-3" /> Interview Scheduled
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">
+                              <Calendar className="h-3 w-3" /> Schedule Interview
+                            </Badge>
+                          ))}
+                      </div>
                     </KanbanCard>
                   </Link>
                 ))}

@@ -501,12 +501,15 @@ async def test_company_applicant_list_is_anonymized(client: AsyncClient) -> None
     assert profile["callsign"] == callsign
     assert profile["headline"] == "Senior Product Leader"
     assert profile["career_entries"][0]["company_name_anonymized"] == "Global Payments Platform"
+    # Not revealed -- the persisted-identity fields must stay null until an actual reveal happens.
+    assert profile["revealed_full_name"] is None
+    assert profile["revealed_email"] is None
+    assert profile["revealed_phone"] is None
 
     raw_body = applicants_response.text
     assert "Secret Applicant" not in raw_body
     assert "Stripe" not in raw_body
     assert "legal_name" not in raw_body
-    assert "phone" not in raw_body
     assert "personal_info" not in raw_body
 
     job_with_count = await client.get(f"/api/v1/shadow-jobs/mine/{job['id']}", headers=headers)

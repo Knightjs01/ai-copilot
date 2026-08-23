@@ -61,7 +61,10 @@ async def get_revealed_identity(
     session: AsyncSession = Depends(get_tenant_db),
 ) -> RevealedIdentity:
     return await ShadowRevealService(session).get_revealed_identity(
-        company_id=actor.company_id, job_id=job_id, application_id=application_id
+        company_id=actor.company_id,
+        job_id=job_id,
+        application_id=application_id,
+        actor_user_id=actor.id,
     )
 
 

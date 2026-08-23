@@ -127,7 +127,12 @@ class ShadowRevealService:
             )
 
     async def get_revealed_identity(
-        self, *, company_id: uuid.UUID, job_id: uuid.UUID, application_id: uuid.UUID
+        self,
+        *,
+        company_id: uuid.UUID,
+        job_id: uuid.UUID,
+        application_id: uuid.UUID,
+        actor_user_id: uuid.UUID,
     ) -> RevealedIdentity:
         application = await self._get_company_application(
             company_id=company_id, job_id=job_id, application_id=application_id
@@ -136,7 +141,27 @@ class ShadowRevealService:
         if request is None or request.status != RevealRequestStatus.APPROVED.value:
             raise RevealNotApprovedError()
 
-        return await self._build_disclosure(application=application, request=request)
+        identity = await self._build_disclosure(application=application, request=request)
+
+        # Persisted exactly once -- every subsequent call (this session or a teammate's) reads
+        # straight off the ShadowApplication row from here on, no repeated decrypt/step-up. See
+        # migration 0055.
+        if application.revealed_full_name is None:
+            await self._applications.persist_revealed_identity(
+                application,
+                full_name=identity.full_name,
+                email=identity.email,
+                phone=identity.phone,
+            )
+            await self._audit.record(
+                company_id=company_id,
+                actor_user_id=actor_user_id,
+                action="shadow_reveal.identity_viewed",
+                target_type="shadow_application",
+                target_id=application.id,
+            )
+
+        return identity
 
     # --- Candidate side: view and respond to a pending request ----------------------------
 

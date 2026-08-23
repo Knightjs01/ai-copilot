@@ -34,6 +34,7 @@ export function useRequestReveal(jobId: string, applicationId: string) {
 // first. Call this from a manual "View identity" action after obtaining a step-up token, not on
 // render.
 export function useFetchRevealedIdentity(jobId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       applicationId,
@@ -46,6 +47,12 @@ export function useFetchRevealedIdentity(jobId: string) {
         `/shadow-reveal/mine/${jobId}/applicants/${applicationId}`,
         stepUpToken
       ),
+    // First reveal persists the name/email/phone onto the application server-side (see
+    // shadow_reveal/service.py) -- invalidate so revealed_full_name flows back into every
+    // ShadowProfile-consuming surface (Kanban, list, workspace) without a manual reload.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
+    },
   });
 }
 

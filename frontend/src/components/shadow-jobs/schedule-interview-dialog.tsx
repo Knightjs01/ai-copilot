@@ -122,10 +122,14 @@ export function ScheduleInterviewDialog({
   jobId,
   applicationId,
   callsign,
+  displayName,
 }: {
   jobId: string;
   applicationId: string;
   callsign: string;
+  // Once identity is revealed, interview workflows should read like they're about a real person
+  // -- falls back to the Callsign when not yet revealed.
+  displayName?: string;
 }) {
   const { hasPermission } = useAuth();
   const canSchedule = hasPermission("interviews.schedule");
@@ -180,7 +184,7 @@ export function ScheduleInterviewDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Interviews with {callsign}</DialogTitle>
+          <DialogTitle>Interviews with {displayName ?? callsign}</DialogTitle>
           <DialogDescription>
             Schedule, reschedule, or cancel interviews for this applicant.
           </DialogDescription>

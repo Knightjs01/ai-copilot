@@ -140,6 +140,22 @@ class ShadowApplicationRepository:
         await self._session.flush()
         return application
 
+    async def persist_revealed_identity(
+        self,
+        application: ShadowApplication,
+        *,
+        full_name: str | None,
+        email: str | None,
+        phone: str | None,
+    ) -> ShadowApplication:
+        """Called exactly once, by ShadowRevealService on first successful reveal -- the
+        idempotency check (has this already been persisted?) lives in the service, not here."""
+        application.revealed_full_name = full_name
+        application.revealed_email = email
+        application.revealed_phone = phone
+        await self._session.flush()
+        return application
+
     async def update_pipeline_stage(
         self, application: ShadowApplication, *, pipeline_stage: str
     ) -> ShadowApplication:

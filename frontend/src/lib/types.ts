@@ -887,8 +887,10 @@ export interface CopilotChatResponse {
   interview_prep_questions: string[] | null;
 }
 
-// The recruiter-facing anonymized applicant card — deliberately has no field that could hold a
-// name, email, phone, or real employer. See backend shadow_jobs/__init__.py.
+// The recruiter-facing applicant card — anonymous (callsign only) until the candidate reveals
+// their identity for this specific application, at which point revealed_full_name/_email/_phone
+// populate and stay populated (never re-anonymized). Never carries a real employer name for
+// career_entries -- that stays behind its own separate, per-session reveal (see RevealedIdentity).
 export interface ShadowProfile {
   application_id: string;
   callsign: string;
@@ -920,6 +922,12 @@ export interface ShadowProfile {
   // True when the candidate has responded (approved/declined) to a reveal request and nobody's
   // opened this applicant's card since. Independent of is_new.
   reveal_response_is_new: boolean;
+  // Populated exactly once, at first successful identity reveal -- the single authoritative
+  // source every surface (Kanban, applicant list, workspace, Passport, messages, interviews)
+  // reads from afterward. Null until revealed, or if that field wasn't part of the disclosure.
+  revealed_full_name: string | null;
+  revealed_email: string | null;
+  revealed_phone: string | null;
 }
 
 // Same shape as ShadowProfile, plus which job/project this application belongs to -- powers the

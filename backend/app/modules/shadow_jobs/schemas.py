@@ -152,6 +152,13 @@ class ShadowProfile(BaseModel):
     # company_viewed_at. Independent of is_new (a reveal response can go unseen long after the
     # application itself was first opened).
     reveal_response_is_new: bool = False
+    # Populated exactly once, at first successful identity reveal (see ShadowRevealService.
+    # get_revealed_identity) -- the single authoritative source every surface (Kanban, applicant
+    # list, workspace, Passport, messages, interviews) reads from afterward. None until revealed,
+    # or until the disclosure level didn't include that specific field.
+    revealed_full_name: str | None = None
+    revealed_email: str | None = None
+    revealed_phone: str | None = None
 
 
 class ShadowApplicantPipelineUpdate(BaseModel):
