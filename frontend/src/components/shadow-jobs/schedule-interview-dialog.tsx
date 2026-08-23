@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InterviewScorecardDialog } from "@/components/shadow-jobs/interview-scorecard-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useTeam } from "@/lib/queries/team";
 import {
@@ -41,6 +42,10 @@ export function InterviewRow({
   canSchedule: boolean;
   team: UserRead[] | undefined;
 }) {
+  const { user, hasPermission } = useAuth();
+  const canScoreInterview =
+    hasPermission("interviews.schedule") ||
+    (!!user && interview.interviewer_user_ids.includes(user.id));
   const cancelInterview = useCancelInterview(jobId, applicationId, interview.id);
   const completeInterview = useCompleteInterview(jobId, applicationId, interview.id);
   const toast = useToast();
@@ -91,6 +96,13 @@ export function InterviewRow({
         <Badge variant={INTERVIEW_STATUS_VARIANT[interview.status]}>
           {INTERVIEW_STATUS_LABEL[interview.status]}
         </Badge>
+        {canScoreInterview && (
+          <InterviewScorecardDialog
+            jobId={jobId}
+            applicationId={applicationId}
+            interviewId={interview.id}
+          />
+        )}
         {canSchedule && interview.status === "scheduled" && (
           <>
             <button

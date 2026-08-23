@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.interviews.models import Interview, InterviewParticipant
+from app.modules.interviews.models import Interview, InterviewParticipant, InterviewScorecard
 
 
 class InterviewRepository:
@@ -146,5 +147,67 @@ class InterviewParticipantRepository:
     async def list_interview_ids_for_user(self, user_id: uuid.UUID) -> list[uuid.UUID]:
         result = await self._session.execute(
             select(InterviewParticipant.interview_id).where(InterviewParticipant.user_id == user_id)
+        )
+        return list(result.scalars().all())
+
+
+class InterviewScorecardRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_by_interview_and_user(
+        self, *, interview_id: uuid.UUID, submitted_by_user_id: uuid.UUID
+    ) -> InterviewScorecard | None:
+        result = await self._session.execute(
+            select(InterviewScorecard).where(
+                InterviewScorecard.interview_id == interview_id,
+                InterviewScorecard.submitted_by_user_id == submitted_by_user_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def upsert(
+        self,
+        *,
+        interview_id: uuid.UUID,
+        company_id: uuid.UUID,
+        submitted_by_user_id: uuid.UUID,
+        notes: str,
+        competency_scores: list[dict[str, Any]],
+        overall_recommendation: str,
+        model_used: str,
+        generated_at: datetime,
+    ) -> InterviewScorecard:
+        existing = await self.get_by_interview_and_user(
+            interview_id=interview_id, submitted_by_user_id=submitted_by_user_id
+        )
+        if existing is not None:
+            existing.notes = notes
+            existing.competency_scores = competency_scores
+            existing.overall_recommendation = overall_recommendation
+            existing.model_used = model_used
+            existing.generated_at = generated_at
+            await self._session.flush()
+            return existing
+
+        scorecard = InterviewScorecard(
+            interview_id=interview_id,
+            company_id=company_id,
+            submitted_by_user_id=submitted_by_user_id,
+            notes=notes,
+            competency_scores=competency_scores,
+            overall_recommendation=overall_recommendation,
+            model_used=model_used,
+            generated_at=generated_at,
+        )
+        self._session.add(scorecard)
+        await self._session.flush()
+        return scorecard
+
+    async def list_by_interview_id(self, interview_id: uuid.UUID) -> list[InterviewScorecard]:
+        result = await self._session.execute(
+            select(InterviewScorecard)
+            .where(InterviewScorecard.interview_id == interview_id)
+            .order_by(InterviewScorecard.created_at)
         )
         return list(result.scalars().all())

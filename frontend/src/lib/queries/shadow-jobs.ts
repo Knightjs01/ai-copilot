@@ -8,8 +8,12 @@ import { fetchOrNull } from "@/lib/queries/helpers";
 import type {
   AuditEntry,
   CompanyInterviewSummary,
+  CompetencyScore,
   Interview,
+  InterviewScorecard,
+  InterviewScorecardDraft,
   MessageThread,
+  OverallRecommendation,
   ShadowApplication,
   ShadowJob,
   ShadowJobBoardListing,
@@ -294,6 +298,69 @@ export function useCompleteInterview(jobId: string, applicationId: string, inter
       });
       void queryClient.invalidateQueries({ queryKey: ["shadow-jobs", "applicants", jobId] });
     },
+  });
+}
+
+interface GenerateScorecardInput {
+  notes: string;
+}
+
+export function useGenerateInterviewScorecard(
+  jobId: string,
+  applicationId: string,
+  interviewId: string
+) {
+  return useMutation({
+    mutationFn: (input: GenerateScorecardInput) =>
+      apiClient.post<InterviewScorecardDraft>(
+        `/interviews/mine/${jobId}/applicants/${applicationId}/${interviewId}/scorecard/generate`,
+        input
+      ),
+  });
+}
+
+interface SaveScorecardInput {
+  notes: string;
+  competency_scores: CompetencyScore[];
+  overall_recommendation: OverallRecommendation;
+}
+
+export function useSaveInterviewScorecard(
+  jobId: string,
+  applicationId: string,
+  interviewId: string
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SaveScorecardInput) =>
+      apiClient.put<InterviewScorecard>(
+        `/interviews/mine/${jobId}/applicants/${applicationId}/${interviewId}/scorecard`,
+        input
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews", "scorecards", jobId, applicationId, interviewId],
+      });
+      // Saving also marks the interview completed as a side effect.
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews", "applicant", jobId, applicationId],
+      });
+    },
+  });
+}
+
+export function useInterviewScorecards(
+  jobId: string | undefined,
+  applicationId: string | undefined,
+  interviewId: string | undefined
+) {
+  return useQuery({
+    queryKey: ["interviews", "scorecards", jobId, applicationId, interviewId],
+    queryFn: () =>
+      apiClient.get<InterviewScorecard[]>(
+        `/interviews/mine/${jobId}/applicants/${applicationId}/${interviewId}/scorecards`
+      ),
+    enabled: !!jobId && !!applicationId && !!interviewId,
   });
 }
 

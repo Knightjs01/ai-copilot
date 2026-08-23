@@ -11,6 +11,7 @@ import type {
   InterviewStatus,
   MatchTier,
   NoticePeriod,
+  OverallRecommendation,
   PassportVisibility,
   PrescreenOutcome,
   ProjectStatus,
@@ -140,6 +141,13 @@ export const DIMENSION_RATING_VARIANT: Record<DimensionRatingValue, Variant> = {
   Strong: "success",
   Moderate: "warning",
   Weak: "danger",
+};
+
+export const OVERALL_RECOMMENDATION_VARIANT: Record<OverallRecommendation, Variant> = {
+  "Strong Hire": "success",
+  Hire: "info",
+  "No Hire": "warning",
+  "Strong No Hire": "danger",
 };
 
 export const SHADOW_JOB_STATUS_LABEL: Record<ShadowJobStatus, string> = {

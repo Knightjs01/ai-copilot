@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -55,3 +56,35 @@ class InterviewParticipant(UUIDPrimaryKeyMixin, Base):
         UUID(as_uuid=True), ForeignKey("users.id"), index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InterviewScorecard(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """One row per (interview, submitting interviewer) -- each interviewer submits their own
+    independent scorecard rather than one shared row per interview, so scores stay independent
+    (standard structured-interviewing practice) and map directly onto InterviewParticipant's own
+    per-user shape. Company-only data -- never candidate-facing, same shape as ApplicantNote."""
+
+    __tablename__ = "interview_scorecards"
+    __table_args__ = (
+        UniqueConstraint(
+            "interview_id", "submitted_by_user_id", name="uq_interview_scorecards_interview_user"
+        ),
+    )
+
+    interview_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("interviews.id", ondelete="CASCADE"), index=True
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id"), index=True
+    )
+    submitted_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id")
+    )
+    notes: Mapped[str] = mapped_column(Text)
+    # [{"competency": str, "rating": "Strong"|"Moderate"|"Weak", "evidence": str}, ...] --
+    # LLM-derived from what the interviewer's own notes actually discuss, never a fixed taxonomy.
+    competency_scores: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    # "Strong Hire" | "Hire" | "No Hire" | "Strong No Hire"
+    overall_recommendation: Mapped[str] = mapped_column(String(20))
+    model_used: Mapped[str] = mapped_column(String(100))
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

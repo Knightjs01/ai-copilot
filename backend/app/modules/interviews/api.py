@@ -16,11 +16,17 @@ from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.interviews.dependencies import get_interview_scorecard_llm_client
+from app.modules.interviews.llm_client import InterviewScorecardLLMClient
 from app.modules.interviews.schemas import (
     CandidateInterviewSummary,
     CompanyInterviewSummary,
     InterviewCreate,
     InterviewRead,
+    InterviewScorecardDraft,
+    InterviewScorecardGenerateRequest,
+    InterviewScorecardRead,
+    InterviewScorecardSave,
     InterviewUpdate,
 )
 from app.modules.interviews.service import InterviewService
@@ -140,4 +146,76 @@ async def complete_applicant_interview(
 ) -> InterviewRead:
     return await InterviewService(session).complete(
         actor=actor, job_id=job_id, application_id=application_id, interview_id=interview_id
+    )
+
+
+@router.post(
+    "/mine/{job_id}/applicants/{application_id}/{interview_id}/scorecard/generate",
+    response_model=InterviewScorecardDraft,
+)
+async def generate_applicant_interview_scorecard(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    interview_id: uuid.UUID,
+    body: InterviewScorecardGenerateRequest,
+    actor: User = Depends(require_mfa_enrolled),
+    current_user: CurrentUser = Depends(require_permission(Permissions.INTERVIEWS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+    scorecard_llm_client: InterviewScorecardLLMClient = Depends(get_interview_scorecard_llm_client),
+) -> InterviewScorecardDraft:
+    return await InterviewService(
+        session, scorecard_llm_client=scorecard_llm_client
+    ).generate_scorecard_draft(
+        actor=actor,
+        permissions=current_user.permissions,
+        job_id=job_id,
+        application_id=application_id,
+        interview_id=interview_id,
+        notes=body.notes,
+    )
+
+
+@router.put(
+    "/mine/{job_id}/applicants/{application_id}/{interview_id}/scorecard",
+    response_model=InterviewScorecardRead,
+)
+async def save_applicant_interview_scorecard(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    interview_id: uuid.UUID,
+    body: InterviewScorecardSave,
+    actor: User = Depends(require_mfa_enrolled),
+    current_user: CurrentUser = Depends(require_permission(Permissions.INTERVIEWS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> InterviewScorecardRead:
+    return await InterviewService(session).save_scorecard(
+        actor=actor,
+        permissions=current_user.permissions,
+        job_id=job_id,
+        application_id=application_id,
+        interview_id=interview_id,
+        notes=body.notes,
+        competency_scores=body.competency_scores,
+        overall_recommendation=body.overall_recommendation,
+    )
+
+
+@router.get(
+    "/mine/{job_id}/applicants/{application_id}/{interview_id}/scorecards",
+    response_model=list[InterviewScorecardRead],
+)
+async def list_applicant_interview_scorecards(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    interview_id: uuid.UUID,
+    actor: User = Depends(require_mfa_enrolled),
+    current_user: CurrentUser = Depends(require_permission(Permissions.INTERVIEWS_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> list[InterviewScorecardRead]:
+    return await InterviewService(session).list_scorecards_for_interview(
+        actor=actor,
+        permissions=current_user.permissions,
+        job_id=job_id,
+        application_id=application_id,
+        interview_id=interview_id,
     )

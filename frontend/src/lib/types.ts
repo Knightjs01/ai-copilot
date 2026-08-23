@@ -1026,6 +1026,33 @@ export interface ProjectActivityEntry {
   created_at: string;
 }
 
+export type CompetencyRating = "Strong" | "Moderate" | "Weak";
+export type OverallRecommendation = "Strong Hire" | "Hire" | "No Hire" | "Strong No Hire";
+
+export interface CompetencyScore {
+  competency: string;
+  rating: CompetencyRating;
+  evidence: string;
+}
+
+// A generated-but-not-yet-saved preview -- nothing is persisted until an explicit Save call.
+export interface InterviewScorecardDraft {
+  competency_scores: CompetencyScore[];
+  overall_recommendation: OverallRecommendation;
+  summary: string;
+}
+
+export interface InterviewScorecard {
+  id: string;
+  interview_id: string;
+  submitted_by_user_id: string;
+  notes: string;
+  competency_scores: CompetencyScore[];
+  overall_recommendation: OverallRecommendation;
+  model_used: string;
+  generated_at: string;
+}
+
 export type RevealRequestStatus = "pending" | "approved" | "declined";
 
 // The company-side view of a Reveal Request it created.

@@ -57,6 +57,10 @@ from app.modules.phantom_passport.llm_client import (  # noqa: E402
 )
 from app.modules.prescreen_assessment.llm_client import AssessmentExtraction  # noqa: E402
 from app.modules.projects.llm_client import RoleFieldsExtraction  # noqa: E402
+from app.modules.interviews.llm_client import (  # noqa: E402
+    CompetencyScoreExtraction,
+    InterviewScorecardExtraction,
+)
 
 
 def _admin_maintenance_dsn() -> str:
@@ -392,6 +396,47 @@ def fake_prescreen_assessment_llm_client() -> FakePrescreenAssessmentLLMClient:
     return FakePrescreenAssessmentLLMClient()
 
 
+class FakeInterviewScorecardLLMClient:
+    """Test double for app.modules.interviews.llm_client.InterviewScorecardLLMClient — returns
+    canned, deterministic competency scores instead of calling the real Claude API. Mirrors
+    FakePrescreenAssessmentLLMClient's shape: captures the `notes` arg it actually received so a
+    test can assert redacted text (not a raw candidate name) is what reached the client."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    async def generate_scorecard(
+        self, *, notes: str, job_title: str, requirements: list[str] | None
+    ) -> InterviewScorecardExtraction:
+        self.calls.append({"notes": notes, "job_title": job_title, "requirements": requirements})
+        return InterviewScorecardExtraction(
+            competency_scores=[
+                CompetencyScoreExtraction(
+                    competency="Fake competency: communication",
+                    rating="Strong",
+                    evidence="Fake evidence drawn from the notes.",
+                ),
+                CompetencyScoreExtraction(
+                    competency="Fake competency: technical depth",
+                    rating="Moderate",
+                    evidence="Fake mixed evidence from the notes.",
+                ),
+                CompetencyScoreExtraction(
+                    competency="Fake competency: ownership",
+                    rating="Weak",
+                    evidence="Fake sparse evidence from the notes.",
+                ),
+            ],
+            overall_recommendation="Hire",
+            summary="Fake but deterministic overall take for testing.",
+        )
+
+
+@pytest.fixture
+def fake_interview_scorecard_llm_client() -> FakeInterviewScorecardLLMClient:
+    return FakeInterviewScorecardLLMClient()
+
+
 class FakePassportLLMClient:
     """Test double for app.modules.phantom_passport.llm_client.LLMClient — returns a canned,
     deterministic Passport extraction instead of calling the real Claude API."""
@@ -472,6 +517,7 @@ async def client(
     fake_passport_matching_llm_client: FakePassportMatchingLLMClient,
     fake_copilot_llm_client: FakeCopilotLLMClient,
     fake_projects_llm_client: FakeProjectsLLMClient,
+    fake_interview_scorecard_llm_client: FakeInterviewScorecardLLMClient,
     test_storage: EncryptingFileStorage,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
@@ -481,6 +527,7 @@ async def client(
     from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
     from app.modules.intelligence.dependencies import get_llm_client
     from app.modules.interview_kit.dependencies import get_interview_kit_llm_client
+    from app.modules.interviews.dependencies import get_interview_scorecard_llm_client
     from app.modules.passport_matching.dependencies import (
         get_passport_matching_llm_client,
     )
@@ -506,6 +553,9 @@ async def client(
     )
     app.dependency_overrides[get_copilot_llm_client] = lambda: fake_copilot_llm_client
     app.dependency_overrides[get_projects_llm_client] = lambda: fake_projects_llm_client
+    app.dependency_overrides[get_interview_scorecard_llm_client] = (
+        lambda: fake_interview_scorecard_llm_client
+    )
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -521,3 +571,4 @@ async def client(
         app.dependency_overrides.pop(get_passport_matching_llm_client, None)
         app.dependency_overrides.pop(get_copilot_llm_client, None)
         app.dependency_overrides.pop(get_projects_llm_client, None)
+        app.dependency_overrides.pop(get_interview_scorecard_llm_client, None)

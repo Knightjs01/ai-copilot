@@ -47,3 +47,44 @@ class CompanyInterviewSummary(InterviewRead):
     job_title: str
     callsign: str
     project_id: uuid.UUID | None
+
+
+CompetencyRating = Literal["Strong", "Moderate", "Weak"]
+OverallRecommendation = Literal["Strong Hire", "Hire", "No Hire", "Strong No Hire"]
+
+
+class CompetencyScore(BaseModel):
+    competency: str
+    rating: CompetencyRating
+    evidence: str
+
+
+class InterviewScorecardGenerateRequest(BaseModel):
+    notes: str = Field(min_length=1)
+
+
+class InterviewScorecardDraft(BaseModel):
+    """A generated-but-not-yet-saved preview -- mirrors the JdUploadResult/CvParseResult
+    "preview, review, then explicit save" pattern already established elsewhere in this
+    codebase. Nothing is persisted until the interviewer POSTs InterviewScorecardSave."""
+
+    competency_scores: list[CompetencyScore]
+    overall_recommendation: OverallRecommendation
+    summary: str
+
+
+class InterviewScorecardSave(BaseModel):
+    notes: str = Field(min_length=1)
+    competency_scores: list[CompetencyScore] = Field(min_length=1)
+    overall_recommendation: OverallRecommendation
+
+
+class InterviewScorecardRead(BaseModel):
+    id: uuid.UUID
+    interview_id: uuid.UUID
+    submitted_by_user_id: uuid.UUID
+    notes: str
+    competency_scores: list[CompetencyScore]
+    overall_recommendation: OverallRecommendation
+    model_used: str
+    generated_at: datetime
