@@ -2,8 +2,6 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { PhantomIcon } from "@/components/phantom-icon";
-
 export function AuthShell({
   title,
   subtitle,
@@ -18,14 +16,13 @@ export function AuthShell({
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16">
       <div className="mb-8 flex flex-col items-center gap-3">
-        <Link href="/" aria-label="Phantom Hire home" className="flex flex-col items-center gap-3">
-          <PhantomIcon className="h-12" priority />
+        <Link href="/" aria-label="Phantom Hire home">
           <Image
-            src="/phantom-ats-wordmark.png"
-            alt="Phantom ATS"
-            width={1388}
-            height={339}
-            className="h-9 w-auto"
+            src="/phantom-hire-logo.png"
+            alt="Phantom Hire"
+            width={2006}
+            height={779}
+            className="h-14 w-auto"
             priority
           />
         </Link>

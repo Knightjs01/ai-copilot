@@ -102,11 +102,11 @@ export function MarketingNav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" aria-label="Phantom Hire home">
           <Image
-            src="/phantom-ats-wordmark.png"
+            src="/phantom-hire-logo-compact.png"
             alt="Phantom Hire"
-            width={1388}
-            height={339}
-            className="h-9 w-auto"
+            width={2006}
+            height={589}
+            className="h-10 w-auto"
             priority
           />
         </Link>

@@ -44,11 +44,11 @@ export function JobBoardMockup() {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
             <Image
-              src="/shadow-wordmark.png"
-              alt="Shadow — Anonymous Job Board"
-              width={1525}
-              height={550}
-              className="h-9 w-auto sm:h-11"
+              src="/phantom-shadow-logo.png"
+              alt="Phantom Shadow — Anonymous Job Board"
+              width={2043}
+              height={610}
+              className="h-8 w-auto sm:h-10"
               priority
             />
             <span className="hidden shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-medium text-muted-foreground sm:flex">

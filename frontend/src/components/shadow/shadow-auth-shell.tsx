@@ -18,11 +18,11 @@ export function ShadowAuthShell({
       <div className="mb-8 flex flex-col items-center gap-3">
         <Link href="/shadow" aria-label="Shadow home" className="flex flex-col items-center gap-3">
           <Image
-            src="/shadow-wordmark.png"
-            alt="Shadow: Anonymous Job Board"
-            width={1525}
-            height={550}
-            className="h-24 w-auto sm:h-28"
+            src="/phantom-shadow-logo.png"
+            alt="Phantom Shadow: Anonymous Job Board"
+            width={2043}
+            height={610}
+            className="h-16 w-auto sm:h-20"
             priority
           />
         </Link>

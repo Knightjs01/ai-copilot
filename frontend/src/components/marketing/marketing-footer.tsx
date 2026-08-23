@@ -9,11 +9,11 @@ export function MarketingFooter() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-6 py-10 sm:flex-row sm:justify-between">
         <div className="flex items-center gap-3">
           <Image
-            src="/phantom-ats-wordmark.png"
+            src="/phantom-hire-logo-compact.png"
             alt="Phantom Hire"
-            width={1388}
-            height={339}
-            className="h-6 w-auto"
+            width={2006}
+            height={589}
+            className="h-7 w-auto"
           />
           <span className="text-xs text-muted-foreground">
             The world&apos;s first Zero-Retention Hiring Platform.

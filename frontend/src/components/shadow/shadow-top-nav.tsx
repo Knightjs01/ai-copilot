@@ -105,11 +105,11 @@ export function ShadowTopNav() {
 
         <Link href="/shadow" aria-label="Shadow home" className="justify-self-center">
           <Image
-            src="/shadow-wordmark.png"
-            alt="Shadow: Anonymous Job Board"
-            width={1525}
-            height={550}
-            className="h-16 w-auto"
+            src="/phantom-shadow-logo.png"
+            alt="Phantom Shadow: Anonymous Job Board"
+            width={2043}
+            height={610}
+            className="h-12 w-auto"
             priority
           />
         </Link>

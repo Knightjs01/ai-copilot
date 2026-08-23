@@ -3,8 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { PhantomIcon } from "@/components/phantom-icon";
-
 export const metadata: Metadata = {
   title: "Log in | Phantom Hire",
 };
@@ -17,10 +15,10 @@ const OPTIONS = [
       "Build your Phantom Passport, browse the Shadow job board, and manage your applications, pseudonymously, on your terms.",
     cta: "Log in as a Candidate",
     logo: {
-      src: "/shadow-wordmark.png",
-      alt: "Shadow: Anonymous Job Board",
-      width: 1525,
-      height: 550,
+      src: "/phantom-shadow-logo.png",
+      alt: "Phantom Shadow: Anonymous Job Board",
+      width: 2043,
+      height: 610,
     },
   },
   {
@@ -30,10 +28,10 @@ const OPTIONS = [
       "Run hiring projects, screen candidates, and post Shadow jobs from your Talent Acquisition workspace.",
     cta: "Log in as a Recruiter",
     logo: {
-      src: "/phantom-ats-wordmark.png",
+      src: "/phantom-ats-logo.png",
       alt: "Phantom ATS",
-      width: 1388,
-      height: 339,
+      width: 2027,
+      height: 487,
     },
   },
 ];
@@ -42,13 +40,12 @@ export default function LoginChooserPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16">
       <Link href="/" aria-label="Phantom Hire home" className="mb-10 flex flex-col items-center gap-3">
-        <PhantomIcon className="h-12" priority />
         <Image
-          src="/phantom-ats-wordmark.png"
+          src="/phantom-hire-logo.png"
           alt="Phantom Hire"
-          width={1388}
-          height={339}
-          className="h-9 w-auto"
+          width={2006}
+          height={779}
+          className="h-14 w-auto"
           priority
         />
       </Link>

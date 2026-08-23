@@ -1,15 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { EyeOff, LayoutGrid, Search, Sparkles, type LucideIcon } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
-const CORE_FEATURES: { Icon: LucideIcon; label: string; detail: string }[] = [
-  { Icon: EyeOff, label: "Phantom Passport", detail: "Anonymous, reusable candidate identity" },
-  { Icon: Search, label: "Shadow", detail: "Anonymous job board for hidden talent" },
-  { Icon: LayoutGrid, label: "Phantom ATS", detail: "Smart pipeline ranked by evidence" },
-  { Icon: Sparkles, label: "Phantom AI", detail: "Evidence-based fit assessments" },
-];
 
 const SPECIALIST_SECTORS = [
   "Technology",
@@ -18,18 +11,6 @@ const SPECIALIST_SECTORS = [
   "Defence",
   "Aerospace & Executive Search",
 ];
-
-function FeatureCard({ Icon, label, detail }: { Icon: LucideIcon; label: string; detail: string }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm shadow-slate-900/[0.04]">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand">
-        <Icon className="h-4 w-4" />
-      </div>
-      <p className="text-sm font-semibold leading-tight text-foreground">{label}</p>
-      <p className="text-xs leading-snug text-muted-foreground">{detail}</p>
-    </div>
-  );
-}
 
 export function HeroSection() {
   return (
@@ -87,31 +68,15 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-5">
-          <div className="grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
-            {CORE_FEATURES.slice(0, 2).map((feature) => (
-              <FeatureCard key={feature.label} {...feature} />
-            ))}
-          </div>
-
-          <div className="relative flex items-center justify-center">
-            <div className="absolute h-56 w-56 rounded-full bg-brand/20 blur-3xl" aria-hidden />
-            <div className="absolute h-40 w-40 rounded-full bg-electric/10 blur-3xl" aria-hidden />
-            <Image
-              src="/phantom-ghost-hero.png"
-              alt="Phantom, the invisible TA partner"
-              width={668}
-              height={844}
-              className="relative h-44 w-auto animate-float drop-shadow-2xl sm:h-52"
-              priority
-            />
-          </div>
-
-          <div className="grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
-            {CORE_FEATURES.slice(2, 4).map((feature) => (
-              <FeatureCard key={feature.label} {...feature} />
-            ))}
-          </div>
+        <div className="relative flex items-center justify-center">
+          <Image
+            src="/phantom-hero-image.png"
+            alt="Phantom Passport, Shadow, Phantom ATS, and Phantom AI working together around the Phantom ghost"
+            width={1536}
+            height={1024}
+            className="relative w-full max-w-xl animate-float"
+            priority
+          />
         </div>
       </div>
     </section>
