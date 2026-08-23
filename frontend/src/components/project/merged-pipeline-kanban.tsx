@@ -9,13 +9,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { KanbanCard, KanbanColumn } from "@/components/ui/kanban";
 import { apiClient } from "@/lib/api-client";
+import { useMarkApplicantViewed, useUpdateApplicantPipelineStage } from "@/lib/queries/shadow-jobs";
 import { useToast } from "@/lib/toast-context";
-import type {
-  Candidate,
-  CandidateStatus,
-  ShadowEffectiveStage,
-  ShadowProfileCompanyWide,
-} from "@/lib/types";
+import type { Candidate, CandidateStatus, ShadowEffectiveStage, ShadowProfile } from "@/lib/types";
 import {
   CANDIDATE_SOURCE_LABEL,
   NOTICE_PERIOD_LABEL,
@@ -27,28 +23,27 @@ import {
   SHADOW_EFFECTIVE_STAGE_LABEL,
 } from "@/lib/status-display";
 
-// Same kind-prefixed drag-id convention as MergedPipelineKanban (the per-project version) — this
-// sibling exists because a cross-project board needs a per-applicant shadow_job_id for both the
-// pipeline-stage mutation and the card's link target, where the per-project version can bind a
-// single shadowJobId once for the whole board.
+// Drag ids are prefixed by kind so handleDragEnd can branch unambiguously between the two row
+// types sharing one board — dnd-kit gives back a plain id, and a raw UUID can't otherwise tell
+// you which table it came from.
 const candidateDragId = (id: string) => `candidate:${id}`;
 const shadowDragId = (id: string) => `shadow:${id}`;
 
-export function CrossProjectPipelineKanban({
+export function MergedPipelineKanban({
   candidatesQueryKey,
   candidates,
-  shadowApplicantsQueryKey,
+  shadowJobId,
   shadowApplicants,
-  projectTitles,
 }: {
   candidatesQueryKey: unknown[];
   candidates: Candidate[];
-  shadowApplicantsQueryKey: unknown[];
-  shadowApplicants: ShadowProfileCompanyWide[];
-  projectTitles: Record<string, string>;
+  shadowJobId: string;
+  shadowApplicants: ShadowProfile[];
 }) {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const updatePipelineStage = useUpdateApplicantPipelineStage(shadowJobId);
+  const markViewed = useMarkApplicantViewed(shadowJobId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -94,20 +89,18 @@ export function CrossProjectPipelineKanban({
       return;
     }
 
-    try {
-      await apiClient.patch(
-        `/shadow-jobs/mine/${applicant.shadow_job_id}/applicants/${applicationId}`,
-        { pipeline_stage: newStage }
-      );
-    } catch {
-      toast({
-        title: "Couldn't move applicant",
-        description: "The stage change didn't save. Try again.",
-        variant: "danger",
-      });
-    } finally {
-      void queryClient.invalidateQueries({ queryKey: shadowApplicantsQueryKey });
-    }
+    updatePipelineStage.mutate(
+      { applicationId, pipelineStage: newStage },
+      {
+        onError: () => {
+          toast({
+            title: "Couldn't move applicant",
+            description: "The stage change didn't save. Try again.",
+            variant: "danger",
+          });
+        },
+      }
+    );
   };
 
   const candidatesByStage = (stage: ShadowEffectiveStage) =>
@@ -145,11 +138,6 @@ export function CrossProjectPipelineKanban({
                           <p className="truncate text-xs text-muted-foreground">
                             {candidate.candidate_ref}
                           </p>
-                          {projectTitles[candidate.project_id] && (
-                            <p className="truncate text-xs text-brand">
-                              {projectTitles[candidate.project_id]}
-                            </p>
-                          )}
                         </div>
                       </div>
 
@@ -184,7 +172,12 @@ export function CrossProjectPipelineKanban({
                 {stageApplicants.map((applicant) => (
                   <Link
                     key={applicant.application_id}
-                    href={`/shadow-jobs/${applicant.shadow_job_id}/applicants/${applicant.application_id}`}
+                    href={`/shadow-jobs/${shadowJobId}/applicants/${applicant.application_id}`}
+                    onClick={() => {
+                      if (applicant.is_new || applicant.reveal_response_is_new) {
+                        markViewed.mutate(applicant.application_id);
+                      }
+                    }}
                   >
                     <KanbanCard
                       id={shadowDragId(applicant.application_id)}
@@ -218,7 +211,11 @@ export function CrossProjectPipelineKanban({
                               </Badge>
                             )}
                           </p>
-                          <p className="truncate text-xs text-brand">{applicant.job_title}</p>
+                          {applicant.headline && (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {applicant.headline}
+                            </p>
+                          )}
                         </div>
                       </div>
 

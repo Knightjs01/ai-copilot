@@ -20,13 +20,18 @@ import { useUpdateApplicantPipelineStage } from "@/lib/queries/shadow-jobs";
 import { CANDIDATE_STATUS_COLUMNS, CANDIDATE_STATUS_LABEL, SHADOW_EFFECTIVE_STAGE_LABEL } from "@/lib/status-display";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import { useToast } from "@/lib/toast-context";
-import type { Candidate, CandidateStatus, ShadowPipelineStage, ShadowProfile } from "@/lib/types";
+import type {
+  Candidate,
+  CandidateStatus,
+  ShadowPipelineStage,
+  ShadowProfileCompanyWide,
+} from "@/lib/types";
 
 const SHADOW_ASSIGNABLE_STAGES = ["new", "screening", "interviewing", "offer", "hired", "rejected"] as const;
 
 type MergedRow =
-  | { kind: "candidate"; key: string; candidate: Candidate }
-  | { kind: "shadow"; key: string; applicant: ShadowProfile };
+  | { kind: "candidate"; key: string; candidate: Candidate; title: string | undefined }
+  | { kind: "shadow"; key: string; applicant: ShadowProfileCompanyWide };
 
 function CandidateStageSelect({ candidate }: { candidate: Candidate }) {
   const updateCandidate = useUpdateCandidate(candidate.id, candidate.project_id);
@@ -59,8 +64,8 @@ function CandidateStageSelect({ candidate }: { candidate: Candidate }) {
   );
 }
 
-function ShadowStageSelect({ shadowJobId, applicant }: { shadowJobId: string; applicant: ShadowProfile }) {
-  const updatePipelineStage = useUpdateApplicantPipelineStage(shadowJobId);
+function ShadowStageSelect({ applicant }: { applicant: ShadowProfileCompanyWide }) {
+  const updatePipelineStage = useUpdateApplicantPipelineStage(applicant.shadow_job_id);
   const container = useThemeScopeContainer();
   const toast = useToast();
 
@@ -112,7 +117,7 @@ const columns = [
         const href =
           row.kind === "candidate"
             ? `/projects/${row.candidate.project_id}/candidates/${row.candidate.id}`
-            : `/shadow-jobs/${info.table.options.meta?.shadowJobId}/applicants/${row.applicant.application_id}`;
+            : `/shadow-jobs/${row.applicant.shadow_job_id}/applicants/${row.applicant.application_id}`;
         return (
           <Link href={href} className="font-medium text-foreground hover:underline">
             {info.getValue()}
@@ -121,12 +126,10 @@ const columns = [
       },
     }
   ),
-  columnHelper.display({
+  columnHelper.accessor((row) => (row.kind === "candidate" ? row.title : row.applicant.job_title), {
     id: "title",
     header: "Title",
-    cell: (info) => (
-      <span className="text-muted-foreground">{info.table.options.meta?.projectTitle}</span>
-    ),
+    cell: (info) => <span className="text-muted-foreground">{info.getValue() ?? "—"}</span>,
   }),
   columnHelper.display({
     id: "role_stage",
@@ -136,10 +139,7 @@ const columns = [
       return row.kind === "candidate" ? (
         <CandidateStageSelect candidate={row.candidate} />
       ) : (
-        <ShadowStageSelect
-          shadowJobId={info.table.options.meta?.shadowJobId ?? ""}
-          applicant={row.applicant}
-        />
+        <ShadowStageSelect applicant={row.applicant} />
       );
     },
   }),
@@ -156,34 +156,35 @@ const columns = [
   }),
 ];
 
-declare module "@tanstack/react-table" {
-  interface TableMeta<TData> {
-    projectTitle?: string;
-    shadowJobId?: string;
-  }
-}
-
 export function CandidatesRoleList({
-  projectTitle,
   candidates,
-  shadowJobId,
+  projectTitles,
   shadowApplicants,
 }: {
-  projectTitle: string;
   candidates: Candidate[];
-  shadowJobId?: string;
-  shadowApplicants: ShadowProfile[];
+  // Keyed by project_id -- each ATS candidate's own row resolves its title from here, since
+  // (unlike a single role's own Candidates tab) which role a candidate belongs to isn't implicit
+  // from context on this cross-project list.
+  projectTitles: Record<string, string>;
+  shadowApplicants: ShadowProfileCompanyWide[];
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
   const rows = React.useMemo<MergedRow[]>(
     () => [
-      ...candidates.map((candidate): MergedRow => ({ kind: "candidate", key: candidate.id, candidate })),
+      ...candidates.map(
+        (candidate): MergedRow => ({
+          kind: "candidate",
+          key: candidate.id,
+          candidate,
+          title: projectTitles[candidate.project_id],
+        })
+      ),
       ...shadowApplicants.map(
         (applicant): MergedRow => ({ kind: "shadow", key: applicant.application_id, applicant })
       ),
     ],
-    [candidates, shadowApplicants]
+    [candidates, projectTitles, shadowApplicants]
   );
 
   const table = useReactTable({
@@ -194,7 +195,6 @@ export function CandidatesRoleList({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.key,
-    meta: { projectTitle, shadowJobId },
   });
 
   if (rows.length === 0) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Eye, Lock, MessageCircle, ShieldAlert, Sparkles } from "lucide-react";
 
+import { PassportCard } from "@/components/candidate/passport-wizard/passport-card";
 import { ActivityTab } from "@/components/shadow-jobs/candidate-workspace/activity-tab";
 import { ApplicationTab } from "@/components/shadow-jobs/candidate-workspace/application-tab";
 import { ExperienceTab } from "@/components/shadow-jobs/candidate-workspace/experience-tab";
@@ -351,15 +352,17 @@ export default function CandidateWorkspacePage() {
 
         {/* --- Candidate Passport ----------------------------------------------------------- */}
         <div className="order-1 flex flex-col gap-4 lg:sticky lg:top-6 lg:order-2 lg:self-start">
+          <PassportCard
+            callsign={profile.callsign}
+            headline={profile.headline}
+            footnote="This is the identity this candidate is shown as until they personally approve a Reveal Request."
+          />
           <Card>
             <CardContent className="flex flex-col gap-3 py-5">
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-brand" />
-                <h2 className="text-sm font-semibold text-foreground">Candidate Passport</h2>
+                <h2 className="text-sm font-semibold text-foreground">Passport details</h2>
               </div>
-              <p className="text-lg font-semibold tracking-tight text-foreground">
-                {profile.callsign}
-              </p>
               <div className="flex flex-col gap-2 text-sm">
                 {profile.years_experience != null && (
                   <div className="flex justify-between">

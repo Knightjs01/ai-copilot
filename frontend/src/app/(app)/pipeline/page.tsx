@@ -3,9 +3,8 @@
 import * as React from "react";
 import { ShieldAlert, Users } from "lucide-react";
 
-import { CandidatesListTab } from "@/components/project/candidates-list-tab";
+import { CandidatesRoleList } from "@/components/project/candidates-role-list";
 import { CandidatesToolbar } from "@/components/project/candidates-toolbar";
-import { CrossProjectPipelineKanban } from "@/components/project/cross-project-pipeline-kanban";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useAllCandidates } from "@/lib/queries/candidates";
@@ -15,8 +14,6 @@ import { cn } from "@/lib/utils";
 import type { CandidateSource } from "@/lib/types";
 
 type OwnerFilter = "all" | "mine";
-
-const SHADOW_APPLICANTS_QUERY_KEY = ["shadow-jobs", "applicants", "mine-company"];
 
 export default function PipelinePage() {
   const { hasPermission, user } = useAuth();
@@ -83,11 +80,7 @@ export default function PipelinePage() {
       <div className="flex flex-col gap-8">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-10 w-full max-w-md" />
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 w-72 shrink-0" />
-          ))}
-        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -143,14 +136,11 @@ export default function PipelinePage() {
         matchCount={filteredCandidates.length + filteredShadowApplicants.length}
         totalCount={(candidates?.length ?? 0) + (shadowApplicants?.length ?? 0)}
       />
-      <CrossProjectPipelineKanban
-        candidatesQueryKey={["candidates", "all"]}
+      <CandidatesRoleList
         candidates={filteredCandidates}
-        shadowApplicantsQueryKey={SHADOW_APPLICANTS_QUERY_KEY}
-        shadowApplicants={filteredShadowApplicants}
         projectTitles={projectTitles}
+        shadowApplicants={filteredShadowApplicants}
       />
-      <CandidatesListTab candidates={filteredCandidates} />
     </div>
   );
 }

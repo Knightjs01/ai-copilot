@@ -10,9 +10,14 @@ import type { VerificationStatus } from "@/lib/types";
 interface PassportCardProps {
   callsign: string | null;
   headline: string | null;
-  verificationStatus: VerificationStatus;
-  completionPercentage: number;
-  versionNumber: number;
+  // Optional -- omitted entirely on the recruiter-facing candidate workspace, which has no real
+  // verification pipeline to report on yet (see the "verification deferred" project memory) and
+  // no access to a candidate's own completion/version bookkeeping in the first place. The
+  // candidate's own Shadow wizard passes all three; nothing else needs to.
+  verificationStatus?: VerificationStatus;
+  completionPercentage?: number;
+  versionNumber?: number;
+  footnote?: string;
 }
 
 // The final "digital credential" reveal — gold accents, used selectively here because this is
@@ -25,6 +30,7 @@ export function PassportCard({
   verificationStatus,
   completionPercentage,
   versionNumber,
+  footnote,
 }: PassportCardProps) {
   const verifyUrl =
     callsign && typeof window !== "undefined"
@@ -39,7 +45,7 @@ export function PassportCard({
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
             Phantom Passport
           </span>
-          <Badge variant="gold">Version {versionNumber}</Badge>
+          {versionNumber != null && <Badge variant="gold">Version {versionNumber}</Badge>}
         </div>
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
@@ -54,16 +60,22 @@ export function PassportCard({
             </div>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={VERIFICATION_STATUS_VARIANT[verificationStatus]}>
-            <ShieldCheck className="h-3 w-3" />
-            {VERIFICATION_STATUS_LABEL[verificationStatus]}
-          </Badge>
-          <Badge variant="neutral">{completionPercentage}% complete</Badge>
-        </div>
+        {(verificationStatus || completionPercentage != null) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {verificationStatus && (
+              <Badge variant={VERIFICATION_STATUS_VARIANT[verificationStatus]}>
+                <ShieldCheck className="h-3 w-3" />
+                {VERIFICATION_STATUS_LABEL[verificationStatus]}
+              </Badge>
+            )}
+            {completionPercentage != null && (
+              <Badge variant="neutral">{completionPercentage}% complete</Badge>
+            )}
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">
-          This is your Callsign — the only identity companies see until you personally approve a
-          Reveal Request. Scan the code to open your public verification page.
+          {footnote ??
+            "This is your Callsign — the only identity companies see until you personally approve a Reveal Request. Scan the code to open your public verification page."}
         </p>
       </div>
     </div>
