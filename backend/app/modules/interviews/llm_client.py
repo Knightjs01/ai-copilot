@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -21,6 +22,27 @@ def _as_list(value: Any, *, field_name: str) -> list[Any]:
             f"Expected Claude's {field_name!r} field to be a list, got {type(value).__name__}"
         )
     return value
+
+
+def _recover_double_encoded_input(data: dict[str, Any]) -> dict[str, Any]:
+    """Observed in production against this tool's schema specifically (a nested array-of-objects
+    property alongside sibling top-level fields): Claude occasionally emits the entire tool
+    payload as a single JSON *string*, assigned to the first declared property, instead of as
+    real top-level fields — e.g. {"competency_scores": "{\"competency_scores\": [...], ...}"}
+    rather than {"competency_scores": [...], "overall_recommendation": ..., "summary": ...}.
+    Recover the real payload from that string when this exact shape is detected; otherwise pass
+    the input through unchanged so a genuinely malformed response still fails loudly below."""
+
+    raw = data.get("competency_scores")
+    if not isinstance(raw, str):
+        return data
+    try:
+        recovered = json.loads(raw)
+    except json.JSONDecodeError:
+        return data
+    if isinstance(recovered, dict) and "competency_scores" in recovered:
+        return recovered
+    return data
 
 
 @dataclass
@@ -151,4 +173,4 @@ class AnthropicInterviewScorecardLLMClient:
         if tool_use_block is None:
             raise LLMRequestError("Claude did not return the expected structured tool call")
         result: dict[str, Any] = tool_use_block.input
-        return result
+        return _recover_double_encoded_input(result)
