@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
-import { PassportIdCardMockup } from "@/components/marketing/mockups/passport-id-card-mockup";
+import { HiringFlowMockup } from "@/components/marketing/mockups/hiring-flow-mockup";
 import { Button } from "@/components/ui/button";
 
 const SPECIALIST_SECTORS = [
@@ -84,7 +84,7 @@ export function HeroSection() {
 
         <div className="relative flex items-center justify-center">
           <div className="animate-float">
-            <PassportIdCardMockup />
+            <HiringFlowMockup />
           </div>
         </div>
       </div>
