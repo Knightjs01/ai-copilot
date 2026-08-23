@@ -7,6 +7,7 @@ import { ArrowLeft, Eye, Lock, MessageCircle, ShieldAlert, Sparkles } from "luci
 
 import { PassportCard } from "@/components/candidate/passport-wizard/passport-card";
 import { ActivityTab } from "@/components/shadow-jobs/candidate-workspace/activity-tab";
+import { AnonymizedCvDialog } from "@/components/shadow-jobs/candidate-workspace/anonymized-cv-dialog";
 import { ApplicationTab } from "@/components/shadow-jobs/candidate-workspace/application-tab";
 import { ExperienceTab } from "@/components/shadow-jobs/candidate-workspace/experience-tab";
 import { InterviewsTab } from "@/components/shadow-jobs/candidate-workspace/interviews-tab";
@@ -217,6 +218,7 @@ export default function CandidateWorkspacePage() {
             </div>
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <AnonymizedCvDialog profile={profile} />
               {isRevealable ? (
                 identity ? (
                   <Badge variant="success">Identity revealed</Badge>
