@@ -33,7 +33,7 @@ export function AtsShowcaseSection() {
             </p>
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Hire on evidence, not on names.
+            Candidate profile comes first, the identity comes later.
           </h2>
           <ul className="flex flex-col gap-2.5">
             {KEY_POINTS.map((point) => (
