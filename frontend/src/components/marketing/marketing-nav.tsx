@@ -16,7 +16,11 @@ interface NavGroup {
   links: { href: string; label: string }[];
 }
 
-// Every link below points at a real, shipped page — no placeholders.
+// Grouped by audience -- Candidates / Companies -- rather than by topic, so a visitor picks a
+// side of the hire once instead of guessing which topic bucket a page landed in (e.g. Pricing
+// and About used to share a "Trust" group with Security for no reason beyond "didn't fit
+// elsewhere"). Pricing is common to both audiences, so it's a top-level link, not nested in
+// either dropdown. Every link below points at a real, shipped page -- no placeholders.
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "Candidates",
@@ -27,39 +31,41 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Hire",
+    label: "Companies",
     links: [
       { href: "/ats", label: "Phantom ATS" },
       { href: "/ai", label: "Phantom AI" },
+      { href: "/talent-memory", label: "Talent Memory" },
+      { href: "/intelligence", label: "Phantom Intelligence" },
       { href: "/hiring-teams", label: "For Hiring Teams" },
     ],
   },
   {
-    label: "Intelligence",
-    links: [
-      { href: "/talent-memory", label: "Talent Memory" },
-      { href: "/intelligence", label: "Phantom Intelligence" },
-    ],
-  },
-  {
-    label: "Trust",
+    label: "About & Trust",
     links: [
       { href: "/trust", label: "Security" },
-      { href: "/pricing", label: "Pricing" },
       { href: "/about", label: "About" },
     ],
   },
 ];
 
-function DesktopNavGroup({ group, isActive }: { group: NavGroup; isActive: boolean }) {
-  const [open, setOpen] = React.useState(false);
+const TOP_LEVEL_LINKS: { href: string; label: string }[] = [{ href: "/pricing", label: "Pricing" }];
 
+function DesktopNavGroup({
+  group,
+  isActive,
+  open,
+  onClose,
+  onToggle,
+}: {
+  group: NavGroup;
+  isActive: boolean;
+  open: boolean;
+  onClose: () => void;
+  onToggle: () => void;
+}) {
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <div className="relative">
       <button
         type="button"
         className={cn(
@@ -67,7 +73,7 @@ function DesktopNavGroup({ group, isActive }: { group: NavGroup; isActive: boole
           isActive ? "text-foreground" : "text-muted-foreground"
         )}
         aria-expanded={open}
-        onFocus={() => setOpen(true)}
+        onClick={onToggle}
       >
         {group.label}
       </button>
@@ -79,7 +85,7 @@ function DesktopNavGroup({ group, isActive }: { group: NavGroup; isActive: boole
                 key={link.href}
                 href={link.href}
                 className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                onClick={() => setOpen(false)}
+                onClick={onClose}
               >
                 {link.label}
               </Link>
@@ -94,8 +100,34 @@ function DesktopNavGroup({ group, isActive }: { group: NavGroup; isActive: boole
 export function MarketingNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [openGroup, setOpenGroup] = React.useState<string | null>(null);
+  const navRef = React.useRef<HTMLDivElement>(null);
 
   const mobileGroups: MobileNavGroup[] = NAV_GROUPS;
+
+  React.useEffect(() => {
+    setOpenGroup(null);
+  }, [pathname]);
+
+  React.useEffect(() => {
+    if (!openGroup) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setOpenGroup(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenGroup(null);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openGroup]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
@@ -111,13 +143,28 @@ export function MarketingNav() {
           />
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav ref={navRef} className="hidden items-center gap-8 md:flex">
           {NAV_GROUPS.map((group) => (
             <DesktopNavGroup
               key={group.label}
               group={group}
               isActive={group.links.some((link) => link.href === pathname)}
+              open={openGroup === group.label}
+              onClose={() => setOpenGroup(null)}
+              onToggle={() => setOpenGroup((current) => (current === group.label ? null : group.label))}
             />
+          ))}
+          {TOP_LEVEL_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-foreground",
+                pathname === link.href ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              {link.label}
+            </Link>
           ))}
         </nav>
 
@@ -147,7 +194,12 @@ export function MarketingNav() {
         </Button>
       </div>
 
-      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen} groups={mobileGroups} />
+      <MobileNav
+        open={mobileOpen}
+        onOpenChange={setMobileOpen}
+        groups={mobileGroups}
+        topLevelLinks={TOP_LEVEL_LINKS}
+      />
     </header>
   );
 }

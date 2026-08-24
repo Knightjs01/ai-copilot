@@ -19,10 +19,12 @@ export function MobileNav({
   open,
   onOpenChange,
   groups,
+  topLevelLinks = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   groups: MobileNavGroup[];
+  topLevelLinks?: { href: string; label: string }[];
 }) {
   const reduceMotion = useReducedMotion();
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -73,6 +75,20 @@ export function MobileNav({
 
           <div className="flex-1 overflow-y-auto px-6 py-8">
             <div className="flex flex-col gap-8">
+              {topLevelLinks.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {topLevelLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => onOpenChange(false)}
+                      className="rounded-xl px-3 py-2.5 text-lg font-medium text-foreground transition-colors hover:bg-secondary"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
               {groups.map((group) => (
                 <div key={group.label} className="flex flex-col gap-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
