@@ -134,10 +134,10 @@ export function MarketingNav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" aria-label="Phantom Hire home">
           <Image
-            src="/phantom-hire-logo-compact.png"
+            src="/phantom-hire-logo-new.png"
             alt="Phantom Hire"
-            width={2006}
-            height={589}
+            width={2172}
+            height={724}
             className="h-10 w-auto"
             priority
           />
