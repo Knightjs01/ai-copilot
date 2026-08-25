@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
-import { HiringFlowMockup } from "@/components/marketing/mockups/hiring-flow-mockup";
+import { HeroShowcaseMockup } from "@/components/marketing/mockups/hero-showcase-mockup";
 import { Button } from "@/components/ui/button";
 
 const SPECIALIST_SECTORS = [
@@ -38,9 +38,7 @@ export function HeroSection() {
           </div>
 
           <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Hire with
-            <br />
-            total anonymity
+            The Private Talent Marketplace
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
@@ -84,7 +82,7 @@ export function HeroSection() {
 
         <div className="relative flex items-center justify-center">
           <div className="animate-float">
-            <HiringFlowMockup />
+            <HeroShowcaseMockup />
           </div>
         </div>
       </div>
