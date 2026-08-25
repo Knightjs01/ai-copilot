@@ -80,17 +80,19 @@ export function HeroSection() {
         </div>
 
         <div className="relative flex items-center justify-center">
-          <div className="animate-float">
-            <Image
-              src="/phantom-hire-hero-composite.png"
-              alt="Phantom Hire's Ghost, Phantom ATS pipeline and the Phantom mobile app showing anonymous candidate matches"
-              width={1536}
-              height={1024}
-              sizes="(max-width: 1024px) 90vw, 640px"
-              quality={95}
-              priority
-              className="w-full max-w-xl"
-            />
+          <div className="shrink-0 lg:translate-x-6">
+            <div className="animate-float w-full max-w-xl lg:w-[620px] lg:max-w-none">
+              <Image
+                src="/phantom-hire-hero-composite.png"
+                alt="Phantom Hire's Ghost, Phantom ATS pipeline and the Phantom mobile app showing anonymous candidate matches"
+                width={1536}
+                height={1024}
+                sizes="(max-width: 1024px) 90vw, 620px"
+                quality={95}
+                priority
+                className="h-auto w-full"
+              />
+            </div>
           </div>
         </div>
       </div>
