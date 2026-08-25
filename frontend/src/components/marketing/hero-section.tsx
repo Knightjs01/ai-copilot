@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
-import { HeroShowcaseMockup } from "@/components/marketing/mockups/hero-showcase-mockup";
+import { MarketplaceNetworkMockup } from "@/components/marketing/mockups/marketplace-network-mockup";
 import { Button } from "@/components/ui/button";
 
 const SPECIALIST_SECTORS = [
@@ -82,7 +82,7 @@ export function HeroSection() {
 
         <div className="relative flex items-center justify-center">
           <div className="animate-float">
-            <HeroShowcaseMockup />
+            <MarketplaceNetworkMockup />
           </div>
         </div>
       </div>
