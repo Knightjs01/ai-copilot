@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
-import { PlatformShieldMockup } from "@/components/marketing/mockups/platform-shield-mockup";
 import { Button } from "@/components/ui/button";
 
 const SPECIALIST_SECTORS = [
@@ -82,7 +81,16 @@ export function HeroSection() {
 
         <div className="relative flex items-center justify-center">
           <div className="animate-float">
-            <PlatformShieldMockup />
+            <Image
+              src="/phantom-hire-hero-composite.png"
+              alt="Phantom Hire's Ghost, Phantom ATS pipeline and the Phantom mobile app showing anonymous candidate matches"
+              width={1536}
+              height={1024}
+              sizes="(max-width: 1024px) 90vw, 640px"
+              quality={95}
+              priority
+              className="w-full max-w-xl"
+            />
           </div>
         </div>
       </div>
