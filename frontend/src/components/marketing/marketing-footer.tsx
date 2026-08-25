@@ -43,10 +43,10 @@ export function MarketingFooter() {
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-4">
           <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
             <Image
-              src="/phantom-hire-logo-compact.png"
+              src="/phantom-hire-logo-new.png"
               alt="Phantom Hire"
-              width={2006}
-              height={589}
+              width={2172}
+              height={724}
               className="h-7 w-auto"
             />
             <p className="text-xs leading-relaxed text-muted-foreground">
