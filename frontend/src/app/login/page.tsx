@@ -28,10 +28,10 @@ const OPTIONS = [
       "Run hiring projects, screen candidates, and post Shadow jobs from your Talent Acquisition workspace.",
     cta: "Log in as a Recruiter",
     logo: {
-      src: "/phantom-ats-logo.png",
+      src: "/phantom-ats-logo-new.png",
       alt: "Phantom ATS",
-      width: 2027,
-      height: 487,
+      width: 2172,
+      height: 724,
     },
   },
 ];
