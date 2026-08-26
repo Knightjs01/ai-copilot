@@ -115,7 +115,7 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
                 alt="Phantom ATS"
                 width={2172}
                 height={724}
-                className="h-11 w-auto"
+                className="h-12 w-auto translate-x-1"
                 priority
               />
             )}
