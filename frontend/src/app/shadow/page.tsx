@@ -4,8 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { Bookmark, BookmarkCheck, Briefcase, MapPin, SearchX } from "lucide-react";
 
+import { ShadowAppShell } from "@/components/shadow/shadow-app-shell";
 import { ShadowBoardToolbar } from "@/components/shadow/shadow-board-toolbar";
-import { ShadowTopNav } from "@/components/shadow/shadow-top-nav";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -19,8 +19,8 @@ import {
   MATCH_TIER_VARIANT,
   REMOTE_PREFERENCE_LABEL,
 } from "@/lib/status-display";
+import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import type { EmploymentType, RemotePreference } from "@/lib/types";
-import styles from "./shadow-theme.module.css";
 
 const MAX_MATCH_BATCH = 24;
 
@@ -40,7 +40,7 @@ export default function ShadowBoardPage() {
   // No visible Select for this today (see shadow-board-toolbar.tsx) -- the real board endpoint
   // supports it, but the only way to set it right now is via Ask Phantom's parsed NL query.
   const [location, setLocation] = React.useState<string | null>(null);
-  const mainRef = React.useRef<HTMLElement>(null);
+  const themeScopeContainer = useThemeScopeContainer();
   const { candidate } = useCandidateAuth();
 
   const { data: jobs, isLoading } = useShadowBoard({
@@ -114,13 +114,8 @@ export default function ShadowBoardPage() {
   };
 
   return (
-    // ShadowTopNav + this outer bg-slate-50 gutter stay light. Only <main> (the actual board
-    // content) goes obsidian/blue — Shadow keeps its own distinct dark theme, separate from
-    // Passport's, per the user's explicit call to not merge the two.
-    <div className="min-h-screen bg-slate-50">
-      <ShadowTopNav />
-      <main ref={mainRef} className={`${styles.shadowTheme} mx-auto max-w-4xl rounded-2xl px-6 py-10`}>
-        <div className="mb-8 flex flex-col gap-2">
+    <ShadowAppShell mainClassName="max-w-4xl">
+      <div className="mb-8 flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
             The job market you can enter without being seen
           </p>
@@ -143,7 +138,7 @@ export default function ShadowBoardPage() {
             onEmploymentTypeChange={setEmploymentType}
             matchCount={filteredJobs.length}
             totalCount={jobs?.length ?? 0}
-            container={mainRef.current}
+            container={themeScopeContainer}
             canAskPhantom={!!candidate}
             onAskPhantom={handleAskPhantom}
             isAskPhantomPending={nlSearch.isPending}
@@ -289,7 +284,6 @@ export default function ShadowBoardPage() {
             );
           })}
         </div>
-      </main>
-    </div>
+    </ShadowAppShell>
   );
 }

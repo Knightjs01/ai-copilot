@@ -51,9 +51,11 @@ const ITEM_CLASS =
 export function ShadowCommandPalette({
   open,
   onOpenChange,
+  container,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  container?: HTMLElement | null;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -73,7 +75,7 @@ export function ShadowCommandPalette({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
+      <DialogContent container={container} className="max-w-lg gap-0 overflow-hidden p-0">
         <Command className="flex flex-col" shouldFilter>
           <Command.Input
             placeholder="Search your applications, saved jobs, or jump to a page…"

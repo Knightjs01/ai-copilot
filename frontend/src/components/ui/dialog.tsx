@@ -16,10 +16,10 @@ function DialogContent({
   ...props
 }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   // Optional portal target — defaults to document.body (Radix's own fallback) when omitted, so
-  // this is additive and doesn't change any existing caller. Needed so a dialog rendered from a
-  // page with a scoped CSS-variable theme (e.g. shadow-theme.module.css) still inherits those
-  // variables — a Portal escapes the DOM subtree of any wrapper div, breaking CSS custom
-  // property inheritance, even though it stays a React-tree descendant.
+  // this is additive and doesn't change any existing caller. Needed so a dialog rendered inside a
+  // themed wrapper div (the literal "dark" class toggled by ThemeProvider/ShadowThemeProvider)
+  // still inherits those CSS variables — a Portal escapes the DOM subtree of any wrapper div,
+  // breaking CSS custom property inheritance, even though it stays a React-tree descendant.
   container?: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Portal>["container"];
 }) {
   return (

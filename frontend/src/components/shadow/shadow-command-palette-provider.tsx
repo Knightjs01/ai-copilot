@@ -12,7 +12,13 @@ const ShadowCommandPaletteContext = React.createContext<ShadowCommandPaletteCont
   null
 );
 
-export function ShadowCommandPaletteProvider({ children }: { children: React.ReactNode }) {
+export function ShadowCommandPaletteProvider({
+  children,
+  container,
+}: {
+  children: React.ReactNode;
+  container?: HTMLElement | null;
+}) {
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -34,7 +40,7 @@ export function ShadowCommandPaletteProvider({ children }: { children: React.Rea
   return (
     <ShadowCommandPaletteContext.Provider value={value}>
       {children}
-      <ShadowCommandPalette open={open} onOpenChange={setOpen} />
+      <ShadowCommandPalette open={open} onOpenChange={setOpen} container={container} />
     </ShadowCommandPaletteContext.Provider>
   );
 }

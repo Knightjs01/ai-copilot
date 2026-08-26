@@ -10,10 +10,10 @@ import type { MessageThread, MessageThreadSummary } from "@/lib/types";
 
 const POLL_INTERVAL_MS = 20000;
 
-// `enabled` matters here specifically because this hook is also read from ShadowTopNav/
-// ShadowMobileNav (for the unread badge), both mounted on the public board where a logged-out
-// visitor has no candidate session -- without it, every anonymous page view would fire a doomed,
-// unauthenticated request. Candidate-only pages don't need to pass it (always true there).
+// `enabled` matters here specifically because this hook is also read from ShadowSidebar (for the
+// unread badge), which can be mounted on the public board where a logged-out visitor has no
+// candidate session -- without it, every anonymous page view would fire a doomed, unauthenticated
+// request. Candidate-only pages don't need to pass it (always true there).
 export function useMyMessageThreads(options?: { enabled?: boolean }) {
   const { enabled = true } = options ?? {};
   return useQuery({

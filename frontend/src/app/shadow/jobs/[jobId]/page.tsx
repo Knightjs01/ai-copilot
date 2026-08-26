@@ -8,8 +8,8 @@ import { AlertTriangle, Bookmark, BookmarkCheck, Briefcase, CheckCircle2, MapPin
 
 import { ApplyDisclosureDialog } from "@/components/candidate/apply-disclosure-dialog";
 import { FormattedText } from "@/components/formatted-text";
+import { ShadowAppShell } from "@/components/shadow/shadow-app-shell";
 import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
-import { ShadowTopNav } from "@/components/shadow/shadow-top-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
   MATCH_TIER_VARIANT,
   REMOTE_PREFERENCE_LABEL,
 } from "@/lib/status-display";
+import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 
 function MatchToneList({
   title,
@@ -88,9 +89,9 @@ export default function ShadowJobDetailPage() {
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(false);
   const [disclosureOpen, setDisclosureOpen] = React.useState(false);
-  // Portal target for ApplyDisclosureDialog so it renders inside the themed <main> instead of
-  // document.body — see DialogContent's comment in dialog.tsx.
-  const mainRef = React.useRef<HTMLElement>(null);
+  // Portal target for ApplyDisclosureDialog so it renders inside the themed shell wrapper instead
+  // of document.body — see DialogContent's comment in dialog.tsx.
+  const themeScopeContainer = useThemeScopeContainer();
   const { setContext } = useShadowCopilot();
 
   React.useEffect(() => {
@@ -129,13 +130,8 @@ export default function ShadowJobDetailPage() {
   const salary = job ? formatSalary(job.salary_min, job.salary_max) : null;
 
   return (
-    // This page deliberately stays on the app's real light theme (matching the ATS's own brand
-    // feel) rather than Shadow's dark obsidian scope used elsewhere -- a candidate reviewing a
-    // specific role should see the same clean, on-brand look a recruiter previewing it does.
-    <div className="min-h-screen bg-slate-50">
-      <ShadowTopNav />
-      <main ref={mainRef} className="mx-auto max-w-4xl rounded-2xl bg-white px-6 py-10">
-        {(isLoading || authLoading) && (
+    <ShadowAppShell mainClassName="max-w-4xl rounded-2xl bg-card">
+      {(isLoading || authLoading) && (
           <div className="flex justify-center py-16">
             <Spinner className="h-6 w-6 text-muted-foreground" />
           </div>
@@ -338,14 +334,13 @@ export default function ShadowJobDetailPage() {
             </div>
           </div>
         )}
-      </main>
       <ApplyDisclosureDialog
         open={disclosureOpen}
         onOpenChange={setDisclosureOpen}
         onConfirm={handleConfirmApply}
         isSubmitting={applyMutation.isPending}
-        container={mainRef.current}
+        container={themeScopeContainer}
       />
-    </div>
+    </ShadowAppShell>
   );
 }
