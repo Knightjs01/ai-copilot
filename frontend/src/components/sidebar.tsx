@@ -111,11 +111,11 @@ export function Sidebar({ container }: { container?: HTMLElement | null }) {
               </span>
             ) : (
               <Image
-                src="/phantom-ats-logo-new.png"
+                src="/phantom-ats-logo-no-ghost.png"
                 alt="Phantom ATS"
                 width={2172}
                 height={724}
-                className="h-8 w-auto"
+                className="h-11 w-auto"
                 priority
               />
             )}
