@@ -15,10 +15,10 @@ const OPTIONS = [
       "Build your Phantom Passport, browse the Shadow job board, and manage your applications, pseudonymously, on your terms.",
     cta: "Log in as a Candidate",
     logo: {
-      src: "/phantom-shadow-logo.png",
+      src: "/phantom-shadow-logo-new.png",
       alt: "Phantom Shadow: Anonymous Job Board",
-      width: 2043,
-      height: 610,
+      width: 2172,
+      height: 724,
     },
   },
   {

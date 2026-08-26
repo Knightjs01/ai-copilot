@@ -30,10 +30,10 @@ export function JobSeekersHeroSection() {
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
           <div className="flex flex-col items-start gap-6">
             <Image
-              src="/phantom-shadow-logo.png"
+              src="/phantom-shadow-logo-new.png"
               alt="Phantom Shadow: Anonymous Job Board"
-              width={2043}
-              height={610}
+              width={2172}
+              height={724}
               className="h-9 w-auto"
               priority
             />
