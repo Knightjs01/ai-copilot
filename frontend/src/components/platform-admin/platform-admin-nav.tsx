@@ -16,6 +16,7 @@ const NAV_ITEMS: { href: string; label: string; permission?: string }[] = [
   { href: "/platform-admin/jobs", label: "Jobs", permission: "jobs.view" },
   { href: "/platform-admin/activity", label: "Activity", permission: "audit.view" },
   { href: "/platform-admin/team", label: "Team", permission: "admins.manage" },
+  { href: "/platform-admin/security", label: "Security" },
   { href: "/platform-admin/danger-zone", label: "Danger Zone", permission: "danger_zone.purge" },
 ];
 

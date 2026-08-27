@@ -9,9 +9,31 @@ import type {
   AdminShadowJob,
   CompanyAccessRequest,
   CompanyProfile,
+  MfaEnableResponse,
+  MfaSetupResponse,
   PlatformAdminAuditLogEntry,
   PlatformAdminSummary,
 } from "@/lib/types";
+
+export function usePlatformAdminMfaSetup() {
+  return useMutation({
+    mutationFn: () => platformAdminApiClient.post<MfaSetupResponse>("/platform-admin/mfa/setup"),
+  });
+}
+
+export function usePlatformAdminMfaEnable() {
+  return useMutation({
+    mutationFn: (input: { secret: string; code: string }) =>
+      platformAdminApiClient.post<MfaEnableResponse>("/platform-admin/mfa/enable", input),
+  });
+}
+
+export function usePlatformAdminMfaDisable() {
+  return useMutation({
+    mutationFn: (password: string) =>
+      platformAdminApiClient.post<void>("/platform-admin/mfa/disable", { password }),
+  });
+}
 
 export function useAccessRequests(status: string = "pending") {
   return useQuery({
@@ -214,11 +236,12 @@ export function useCreateAdmin() {
 export function usePurgeAllData() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { password: string; confirmationPhrase: string }) =>
-      platformAdminApiClient.post<{ tables_cleared: number }>("/platform-admin/danger-zone/purge", {
-        password: input.password,
-        confirmation_phrase: input.confirmationPhrase,
-      }),
+    mutationFn: (input: { confirmationPhrase: string; stepUpToken: string }) =>
+      platformAdminApiClient.post<{ tables_cleared: number }>(
+        "/platform-admin/danger-zone/purge",
+        { confirmation_phrase: input.confirmationPhrase },
+        input.stepUpToken
+      ),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform-admin"] }),
   });
 }

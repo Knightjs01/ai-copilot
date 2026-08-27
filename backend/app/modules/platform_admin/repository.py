@@ -1,10 +1,14 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.platform_admin.models import PlatformAdmin, PlatformAdminRefreshToken
+from app.modules.platform_admin.models import (
+    PlatformAdmin,
+    PlatformAdminMfaBackupCode,
+    PlatformAdminRefreshToken,
+)
 
 
 class PlatformAdminRepository:
@@ -72,3 +76,33 @@ class PlatformAdminTokenRepository:
             .values(revoked_at=datetime.now(timezone.utc))
         )
         await self._session.flush()
+
+    async def create_backup_codes(self, *, admin_id: uuid.UUID, code_hashes: list[str]) -> None:
+        for code_hash in code_hashes:
+            self._session.add(
+                PlatformAdminMfaBackupCode(admin_id=admin_id, code_hash=code_hash)
+            )
+        await self._session.flush()
+
+    async def get_unused_backup_code_by_hash(
+        self, *, admin_id: uuid.UUID, code_hash: str
+    ) -> PlatformAdminMfaBackupCode | None:
+        result = await self._session.execute(
+            select(PlatformAdminMfaBackupCode).where(
+                PlatformAdminMfaBackupCode.admin_id == admin_id,
+                PlatformAdminMfaBackupCode.code_hash == code_hash,
+                PlatformAdminMfaBackupCode.used_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def consume_backup_code(self, code: PlatformAdminMfaBackupCode) -> None:
+        code.used_at = datetime.now(timezone.utc)
+        await self._session.flush()
+
+    async def delete_all_backup_codes_for_admin(self, admin_id: uuid.UUID) -> None:
+        await self._session.execute(
+            delete(PlatformAdminMfaBackupCode).where(
+                PlatformAdminMfaBackupCode.admin_id == admin_id
+            )
+        )

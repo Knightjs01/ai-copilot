@@ -9,6 +9,7 @@ from app.modules.auth import security
 from app.modules.auth.exceptions import (
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
+    InvalidMfaCodeError,
     InvalidOrExpiredTokenError,
     InvalidRoleError,
 )
@@ -22,27 +23,24 @@ from app.modules.platform_admin.repository import (
 from app.modules.platform_admin.role_repository import PlatformAdminRoleRepository
 from app.modules.platform_admin.schemas import PlatformAdminSummary, PurgeAllDataResult
 
-# Tables a "wipe all tenant data" action must never touch, regardless of how the live table list
-# changes over time: migration bookkeeping, the seeded non-tenant permission catalog, and this
-# admin's own accounts/sessions/audit-trail. See PlatformAdminDataService.purge_all_tenant_data.
-_PURGE_EXCLUDED_TABLES = frozenset(
-    {
-        "alembic_version",
-        "permissions",
-        "platform_admins",
-        "platform_admin_audit_logs",
-        "platform_admin_refresh_tokens",
-        "platform_admin_roles",
-        "platform_admin_permissions",
-        "platform_admin_role_permissions",
-        "platform_admin_role_assignments",
-    }
-)
+# Tables a "wipe all tenant data" action must never touch: migration bookkeeping, the seeded
+# non-tenant permission catalog, and every platform_admin_* table (this admin's own accounts,
+# sessions, roles, MFA, audit trail). Deliberately a *prefix* rule, not a hardcoded set of table
+# names -- a hardcoded list already went stale twice in this feature's own first day (once for
+# the RBAC tables, once for the MFA backup-codes table added right after), each time silently
+# wiping every admin's roles or recovery codes on the next purge. Every platform-admin-owned
+# table already follows this naming convention (see models.py), so the prefix is the actual
+# invariant to encode, not an enumeration that has to be remembered on every future addition.
+_PURGE_EXCLUDED_TABLES = frozenset({"alembic_version", "permissions"})
+_PURGE_EXCLUDED_PREFIX = "platform_admin"
 
 # Must match the confirmation dialog's required input exactly (frontend/src/components/
 # platform-admin/purge-all-data-dialog.tsx) -- checked server-side too, not trusted from the
 # client alone, since this is the single most destructive action on the whole site.
 PURGE_CONFIRMATION_PHRASE = "DELETE ALL DATA"
+
+
+_BACKUP_CODE_COUNT = 10
 
 
 class IssuedAdminTokens(NamedTuple):
@@ -56,6 +54,7 @@ class PlatformAdminAuthService:
         self._settings = get_settings()
         self._admins = PlatformAdminRepository(session)
         self._tokens = PlatformAdminTokenRepository(session)
+        self._audit = PlatformAdminAuditService(session)
 
     async def login(self, *, email: str, password: str) -> IssuedAdminTokens:
         throttle = LoginAttemptTracker(realm="platform_admin")
@@ -115,6 +114,63 @@ class PlatformAdminAuthService:
         # other session, not just leave old refresh tokens quietly valid.
         await self._tokens.revoke_all_refresh_tokens_for_admin(admin.id)
 
+    async def setup_mfa(self, *, admin: PlatformAdmin) -> tuple[str, str]:
+        secret = security.generate_totp_secret()
+        uri = security.get_totp_provisioning_uri(secret=secret, email=admin.email)
+        return secret, uri
+
+    async def enable_mfa(self, *, admin: PlatformAdmin, secret: str, code: str) -> list[str]:
+        if not security.verify_totp_code(secret=secret, code=code):
+            raise InvalidMfaCodeError()
+        admin.mfa_secret_encrypted = security.encrypt_secret(secret)
+        admin.mfa_enabled = True
+
+        # Backup codes are the only recovery path if the authenticator is lost -- generated once
+        # here and returned in plaintext exactly this one time; only their hashes are ever stored.
+        await self._tokens.delete_all_backup_codes_for_admin(admin.id)
+        plain_codes = [security.generate_backup_code() for _ in range(_BACKUP_CODE_COUNT)]
+        await self._tokens.create_backup_codes(
+            admin_id=admin.id,
+            code_hashes=[security.hash_opaque_token(c) for c in plain_codes],
+        )
+
+        await self._audit.record(
+            admin_id=admin.id, action="admin.mfa_enabled", target_type="platform_admin"
+        )
+        return plain_codes
+
+    async def disable_mfa(self, *, admin: PlatformAdmin, password: str) -> None:
+        if not security.verify_password(password, admin.hashed_password):
+            raise InvalidCredentialsError()
+        admin.mfa_enabled = False
+        admin.mfa_secret_encrypted = None
+        await self._tokens.delete_all_backup_codes_for_admin(admin.id)
+        await self._audit.record(
+            admin_id=admin.id, action="admin.mfa_disabled", target_type="platform_admin"
+        )
+
+    async def step_up(self, *, admin: PlatformAdmin, password: str, mfa_code: str | None) -> str:
+        if not security.verify_password(password, admin.hashed_password):
+            raise InvalidCredentialsError()
+
+        if admin.mfa_enabled:
+            if not mfa_code or not admin.mfa_secret_encrypted:
+                raise InvalidMfaCodeError()
+            secret = security.decrypt_secret(admin.mfa_secret_encrypted)
+            if not security.verify_totp_code(secret=secret, code=mfa_code):
+                backup_code = await self._tokens.get_unused_backup_code_by_hash(
+                    admin_id=admin.id,
+                    code_hash=security.hash_opaque_token(mfa_code.strip().upper()),
+                )
+                if backup_code is None:
+                    raise InvalidMfaCodeError()
+                await self._tokens.consume_backup_code(backup_code)
+
+        await self._audit.record(
+            admin_id=admin.id, action="admin.step_up_verified", target_type="platform_admin"
+        )
+        return security.create_platform_admin_step_up_token(admin_id=admin.id)
+
     async def _issue_tokens(self, admin: PlatformAdmin) -> IssuedAdminTokens:
         access_token = security.create_platform_admin_access_token(admin_id=admin.id)
         refresh_token_plain = security.generate_opaque_token()
@@ -128,7 +184,7 @@ class PlatformAdminAuthService:
 
 
 class PurgeConfirmationError(InvalidCredentialsError):
-    detail = "Wrong password or confirmation phrase."
+    detail = "Wrong confirmation phrase."
 
 
 class PlatformAdminDataService:
@@ -144,12 +200,11 @@ class PlatformAdminDataService:
         self._audit = PlatformAdminAuditService(session)
 
     async def purge_all_tenant_data(
-        self, *, admin: PlatformAdmin, password: str, confirmation_phrase: str
+        self, *, admin: PlatformAdmin, confirmation_phrase: str
     ) -> PurgeAllDataResult:
-        if (
-            confirmation_phrase != PURGE_CONFIRMATION_PHRASE
-            or not security.verify_password(password, admin.hashed_password)
-        ):
+        # Password + MFA were already re-verified moments ago by require_platform_admin_step_up
+        # (the route's own dependency) -- only the typed confirmation phrase is checked here.
+        if confirmation_phrase != PURGE_CONFIRMATION_PHRASE:
             raise PurgeConfirmationError()
 
         tables = await self._tables_in_delete_order()
@@ -175,7 +230,12 @@ class PlatformAdminDataService:
         tables_result = await self._session.execute(
             text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
         )
-        all_tables = {row[0] for row in tables_result} - _PURGE_EXCLUDED_TABLES
+        all_tables = {
+            row[0]
+            for row in tables_result
+            if row[0] not in _PURGE_EXCLUDED_TABLES
+            and not row[0].startswith(_PURGE_EXCLUDED_PREFIX)
+        }
 
         fk_result = await self._session.execute(
             text(

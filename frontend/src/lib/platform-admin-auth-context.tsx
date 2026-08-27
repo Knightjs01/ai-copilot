@@ -16,6 +16,7 @@ interface PlatformAdminAuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  refreshAdmin: () => Promise<void>;
 }
 
 const PlatformAdminAuthContext = React.createContext<PlatformAdminAuthContextValue | null>(null);
@@ -67,9 +68,14 @@ export function PlatformAdminAuthProvider({ children }: { children: React.ReactN
     [admin]
   );
 
+  const refreshAdmin = React.useCallback(async () => {
+    const me = await platformAdminApiClient.get<PlatformAdmin>("/platform-admin/me");
+    setAdmin(me);
+  }, []);
+
   const value = React.useMemo(
-    () => ({ admin, isLoading, login, logout, hasPermission }),
-    [admin, isLoading, login, logout, hasPermission]
+    () => ({ admin, isLoading, login, logout, hasPermission, refreshAdmin }),
+    [admin, isLoading, login, logout, hasPermission, refreshAdmin]
   );
 
   return (

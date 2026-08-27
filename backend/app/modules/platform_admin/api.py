@@ -13,6 +13,7 @@ from app.modules.platform_admin.dependencies import (
     get_maintenance_db,
     require_platform_admin,
     require_platform_admin_permission,
+    require_platform_admin_step_up,
 )
 from app.modules.platform_admin.models import PlatformAdmin
 from app.modules.platform_admin.permissions import PlatformAdminPermissions
@@ -20,7 +21,13 @@ from app.modules.platform_admin.schemas import (
     ChangePasswordRequest,
     CreatePlatformAdminRequest,
     PlatformAdminLoginRequest,
+    PlatformAdminMfaDisableRequest,
+    PlatformAdminMfaEnableRequest,
+    PlatformAdminMfaEnableResponse,
+    PlatformAdminMfaSetupResponse,
     PlatformAdminRead,
+    PlatformAdminStepUpRequest,
+    PlatformAdminStepUpResponse,
     PlatformAdminSummary,
     PlatformAdminTokenResponse,
     PurgeAllDataRequest,
@@ -114,7 +121,52 @@ async def me(admin: PlatformAdminContext = Depends(get_current_platform_admin)) 
         full_name=admin.full_name,
         roles=admin.roles,
         permissions=sorted(admin.permissions),
+        mfa_enabled=admin.mfa_enabled,
     )
+
+
+@router.post("/mfa/setup", response_model=PlatformAdminMfaSetupResponse)
+async def setup_mfa(
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminMfaSetupResponse:
+    secret, uri = await PlatformAdminAuthService(session).setup_mfa(admin=admin)
+    return PlatformAdminMfaSetupResponse(secret=secret, provisioning_uri=uri)
+
+
+@router.post("/mfa/enable", response_model=PlatformAdminMfaEnableResponse)
+async def enable_mfa(
+    body: PlatformAdminMfaEnableRequest,
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminMfaEnableResponse:
+    backup_codes = await PlatformAdminAuthService(session).enable_mfa(
+        admin=admin, secret=body.secret, code=body.code
+    )
+    return PlatformAdminMfaEnableResponse(backup_codes=backup_codes)
+
+
+@router.post("/mfa/disable", status_code=204)
+async def disable_mfa(
+    body: PlatformAdminMfaDisableRequest,
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await PlatformAdminAuthService(session).disable_mfa(admin=admin, password=body.password)
+
+
+@router.post("/step-up", response_model=PlatformAdminStepUpResponse)
+@limiter.limit("10/minute")
+async def step_up(
+    request: Request,
+    body: PlatformAdminStepUpRequest,
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminStepUpResponse:
+    token = await PlatformAdminAuthService(session).step_up(
+        admin=admin, password=body.password, mfa_code=body.mfa_code
+    )
+    return PlatformAdminStepUpResponse(step_up_token=token)
 
 
 @router.post("/danger-zone/purge", response_model=PurgeAllDataResult)
@@ -122,14 +174,14 @@ async def me(admin: PlatformAdminContext = Depends(get_current_platform_admin)) 
 async def purge_all_data(
     request: Request,
     body: PurgeAllDataRequest,
-    admin: PlatformAdmin = Depends(require_platform_admin),
     _: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.DANGER_ZONE_PURGE)
     ),
+    admin: PlatformAdmin = Depends(require_platform_admin_step_up),
     session: AsyncSession = Depends(get_maintenance_db),
 ) -> PurgeAllDataResult:
     return await PlatformAdminDataService(session).purge_all_tenant_data(
-        admin=admin, password=body.password, confirmation_phrase=body.confirmation_phrase
+        admin=admin, confirmation_phrase=body.confirmation_phrase
     )
 
 

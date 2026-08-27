@@ -159,6 +159,29 @@ def decode_step_up_token(token: str) -> dict[str, Any]:
     return payload
 
 
+def create_platform_admin_step_up_token(*, admin_id: uuid.UUID) -> str:
+    """Platform-admin equivalent of create_step_up_token -- a distinct scope so a stolen company
+    step-up token can't be replayed against a platform-admin route or vice versa, same reasoning
+    create_platform_admin_access_token already follows for the access token itself."""
+
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(admin_id),
+        "scope": "platform_admin_step_up",
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.step_up_token_expire_minutes),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
+def decode_platform_admin_step_up_token(token: str) -> dict[str, Any]:
+    payload = decode_access_token(token)
+    if payload.get("scope") != "platform_admin_step_up":
+        raise TokenError("Not a step-up token")
+    return payload
+
+
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 

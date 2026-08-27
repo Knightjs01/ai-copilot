@@ -49,13 +49,22 @@ interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   skipAuthRetry?: boolean;
+  extraHeaders?: Record<string, string>;
+}
+
+// Danger Zone actions pass the token obtained from POST /platform-admin/step-up here — see
+// components/platform-admin/step-up-dialog.tsx — since the plain methods below have no other way
+// to attach a one-off header. Mirrors api-client.ts's own stepUpHeaders exactly.
+function stepUpHeaders(token?: string): Record<string, string> | undefined {
+  return token ? { "X-Step-Up-Token": token } : undefined;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, skipAuthRetry = false } = options;
+  const { method = "GET", body, skipAuthRetry = false, extraHeaders } = options;
   const headers: Record<string, string> = {};
   if (platformAdminAccessToken) headers.Authorization = `Bearer ${platformAdminAccessToken}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (extraHeaders) Object.assign(headers, extraHeaders);
 
   const res = await fetch(`${API_URL}/api/v1${path}`, {
     method,
@@ -88,5 +97,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 export const platformAdminApiClient = {
   get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
+  post: <T>(path: string, body?: unknown, stepUpToken?: string) =>
+    request<T>(path, { method: "POST", body, extraHeaders: stepUpHeaders(stepUpToken) }),
 };

@@ -23,6 +23,34 @@ class PlatformAdminRead(BaseModel):
     full_name: str
     roles: list[str] = []
     permissions: list[str] = []
+    mfa_enabled: bool = False
+
+
+class PlatformAdminMfaSetupResponse(BaseModel):
+    secret: str
+    provisioning_uri: str
+
+
+class PlatformAdminMfaEnableRequest(BaseModel):
+    secret: str
+    code: str
+
+
+class PlatformAdminMfaEnableResponse(BaseModel):
+    backup_codes: list[str]
+
+
+class PlatformAdminMfaDisableRequest(BaseModel):
+    password: str
+
+
+class PlatformAdminStepUpRequest(BaseModel):
+    password: str
+    mfa_code: str | None = None
+
+
+class PlatformAdminStepUpResponse(BaseModel):
+    step_up_token: str
 
 
 class PlatformAdminSummary(BaseModel):
@@ -55,7 +83,8 @@ class ChangePasswordRequest(BaseModel):
 
 
 class PurgeAllDataRequest(BaseModel):
-    password: str
+    # No password field -- superseded by the step-up token this route now requires (see
+    # require_platform_admin_step_up), which already re-verified password + MFA moments ago.
     confirmation_phrase: str
 
 

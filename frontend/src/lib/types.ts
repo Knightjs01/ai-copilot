@@ -1220,6 +1220,7 @@ export interface PlatformAdmin {
   full_name: string;
   roles: string[];
   permissions: string[];
+  mfa_enabled: boolean;
 }
 
 export type PlatformAdminRoleName =

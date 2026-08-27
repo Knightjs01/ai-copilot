@@ -16,6 +16,8 @@ class PlatformAdmin(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    mfa_secret_encrypted: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class PlatformAdminRefreshToken(UUIDPrimaryKeyMixin, Base):
@@ -78,3 +80,17 @@ class PlatformAdminRoleAssignment(Base):
     role_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("platform_admin_roles.id"), primary_key=True
     )
+
+
+class PlatformAdminMfaBackupCode(UUIDPrimaryKeyMixin, Base):
+    """Mirrors auth.models.MfaBackupCode, minus company_id -- platform admins aren't tenant-
+    owned data."""
+
+    __tablename__ = "platform_admin_mfa_backup_codes"
+
+    admin_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("platform_admins.id"), index=True
+    )
+    code_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

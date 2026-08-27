@@ -12,24 +12,26 @@ import {
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { ApiError } from "@/lib/api-client";
 import { usePurgeAllData } from "@/lib/queries/platform-admin";
 
 const CONFIRMATION_PHRASE = "DELETE ALL DATA";
 
-export function PurgeAllDataDialog() {
+// Password re-entry used to live in this dialog too, before Danger Zone required a page-level
+// step-up (password + MFA) just to reach this point -- asking for it a second time here would be
+// redundant, so the only remaining friction is the typed confirmation phrase.
+export function PurgeAllDataDialog({ stepUpToken }: { stepUpToken: string }) {
   const [open, setOpen] = React.useState(false);
   const [phrase, setPhrase] = React.useState("");
-  const [password, setPassword] = React.useState("");
   const [result, setResult] = React.useState<number | null>(null);
   const purge = usePurgeAllData();
 
-  const canSubmit = phrase === CONFIRMATION_PHRASE && password.length > 0 && !purge.isPending;
+  const canSubmit = phrase === CONFIRMATION_PHRASE && !purge.isPending;
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) {
       setPhrase("");
-      setPassword("");
       setResult(null);
       purge.reset();
     }
@@ -39,7 +41,7 @@ export function PurgeAllDataDialog() {
     e.preventDefault();
     if (!canSubmit) return;
     purge.mutate(
-      { password, confirmationPhrase: phrase },
+      { confirmationPhrase: phrase, stepUpToken },
       { onSuccess: (res) => setResult(res.tables_cleared) }
     );
   };
@@ -73,7 +75,7 @@ export function PurgeAllDataDialog() {
               platform. It cannot be undone. Type <strong className="text-foreground">
                 {CONFIRMATION_PHRASE}
               </strong>{" "}
-              and re-enter your password to continue.
+              to continue.
             </p>
             <Field label={`Type "${CONFIRMATION_PHRASE}"`} htmlFor="purge-phrase">
               <Input
@@ -83,18 +85,11 @@ export function PurgeAllDataDialog() {
                 autoComplete="off"
               />
             </Field>
-            <Field label="Password" htmlFor="purge-password">
-              <Input
-                id="purge-password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
             {purge.isError && (
               <p className="text-sm font-medium text-danger">
-                Couldn&apos;t purge — check the phrase and password and try again.
+                {purge.error instanceof ApiError && purge.error.status === 403
+                  ? "Your verification expired — reload this page and confirm it's you again."
+                  : "Couldn't purge — check the phrase and try again."}
               </p>
             )}
             <DialogFooter>
