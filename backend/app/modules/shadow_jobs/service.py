@@ -171,6 +171,38 @@ class ShadowJobService:
         )
         return job
 
+    async def publish_project_to_shadow(
+        self, *, actor: User, project_id: uuid.UUID, body: ShadowJobCreate
+    ) -> ShadowJob:
+        """The ATS -> Shadow publish pipeline: an explicit, one-time snapshot. Copies whatever the
+        recruiter confirmed in the publish dialog onto the linked ShadowJob (creating it on first
+        publish, overwriting the existing one on a re-publish) -- nothing auto-propagates from the
+        Project afterward, by design. Orchestrates the existing create/update/publish methods
+        rather than duplicating their repository or audit-logging logic."""
+        existing = await self._jobs.get_by_project_id(project_id)
+        if existing is None:
+            job = await self.create_job(
+                actor=actor, body=body.model_copy(update={"project_id": project_id})
+            )
+        else:
+            update_body = ShadowJobUpdate(
+                title=body.title,
+                department=body.department,
+                seniority=body.seniority,
+                employment_type=body.employment_type,
+                location=body.location,
+                remote_preference=body.remote_preference,
+                salary_min=body.salary_min,
+                salary_max=body.salary_max,
+                summary=body.summary,
+                description=body.description,
+                requirements=body.requirements,
+            )
+            job = await self.update_job(actor=actor, job_id=existing.id, body=update_body)
+        # published_at reflects the most recent publish action, not just the first one -- safe to
+        # call unconditionally, publish_job just sets status + refreshes the timestamp.
+        return await self.publish_job(actor=actor, job_id=job.id)
+
     async def close_job(self, *, actor: User, job_id: uuid.UUID) -> ShadowJob:
         job = await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)
         job.status = ShadowJobStatus.CLOSED.value

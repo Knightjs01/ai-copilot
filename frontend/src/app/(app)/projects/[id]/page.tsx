@@ -14,6 +14,7 @@ import { IdentityVaultTab } from "@/components/project/identity-vault-tab";
 import { InterviewKitCard } from "@/components/project/interview-kit-card";
 import { LiveRoleLink } from "@/components/project/live-role-preview";
 import { ProjectAnalyticsCard } from "@/components/project/project-analytics-card";
+import { PublishToShadowDialog } from "@/components/project/publish-to-shadow-dialog";
 import { RoleHealthCard } from "@/components/project/role-health-card";
 import { RoleInfoCard } from "@/components/project/role-info-card";
 import { Badge } from "@/components/ui/badge";
@@ -107,6 +108,7 @@ export default function ProjectDetailPage() {
   const { hasPermission } = useAuth();
   const canRevealIdentity = hasPermission("identity_vault.reveal");
   const canEditProject = hasPermission("projects.update");
+  const canPublishToShadow = hasPermission("shadow_jobs.create");
 
   React.useEffect(() => {
     const tab = searchParams.get("tab");
@@ -138,6 +140,9 @@ export default function ProjectDetailPage() {
         </h1>
         <div className="flex items-center gap-2">
           {shadowJob?.status === "published" && <LiveRoleLink jobId={shadowJob.id} />}
+          {canPublishToShadow && (
+            <PublishToShadowDialog project={project} existingShadowJob={shadowJob} />
+          )}
           {canEditProject && <EditProjectDialog project={project} />}
           {canEditProject && <ApproveProjectDialog project={project} />}
           <BurnProjectDialog projectId={project.id} projectTitle={project.title} />

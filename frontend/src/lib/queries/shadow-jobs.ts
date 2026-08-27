@@ -154,6 +154,19 @@ export function useProjectShadowJob(projectId: string | undefined) {
   });
 }
 
+// The one-time-snapshot publish/re-publish action -- always sends the full current form state,
+// never a partial diff, since each call is an explicit "copy this onto Shadow now" moment.
+export function usePublishProjectToShadow(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ShadowJobCreateInput) =>
+      apiClient.post<ShadowJob>(`/projects/${projectId}/shadow-job`, input),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["shadow-jobs", "project", projectId], data);
+    },
+  });
+}
+
 export function useUpdateApplicantPipelineStage(jobId: string) {
   const queryClient = useQueryClient();
   return useMutation({

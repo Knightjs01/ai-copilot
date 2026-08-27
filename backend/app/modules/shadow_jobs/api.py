@@ -333,3 +333,18 @@ async def get_project_shadow_job(
     if job is None or job.company_id != actor.company_id:
         raise ShadowJobNotFoundError()
     return await _to_job_read(service, job)
+
+
+@project_router.post("/{project_id}/shadow-job", response_model=ShadowJobRead)
+async def publish_project_to_shadow(
+    project_id: uuid.UUID,
+    body: ShadowJobCreate,
+    actor: User = Depends(require_verified_domain),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_CREATE)),
+    session: AsyncSession = Depends(get_tenant_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> ShadowJobRead:
+    service = ShadowJobService(session)
+    job = await service.publish_project_to_shadow(actor=actor, project_id=project_id, body=body)
+    await JobAlertService(session, email_sender=email_sender).notify_matching_alerts(job)
+    return await _to_job_read(service, job)
