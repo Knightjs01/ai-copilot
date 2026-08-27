@@ -41,10 +41,10 @@ export default function LoginChooserPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16">
       <Link href="/" aria-label="Phantom Hire home" className="mb-10 flex flex-col items-center gap-3">
         <Image
-          src="/phantom-hire-logo-new.png"
+          src="/phantom-logo-ghost.png"
           alt="Phantom Hire"
-          width={2172}
-          height={724}
+          width={1191}
+          height={1321}
           className="h-14 w-auto"
           priority
         />
