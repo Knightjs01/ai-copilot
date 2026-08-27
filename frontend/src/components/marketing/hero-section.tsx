@@ -41,9 +41,9 @@ export function HeroSection() {
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Phantom Hire is the all-in-one platform for anonymous, evidence-based hiring, built
-            around the Candidate Passport: one reusable, verifiable, anonymous profile for people
-            who aren&apos;t publicly job-searching.
+            Phantom Hire is the all in one platform for anonymous, evidence based hiring. Built
+            around the Candidate Passport, a reusable, verified profile that lets people explore
+            new opportunities without putting their identity at risk.
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
