@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Search, Sparkles } from "lucide-react";
+import { Bell, MapPin, Search, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ export function ShadowBoardToolbar({
   onRemotePreferenceChange,
   employmentType,
   onEmploymentTypeChange,
+  location,
+  onLocationChange,
   matchCount,
   totalCount,
   container,
@@ -34,6 +36,8 @@ export function ShadowBoardToolbar({
   onRemotePreferenceChange: (value: RemotePreference | "all") => void;
   employmentType: EmploymentType | "all";
   onEmploymentTypeChange: (value: EmploymentType | "all") => void;
+  location: string;
+  onLocationChange: (value: string) => void;
   matchCount: number;
   totalCount: number;
   container: HTMLElement | null;
@@ -73,6 +77,16 @@ export function ShadowBoardToolbar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search roles by skill, not by title…"
+            className="pl-9"
+          />
+        </div>
+
+        <div className="relative w-full sm:max-w-[9rem]">
+          <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={location}
+            onChange={(e) => onLocationChange(e.target.value)}
+            placeholder="Location"
             className="pl-9"
           />
         </div>

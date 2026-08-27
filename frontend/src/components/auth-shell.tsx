@@ -18,10 +18,10 @@ export function AuthShell({
       <div className="mb-8 flex flex-col items-center gap-3">
         <Link href="/" aria-label="Phantom Hire home">
           <Image
-            src="/phantom-hire-logo.png"
+            src="/phantom-hire-logo-new.png"
             alt="Phantom Hire"
-            width={2006}
-            height={779}
+            width={2172}
+            height={724}
             className="h-14 w-auto"
             priority
           />

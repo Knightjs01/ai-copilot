@@ -2,29 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Briefcase, MapPin, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useBatchJobMatches } from "@/lib/queries/passport-matching";
 import { useMyPassport } from "@/lib/queries/phantom-passport";
 import { useShadowBoard } from "@/lib/queries/shadow-jobs";
-import {
-  EMPLOYMENT_TYPE_LABEL,
-  MATCH_TIER_VARIANT,
-  REMOTE_PREFERENCE_LABEL,
-} from "@/lib/status-display";
 
 const MAX_MATCH_BATCH = 24;
-
-function formatSalary(min: number | null, max: number | null): string | null {
-  if (!min && !max) return null;
-  const fmt = (n: number) => `£${(n / 1000).toFixed(0)}k`;
-  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
-  return fmt((min ?? max)!);
-}
 
 // Requires an approved Passport, unlike Discover which works for anyone -- there's no valid
 // match cache key before that (see backend passport_matching/__init__.py). Sorted by match_score
@@ -96,47 +84,17 @@ export default function ShadowForYouPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {rankedJobs.map(({ job, match }) => {
-            const salary = formatSalary(job.salary_min, job.salary_max);
-            return (
-              <Link key={job.id} href={`/shadow/jobs/${job.id}`}>
-                <Card className="transition-colors hover:border-brand/40">
-                  <CardContent className="flex flex-col gap-2.5 py-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex flex-col gap-0.5">
-                        <h2 className="text-base font-semibold text-foreground">{job.title}</h2>
-                        <p className="text-sm text-muted-foreground">{job.company_name}</p>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <Badge variant={MATCH_TIER_VARIANT[match.match_tier]}>
-                          {match.match_tier}
-                        </Badge>
-                        {salary && <Badge variant="success">{salary}</Badge>}
-                      </div>
-                    </div>
-                    <p className="line-clamp-2 text-sm text-muted-foreground">{match.summary}</p>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      {job.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {job.location}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Briefcase className="h-3.5 w-3.5" />
-                        {EMPLOYMENT_TYPE_LABEL[job.employment_type]}
-                      </span>
-                      {job.remote_preference && (
-                        <Badge variant="outline">
-                          {REMOTE_PREFERENCE_LABEL[job.remote_preference]}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+          {rankedJobs.map(({ job, match }) => (
+            <ShadowJobCard
+              key={job.id}
+              job={job}
+              match={match}
+              description={match.summary}
+              showSeniority={false}
+              showRequirements={false}
+              showCompanyLink={false}
+            />
+          ))}
         </div>
       )}
 

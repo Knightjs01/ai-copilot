@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BellOff, Bookmark, BookmarkX, Trash2 } from "lucide-react";
+import { Bell, BellOff, Bookmark, Trash2 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -69,13 +69,6 @@ function JobAlertRow({ alert }: { alert: JobAlert }) {
   );
 }
 
-function formatSalary(min: number | null, max: number | null): string | null {
-  if (!min && !max) return null;
-  const fmt = (n: number) => `£${(n / 1000).toFixed(0)}k`;
-  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
-  return fmt((min ?? max)!);
-}
-
 function groupByCollection(saved: SavedShadowJob[]): Map<string, SavedShadowJob[]> {
   const groups = new Map<string, SavedShadowJob[]>();
   for (const item of saved) {
@@ -128,38 +121,19 @@ export default function SavedJobsPage() {
             {collectionName}
           </h2>
           <div className="flex flex-col gap-3">
-            {jobs.map((saved) => {
-              const salary = formatSalary(saved.job.salary_min, saved.job.salary_max);
-              return (
-                <Card key={saved.id} className="transition-colors hover:border-muted-foreground/40">
-                  <CardContent className="flex items-start justify-between gap-4 py-5">
-                    <Link href={`/shadow/jobs/${saved.job.id}`} className="flex flex-1 flex-col gap-1">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex flex-col gap-0.5">
-                          <h3 className="text-base font-semibold text-foreground">
-                            {saved.job.title}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">{saved.job.company_name}</p>
-                        </div>
-                        {salary && <Badge variant="success">{salary}</Badge>}
-                      </div>
-                      <p className="line-clamp-2 text-sm text-muted-foreground">
-                        {saved.job.summary}
-                      </p>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => unsaveJob.mutate(saved.job.id)}
-                      disabled={unsaveJob.isPending}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-danger"
-                      aria-label="Remove from saved jobs"
-                    >
-                      <BookmarkX className="h-4 w-4" />
-                    </button>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {jobs.map((saved) => (
+              <ShadowJobCard
+                key={saved.id}
+                job={saved.job}
+                showMeta={false}
+                showRequirements={false}
+                showCompanyLink={false}
+                unsaveAction={{
+                  onUnsave: () => unsaveJob.mutate(saved.job.id),
+                  pending: unsaveJob.isPending,
+                }}
+              />
+            ))}
           </div>
         </div>
       ))}
