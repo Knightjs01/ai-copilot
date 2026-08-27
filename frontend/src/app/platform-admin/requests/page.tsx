@@ -8,13 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
 import { Spinner } from "@/components/ui/spinner";
-import { StatTile } from "@/components/ui/stat-tile";
 import { Textarea } from "@/components/ui/textarea";
 import { PlatformAdminNav } from "@/components/platform-admin/platform-admin-nav";
 import {
   useAccessRequests,
   useApproveAccessRequest,
-  useDashboardStats,
   useRejectAccessRequest,
   useRequestMoreInfo,
 } from "@/lib/queries/platform-admin";
@@ -151,7 +149,6 @@ export default function PlatformAdminRequestsPage() {
   const { admin, isLoading: authLoading } = usePlatformAdminAuth();
   const [statusFilter, setStatusFilter] = React.useState<"pending" | "all">("pending");
   const { data: requests, isLoading } = useAccessRequests(statusFilter);
-  const { data: stats } = useDashboardStats();
 
   React.useEffect(() => {
     if (!authLoading && !admin) router.push("/platform-admin/login");
@@ -168,16 +165,6 @@ export default function PlatformAdminRequestsPage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-10">
       <PlatformAdminNav admin={admin} />
-
-      {stats && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <StatTile label="Pending" value={stats.pending_requests} />
-          <StatTile label="Approved" value={stats.approved_requests} />
-          <StatTile label="Rejected" value={stats.rejected_requests} />
-          <StatTile label="Active companies" value={stats.active_companies} />
-          <StatTile label="Suspended" value={stats.suspended_companies} />
-        </div>
-      )}
 
       <PillToggleGroup options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
 

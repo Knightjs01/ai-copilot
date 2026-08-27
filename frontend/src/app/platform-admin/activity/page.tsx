@@ -20,6 +20,7 @@ const ACTION_LABEL: Record<string, string> = {
   "company.reactivated": "Reactivated company",
   "company_profile.approved": "Approved profile",
   "company_profile.rejected": "Rejected profile",
+  "tenant_data.purged": "Purged all tenant data",
 };
 
 function describeEntry(entry: PlatformAdminAuditLogEntry): string {

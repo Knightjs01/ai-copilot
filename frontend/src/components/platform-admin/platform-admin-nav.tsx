@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 import type { PlatformAdmin } from "@/lib/types";
 
 const NAV_ITEMS = [
+  { href: "/platform-admin", label: "Dashboard" },
   { href: "/platform-admin/requests", label: "Requests" },
   { href: "/platform-admin/companies", label: "Companies" },
   { href: "/platform-admin/activity", label: "Activity" },
+  { href: "/platform-admin/danger-zone", label: "Danger Zone" },
 ];
 
 export function PlatformAdminNav({ admin }: { admin: PlatformAdmin }) {

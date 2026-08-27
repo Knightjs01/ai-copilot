@@ -8,12 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { StatTile } from "@/components/ui/stat-tile";
 import { PlatformAdminNav } from "@/components/platform-admin/platform-admin-nav";
 import { ProfileReviewDialog } from "@/components/platform-admin/profile-review-dialog";
 import {
   useAllCompanies,
-  useDashboardStats,
   useReactivateCompany,
   useSuspendCompany,
 } from "@/lib/queries/platform-admin";
@@ -86,7 +84,6 @@ export default function PlatformAdminCompaniesPage() {
   const router = useRouter();
   const { admin, isLoading: authLoading } = usePlatformAdminAuth();
   const { data: companies, isLoading } = useAllCompanies();
-  const { data: stats } = useDashboardStats();
 
   React.useEffect(() => {
     if (!authLoading && !admin) router.push("/platform-admin/login");
@@ -103,16 +100,6 @@ export default function PlatformAdminCompaniesPage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-10">
       <PlatformAdminNav admin={admin} />
-
-      {stats && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <StatTile label="Pending" value={stats.pending_requests} />
-          <StatTile label="Approved" value={stats.approved_requests} />
-          <StatTile label="Rejected" value={stats.rejected_requests} />
-          <StatTile label="Active companies" value={stats.active_companies} />
-          <StatTile label="Suspended" value={stats.suspended_companies} />
-        </div>
-      )}
 
       {isLoading && (
         <div className="flex justify-center py-16">

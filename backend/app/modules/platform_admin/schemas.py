@@ -21,6 +21,15 @@ class PlatformAdminRead(BaseModel):
     full_name: str
 
 
+class PurgeAllDataRequest(BaseModel):
+    password: str
+    confirmation_phrase: str
+
+
+class PurgeAllDataResult(BaseModel):
+    tables_cleared: int
+
+
 class PlatformAdminAuditLogRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

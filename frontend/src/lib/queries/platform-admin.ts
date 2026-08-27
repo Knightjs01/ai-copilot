@@ -144,3 +144,15 @@ export function useReactivateCompany() {
     onSuccess: () => invalidateCompanyQueues(queryClient),
   });
 }
+
+export function usePurgeAllData() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { password: string; confirmationPhrase: string }) =>
+      platformAdminApiClient.post<{ tables_cleared: number }>("/platform-admin/danger-zone/purge", {
+        password: input.password,
+        confirmation_phrase: input.confirmationPhrase,
+      }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform-admin"] }),
+  });
+}

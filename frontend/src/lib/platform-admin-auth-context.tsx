@@ -5,6 +5,7 @@ import * as React from "react";
 import {
   getPlatformAdminAccessToken,
   platformAdminApiClient,
+  refreshPlatformAdminAccessToken,
   setPlatformAdminAccessToken,
 } from "@/lib/platform-admin-api-client";
 import type { PlatformAdmin } from "@/lib/types";
@@ -13,7 +14,7 @@ interface PlatformAdminAuthContextValue {
   admin: PlatformAdmin | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const PlatformAdminAuthContext = React.createContext<PlatformAdminAuthContextValue | null>(null);
@@ -24,8 +25,11 @@ export function PlatformAdminAuthProvider({ children }: { children: React.ReactN
 
   React.useEffect(() => {
     (async () => {
-      // No refresh route exists yet (a stated Phase 1 limitation) -- if a token is already in
-      // memory (e.g. a client-side navigation, not a fresh page load), confirm it's still good.
+      // A fresh page load has no in-memory access token — try the httponly refresh cookie first
+      // so a reload silently re-establishes the session instead of bouncing to the login page.
+      if (!getPlatformAdminAccessToken()) {
+        await refreshPlatformAdminAccessToken();
+      }
       if (getPlatformAdminAccessToken()) {
         try {
           const me = await platformAdminApiClient.get<PlatformAdmin>("/platform-admin/me");
@@ -48,9 +52,13 @@ export function PlatformAdminAuthProvider({ children }: { children: React.ReactN
     setAdmin(me);
   }, []);
 
-  const logout = React.useCallback(() => {
-    setPlatformAdminAccessToken(null);
-    setAdmin(null);
+  const logout = React.useCallback(async () => {
+    try {
+      await platformAdminApiClient.post("/platform-admin/logout");
+    } finally {
+      setPlatformAdminAccessToken(null);
+      setAdmin(null);
+    }
   }, []);
 
   const value = React.useMemo(

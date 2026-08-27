@@ -3,9 +3,10 @@ import { ApiError } from "@/lib/api-client";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // Phantom staff are a third, separate principal from company Users and candidates — its own
-// module-scoped token var, matching candidate-api-client.ts's exact reasoning. No refresh route
-// exists yet (see backend platform_admin/__init__.py) -- a real, stated Phase 1 limitation, not
-// an oversight: the token just lives in memory and a session ends on reload or expiry.
+// module-scoped token var, matching candidate-api-client.ts's exact reasoning. The refresh token
+// is an httponly cookie the backend sets (see backend platform_admin/api.py), so a page reload
+// re-establishes the access token via refreshPlatformAdminAccessToken() rather than reading
+// anything from client-side storage.
 let platformAdminAccessToken: string | null = null;
 
 export function setPlatformAdminAccessToken(token: string | null): void {
@@ -16,13 +17,42 @@ export function getPlatformAdminAccessToken(): string | null {
   return platformAdminAccessToken;
 }
 
+let refreshPromise: Promise<string | null> | null = null;
+
+export async function refreshPlatformAdminAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/platform-admin/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          platformAdminAccessToken = null;
+          return null;
+        }
+        const data = (await res.json()) as { access_token: string };
+        platformAdminAccessToken = data.access_token;
+        return platformAdminAccessToken;
+      } catch {
+        platformAdminAccessToken = null;
+        return null;
+      }
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
+  skipAuthRetry?: boolean;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body } = options;
+  const { method = "GET", body, skipAuthRetry = false } = options;
   const headers: Record<string, string> = {};
   if (platformAdminAccessToken) headers.Authorization = `Bearer ${platformAdminAccessToken}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -30,8 +60,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const res = await fetch(`${API_URL}/api/v1${path}`, {
     method,
     headers,
+    credentials: "include",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+
+  if (res.status === 401 && !skipAuthRetry) {
+    const newToken = await refreshPlatformAdminAccessToken();
+    if (newToken) {
+      return request<T>(path, { ...options, skipAuthRetry: true });
+    }
+  }
 
   if (!res.ok) {
     let detail = res.statusText;

@@ -1,9 +1,11 @@
 import uuid
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.base import maintenance_session_factory
 from app.db.session import get_db
 from app.modules.auth import security
 from app.modules.auth.dependencies import get_bearer_token
@@ -39,3 +41,17 @@ async def require_platform_admin(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
         )
     return admin
+
+
+async def get_maintenance_db() -> AsyncGenerator[AsyncSession, None]:
+    """See app.db.base.maintenance_session_factory's docstring — full-privilege, RLS-bypassing
+    session for platform-wide actions with no single tenant to scope by. Only
+    PlatformAdminDataService.purge_all_tenant_data uses this."""
+
+    async with maintenance_session_factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

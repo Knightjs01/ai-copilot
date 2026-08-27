@@ -23,7 +23,7 @@ export default function PlatformAdminLoginPage() {
     setIsSubmitting(true);
     try {
       await login(email, password);
-      router.push("/platform-admin/requests");
+      router.push("/platform-admin");
     } catch {
       setError("Invalid email or password.");
     } finally {

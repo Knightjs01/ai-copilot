@@ -34,3 +34,13 @@ async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 # `users` without an app.current_company_id set. See app/db/session.get_db.
 auth_engine = _build_engine(_settings.auth_database_url)
 auth_session_factory = async_sessionmaker(auth_engine, expire_on_commit=False)
+
+# Maintenance connection — the same owning role Alembic migrations run as (Superuser, Bypass RLS
+# per this database's actual role attributes). This is the only role that can touch a FORCE ROW
+# LEVEL SECURITY table (most tenant tables — see any migration's "ALTER TABLE ... FORCE ROW LEVEL
+# SECURITY") outside of a single tenant's app.current_company_id context: neither app_runtime
+# (no Bypass RLS) nor app_auth (Bypass RLS, but not granted most tenant tables) can. Used by
+# exactly one place today — PlatformAdminDataService.purge_all_tenant_data, a platform-wide action
+# with no single company to scope by. Never use this for normal request handling.
+maintenance_engine = _build_engine(_settings.migration_database_url)
+maintenance_session_factory = async_sessionmaker(maintenance_engine, expire_on_commit=False)
