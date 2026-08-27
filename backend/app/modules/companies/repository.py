@@ -32,12 +32,18 @@ class CompanyRepository:
         return result.scalar_one_or_none()
 
     async def get_by_email_domain(self, email_domain: str) -> Company | None:
+        # .first(), not .scalar_one_or_none() -- there's no DB-level uniqueness constraint on
+        # email_domain (see company_access/service.py's own "race safety" comment: the
+        # check-then-create flow is only best-effort), so more than one row can legitimately
+        # exist for a domain. Every caller only checks "is a company already using this domain",
+        # not "give me the one true owner" -- .scalar_one_or_none() would raise
+        # MultipleResultsFound in exactly the case this method exists to detect.
         result = await self._session.execute(
             select(Company).where(
                 Company.email_domain == email_domain, Company.deleted_at.is_(None)
             )
         )
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def slug_exists(self, slug: str) -> bool:
         result = await self._session.execute(select(Company.id).where(Company.slug == slug))
