@@ -2,94 +2,59 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
 
 import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useMyApplications } from "@/lib/queries/shadow-jobs";
-import { SHADOW_APPLICATION_STATUS_LABEL, SHADOW_APPLICATION_STATUS_VARIANT } from "@/lib/status-display";
-import { cn } from "@/lib/utils";
+import {
+  SHADOW_APPLICATION_STATUS_COLUMNS,
+  SHADOW_APPLICATION_STATUS_LABEL,
+} from "@/lib/status-display";
 import type { ShadowApplication, ShadowApplicationStatus } from "@/lib/types";
 
-// The real, in-progress path a submitted application can move through -- reveal_requested only
-// happens if a company actually asks, so it's still shown as a step even though not every
-// application reaches it. declined/withdrawn are exits, not further steps along this path, so
-// they're deliberately not part of the stepper (see the flat badge treatment below instead).
-const ACTIVE_STEPS: ShadowApplicationStatus[] = [
-  "submitted",
-  "under_review",
-  "reveal_requested",
-  "revealed",
-];
-const TERMINAL_STATUSES = new Set<ShadowApplicationStatus>(["declined", "withdrawn"]);
+function formatAppliedDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
 
-function ApplicationStepper({ status }: { status: ShadowApplicationStatus }) {
-  const currentIndex = ACTIVE_STEPS.indexOf(status);
+function ApplicationKanbanCard({ application }: { application: ShadowApplication }) {
   return (
-    <div className="flex items-center gap-2">
-      {ACTIVE_STEPS.map((step, index) => {
-        const isComplete = index < currentIndex;
-        const isCurrent = index === currentIndex;
-        return (
-          <div key={step} className="flex flex-1 items-center gap-2">
-            <div className="flex flex-col items-center gap-1">
-              <span
-                className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold",
-                  isComplete
-                    ? "border-brand bg-brand text-brand-foreground"
-                    : isCurrent
-                      ? "border-brand text-brand"
-                      : "border-border text-muted-foreground"
-                )}
-              >
-                {isComplete ? <Check className="h-3 w-3" /> : index + 1}
-              </span>
-              <span
-                className={cn(
-                  "hidden text-center text-[10px] sm:block",
-                  isCurrent ? "font-medium text-foreground" : "text-muted-foreground"
-                )}
-              >
-                {SHADOW_APPLICATION_STATUS_LABEL[step]}
-              </span>
-            </div>
-            {index < ACTIVE_STEPS.length - 1 && (
-              <span
-                className={cn("h-px flex-1", index < currentIndex ? "bg-brand" : "bg-border")}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <Link href={`/shadow/applications/${application.id}`}>
+      <div className="rounded-2xl border border-border bg-card p-3.5 shadow-sm shadow-slate-900/[0.03] transition-shadow hover:border-slate-300">
+        <p className="text-sm font-semibold text-foreground">{application.job_title}</p>
+        <p className="text-xs text-muted-foreground">{application.company_name}</p>
+        <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+          <span>Callsign: {application.callsign}</span>
+          <span>{formatAppliedDate(application.applied_at)}</span>
+        </div>
+      </div>
+    </Link>
   );
 }
 
-function ApplicationCard({ application }: { application: ShadowApplication }) {
-  const isTerminal = TERMINAL_STATUSES.has(application.status);
+function ApplicationKanbanColumn({
+  status,
+  applications,
+}: {
+  status: ShadowApplicationStatus;
+  applications: ShadowApplication[];
+}) {
   return (
-    <Link href={`/shadow/applications/${application.id}`}>
-      <Card className="transition-colors hover:border-brand/40">
-        <CardContent className="flex flex-col gap-3 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-0.5">
-              <h3 className="text-base font-semibold text-foreground">{application.job_title}</h3>
-              <p className="text-sm text-muted-foreground">{application.company_name}</p>
-              <p className="text-xs text-muted-foreground">Callsign: {application.callsign}</p>
-            </div>
-            {isTerminal && (
-              <Badge variant={SHADOW_APPLICATION_STATUS_VARIANT[application.status]}>
-                {SHADOW_APPLICATION_STATUS_LABEL[application.status]}
-              </Badge>
-            )}
-          </div>
-          {!isTerminal && <ApplicationStepper status={application.status} />}
-        </CardContent>
-      </Card>
-    </Link>
+    <div className="flex w-72 shrink-0 flex-col gap-3 rounded-2xl border border-transparent p-2">
+      <div className="flex items-center gap-2 px-2 pt-1">
+        <h3 className="text-sm font-semibold text-foreground">
+          {SHADOW_APPLICATION_STATUS_LABEL[status]}
+        </h3>
+        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {applications.length}
+        </span>
+      </div>
+      <div className="flex flex-col gap-2">
+        {applications.map((application) => (
+          <ApplicationKanbanCard key={application.id} application={application} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -102,8 +67,14 @@ export default function ApplicationsPage() {
     return () => setContext({ type: "none" });
   }, [setContext]);
 
-  const active = applications?.filter((a) => !TERMINAL_STATUSES.has(a.status)) ?? [];
-  const completed = applications?.filter((a) => TERMINAL_STATUSES.has(a.status)) ?? [];
+  const byStatus = React.useMemo(() => {
+    const map = new Map<ShadowApplicationStatus, ShadowApplication[]>();
+    for (const status of SHADOW_APPLICATION_STATUS_COLUMNS) map.set(status, []);
+    for (const application of applications ?? []) {
+      map.get(application.status)?.push(application);
+    }
+    return map;
+  }, [applications]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -133,29 +104,15 @@ export default function ApplicationsPage() {
         </Card>
       )}
 
-      {active.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Active
-          </h2>
-          <div className="flex flex-col gap-3">
-            {active.map((application) => (
-              <ApplicationCard key={application.id} application={application} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {completed.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Completed
-          </h2>
-          <div className="flex flex-col gap-3">
-            {completed.map((application) => (
-              <ApplicationCard key={application.id} application={application} />
-            ))}
-          </div>
+      {!isLoading && (applications?.length ?? 0) > 0 && (
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {SHADOW_APPLICATION_STATUS_COLUMNS.map((status) => (
+            <ApplicationKanbanColumn
+              key={status}
+              status={status}
+              applications={byStatus.get(status) ?? []}
+            />
+          ))}
         </div>
       )}
     </div>

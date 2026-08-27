@@ -180,6 +180,17 @@ export const SHADOW_APPLICATION_STATUS_VARIANT: Record<ShadowApplicationStatus, 
   withdrawn: "outline",
 };
 
+// Column order for the candidate's own Applications board — all 6 rendered as ordinary columns,
+// matching how the real ATS kanban treats terminal statuses (hired/rejected) as just more columns.
+export const SHADOW_APPLICATION_STATUS_COLUMNS: ShadowApplicationStatus[] = [
+  "submitted",
+  "under_review",
+  "reveal_requested",
+  "revealed",
+  "declined",
+  "withdrawn",
+];
+
 // Reuses CANDIDATE_STATUS_LABEL's exact copy for the 6 shared words plus "Withdrawn", so ATS and
 // Shadow cards land in identically-labeled columns in the merged pipeline Kanban.
 export const SHADOW_EFFECTIVE_STAGE_LABEL: Record<ShadowEffectiveStage, string> = {
