@@ -147,6 +147,16 @@ export function useReactivateCompany() {
   });
 }
 
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string }) =>
+      platformAdminApiClient.post<void>("/platform-admin/change-password", {
+        current_password: input.currentPassword,
+        new_password: input.newPassword,
+      }),
+  });
+}
+
 export function usePendingReviewJobs() {
   return useQuery({
     queryKey: ["platform-admin", "jobs", "pending-review"],

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { ChangePasswordDialog } from "@/components/platform-admin/change-password-dialog";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { cn } from "@/lib/utils";
 import type { PlatformAdmin } from "@/lib/types";
@@ -32,9 +33,12 @@ export function PlatformAdminNav({ admin }: { admin: PlatformAdmin }) {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Phantom Admin</h1>
           <p className="text-sm text-muted-foreground">Signed in as {admin.email}</p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={logout}>
-          Log out
-        </Button>
+        <div className="flex items-center gap-2">
+          <ChangePasswordDialog />
+          <Button type="button" variant="secondary" size="sm" onClick={logout}>
+            Log out
+          </Button>
+        </div>
       </div>
       <nav className="flex gap-1 border-b border-border">
         {visibleItems.map((item) => {

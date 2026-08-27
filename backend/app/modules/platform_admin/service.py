@@ -105,6 +105,16 @@ class PlatformAdminAuthService:
         if stored is not None and stored.revoked_at is None:
             await self._tokens.revoke_refresh_token(stored)
 
+    async def change_password(
+        self, *, admin: PlatformAdmin, current_password: str, new_password: str
+    ) -> None:
+        if not security.verify_password(current_password, admin.hashed_password):
+            raise InvalidCredentialsError()
+        admin.hashed_password = security.hash_password(new_password)
+        # Same reasoning as AuthService.reset_password -- a password change should end every
+        # other session, not just leave old refresh tokens quietly valid.
+        await self._tokens.revoke_all_refresh_tokens_for_admin(admin.id)
+
     async def _issue_tokens(self, admin: PlatformAdmin) -> IssuedAdminTokens:
         access_token = security.create_platform_admin_access_token(admin_id=admin.id)
         refresh_token_plain = security.generate_opaque_token()

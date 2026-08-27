@@ -49,6 +49,11 @@ class RejectShadowJobRequest(BaseModel):
     reason: str | None = None
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
 class PurgeAllDataRequest(BaseModel):
     password: str
     confirmation_phrase: str

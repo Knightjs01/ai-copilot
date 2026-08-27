@@ -17,6 +17,7 @@ from app.modules.platform_admin.dependencies import (
 from app.modules.platform_admin.models import PlatformAdmin
 from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import (
+    ChangePasswordRequest,
     CreatePlatformAdminRequest,
     PlatformAdminLoginRequest,
     PlatformAdminRead,
@@ -92,6 +93,17 @@ async def logout(
     if refresh_token is not None:
         await PlatformAdminAuthService(session).logout(refresh_token_plain=refresh_token)
     _clear_refresh_cookie(response)
+
+
+@router.post("/change-password", status_code=204)
+async def change_password(
+    body: ChangePasswordRequest,
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await PlatformAdminAuthService(session).change_password(
+        admin=admin, current_password=body.current_password, new_password=body.new_password
+    )
 
 
 @router.get("/me", response_model=PlatformAdminRead)
