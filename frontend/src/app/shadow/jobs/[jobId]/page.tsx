@@ -9,6 +9,7 @@ import { Bookmark, BookmarkCheck, Briefcase, MapPin } from "lucide-react";
 import { ApplyDisclosureDialog } from "@/components/candidate/apply-disclosure-dialog";
 import { DimensionBreakdownList } from "@/components/dimension-breakdown-list";
 import { FormattedText } from "@/components/formatted-text";
+import { JobIntelligenceCard } from "@/components/shadow/job-intelligence-card";
 import { ShadowAppShell } from "@/components/shadow/shadow-app-shell";
 import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
 import { MatchToneList } from "@/components/shadow/match-tone-list";
@@ -22,7 +23,7 @@ import { formatSalary } from "@/lib/format";
 import { useCompanyProfile } from "@/lib/queries/company";
 import { useJobMatch } from "@/lib/queries/passport-matching";
 import { useSaveJob, useSavedJobs, useUnsaveJob } from "@/lib/queries/saved-jobs";
-import { useApplyToShadowJob, useShadowBoardJob } from "@/lib/queries/shadow-jobs";
+import { useApplyToShadowJob, useJobIntelligence, useShadowBoardJob } from "@/lib/queries/shadow-jobs";
 import {
   EMPLOYMENT_TYPE_LABEL,
   MATCH_TIER_VARIANT,
@@ -42,6 +43,7 @@ export default function ShadowJobDetailPage() {
   const saveJob = useSaveJob();
   const unsaveJob = useUnsaveJob();
   const { data: match } = useJobMatch(params.jobId, { enabled: !!candidate });
+  const { data: intelligence } = useJobIntelligence(params.jobId);
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(false);
   const [disclosureOpen, setDisclosureOpen] = React.useState(false);
@@ -217,6 +219,7 @@ export default function ShadowJobDetailPage() {
                     </CardContent>
                   </Card>
                 )}
+                {intelligence && <JobIntelligenceCard intelligence={intelligence} />}
                 <Card>
                   <CardContent className="flex flex-col gap-3 py-5">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

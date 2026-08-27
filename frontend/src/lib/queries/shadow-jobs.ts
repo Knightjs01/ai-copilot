@@ -12,6 +12,7 @@ import type {
   Interview,
   InterviewScorecard,
   InterviewScorecardDraft,
+  JobIntelligence,
   MessageThread,
   OverallRecommendation,
   ShadowApplication,
@@ -394,6 +395,14 @@ export function useShadowBoardJob(jobId: string | undefined) {
   return useQuery({
     queryKey: ["shadow-jobs", "board", jobId],
     queryFn: () => apiClient.get<ShadowJobBoardListing>(`/shadow-jobs/board/${jobId}`),
+    enabled: !!jobId,
+  });
+}
+
+export function useJobIntelligence(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["shadow-jobs", "board", jobId, "intelligence"],
+    queryFn: () => apiClient.get<JobIntelligence>(`/shadow-jobs/board/${jobId}/intelligence`),
     enabled: !!jobId,
   });
 }

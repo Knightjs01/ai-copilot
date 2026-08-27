@@ -808,6 +808,28 @@ export interface ShadowJobMatch {
   generated_at: string;
 }
 
+// See backend shadow_jobs/schemas.py::SalaryBenchmark/ViewTimeBenchmark/JobIntelligence. Real
+// aggregations, gated on a minimum sample size -- has_enough_data is false far more often than
+// not for a young product, and that's the honest, expected common case, not a bug.
+export interface SalaryBenchmark {
+  has_enough_data: boolean;
+  sample_size: number;
+  company_count: number;
+  median: number | null;
+  this_job_vs_median: "above" | "at" | "below" | null;
+}
+
+export interface ViewTimeBenchmark {
+  has_enough_data: boolean;
+  sample_size: number;
+  median_hours: number | null;
+}
+
+export interface JobIntelligence {
+  salary_benchmark: SalaryBenchmark;
+  view_time_benchmark: ViewTimeBenchmark;
+}
+
 // One discoverable candidate ranked against a company's job — see backend
 // passport_matching/schemas.py::CandidateSearchResult. No PII field, same discipline as
 // ShadowProfile. `match_summary` (not `summary`) to avoid colliding with the passport's own bio.

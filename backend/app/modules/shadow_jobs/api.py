@@ -25,6 +25,7 @@ from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.repository import ShadowJobRepository
 from app.modules.shadow_jobs.schemas import (
     AddFromTalentPoolRequest,
+    JobIntelligence,
     ShadowApplicantPipelineUpdate,
     ShadowApplicationRead,
     ShadowJobBoardListing,
@@ -262,6 +263,13 @@ async def get_board_job(
     job_id: uuid.UUID, session: AsyncSession = Depends(get_db)
 ) -> ShadowJobBoardListing:
     return await ShadowJobService(session).get_board_detail(job_id)
+
+
+@router.get("/board/{job_id}/intelligence", response_model=JobIntelligence)
+async def get_job_intelligence(
+    job_id: uuid.UUID, session: AsyncSession = Depends(get_db)
+) -> JobIntelligence:
+    return await ShadowJobService(session).get_job_intelligence(job_id)
 
 
 # --- Apply with Phantom Passport (candidate-authenticated) ---------------------------------

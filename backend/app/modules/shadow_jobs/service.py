@@ -1,8 +1,10 @@
 import logging
 import secrets
+import statistics
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
+from typing import Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +47,8 @@ from app.modules.shadow_jobs.models import (
 )
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 from app.modules.shadow_jobs.schemas import (
+    JobIntelligence,
+    SalaryBenchmark,
     ShadowApplicationRead,
     ShadowCareerEntrySummary,
     ShadowJobBoardListing,
@@ -52,6 +56,7 @@ from app.modules.shadow_jobs.schemas import (
     ShadowJobUpdate,
     ShadowProfile,
     ShadowProfileCompanyWide,
+    ViewTimeBenchmark,
 )
 
 logger = logging.getLogger("app.shadow_jobs.service")
@@ -66,6 +71,14 @@ _CALLSIGN_WORDS = [
     "Halcyon", "Wraith", "Basalt", "Cipher", "Lumen", "Grove", "Amber", "Fjord",
 ]  # fmt: skip
 _MAX_CALLSIGN_ATTEMPTS = 5
+
+# Minimum sample sizes before Job Intelligence shows a real number rather than "not enough data
+# yet" -- a thin bucket would either be statistically meaningless or risk fingerprinting one
+# specific company's own listing as "the benchmark". See compute_salary_benchmark/
+# compute_view_time_benchmark.
+_MIN_SALARY_SAMPLE = 5
+_MIN_SALARY_COMPANIES = 3
+_MIN_VIEW_TIME_SAMPLE = 5
 
 
 class ShadowJobService:
@@ -565,6 +578,101 @@ class ShadowJobService:
         ):
             raise ShadowJobNotFoundError()
         return await self._to_board_listing(job)
+
+    async def get_job_intelligence(self, job_id: uuid.UUID) -> JobIntelligence:
+        job = await self._jobs.get_by_id(job_id)
+        if (
+            job is None
+            or job.deleted_at is not None
+            or job.status != ShadowJobStatus.PUBLISHED.value
+        ):
+            raise ShadowJobNotFoundError()
+        return JobIntelligence(
+            salary_benchmark=await self.compute_salary_benchmark(job),
+            view_time_benchmark=await self.compute_view_time_benchmark(job.company_id),
+        )
+
+    async def compute_salary_benchmark(self, job: ShadowJob) -> SalaryBenchmark:
+        """Real aggregation over other published jobs with the same employment_type and (when set)
+        a case-insensitive seniority match. Gated on a minimum sample size (see module-level
+        _MIN_SALARY_SAMPLE/_MIN_SALARY_COMPANIES) so a thin bucket never produces a misleading
+        single-data-point "benchmark", or fingerprints one specific company's own listing."""
+        candidates = await self._jobs.list_published(
+            limit=500, employment_type=job.employment_type
+        )
+        if job.seniority:
+            candidates = [
+                c
+                for c in candidates
+                if c.seniority and c.seniority.strip().lower() == job.seniority.strip().lower()
+            ]
+        candidates = [c for c in candidates if c.id != job.id]
+
+        midpoints: list[float] = []
+        company_ids: set[uuid.UUID] = set()
+        for candidate in candidates:
+            if candidate.salary_min is None and candidate.salary_max is None:
+                continue
+            if candidate.salary_min is not None and candidate.salary_max is not None:
+                midpoints.append((candidate.salary_min + candidate.salary_max) / 2)
+            elif candidate.salary_min is not None:
+                midpoints.append(float(candidate.salary_min))
+            else:
+                assert candidate.salary_max is not None
+                midpoints.append(float(candidate.salary_max))
+            company_ids.add(candidate.company_id)
+
+        if len(midpoints) < _MIN_SALARY_SAMPLE or len(company_ids) < _MIN_SALARY_COMPANIES:
+            return SalaryBenchmark(
+                has_enough_data=False, sample_size=len(midpoints), company_count=len(company_ids)
+            )
+
+        median = statistics.median(midpoints)
+        this_job_midpoint: float | None = None
+        if job.salary_min is not None and job.salary_max is not None:
+            this_job_midpoint = (job.salary_min + job.salary_max) / 2
+        elif job.salary_min is not None:
+            this_job_midpoint = float(job.salary_min)
+        elif job.salary_max is not None:
+            this_job_midpoint = float(job.salary_max)
+
+        vs_median: Literal["above", "at", "below"] | None = None
+        if this_job_midpoint is not None:
+            if this_job_midpoint > median:
+                vs_median = "above"
+            elif this_job_midpoint < median:
+                vs_median = "below"
+            else:
+                vs_median = "at"
+
+        return SalaryBenchmark(
+            has_enough_data=True,
+            sample_size=len(midpoints),
+            company_count=len(company_ids),
+            median=round(median),
+            this_job_vs_median=vs_median,
+        )
+
+    async def compute_view_time_benchmark(self, company_id: uuid.UUID) -> ViewTimeBenchmark:
+        """Reuses the real, already-populated ShadowApplication.viewed_at column, framed as "time
+        to first view" rather than "response time" -- no event in this codebase captures an actual
+        recruiter decision/reply, only a first card-open. Aggregated across every job the company
+        has posted, not just one, so the sample has a realistic chance of clearing the threshold."""
+        applications = await self._applications.list_by_company_id(company_id)
+        hours: list[float] = [
+            (application.viewed_at - application.created_at).total_seconds() / 3600
+            for application in applications
+            if application.viewed_at is not None
+        ]
+
+        if len(hours) < _MIN_VIEW_TIME_SAMPLE:
+            return ViewTimeBenchmark(has_enough_data=False, sample_size=len(hours))
+
+        return ViewTimeBenchmark(
+            has_enough_data=True,
+            sample_size=len(hours),
+            median_hours=round(statistics.median(hours), 1),
+        )
 
     async def _to_board_listing(self, job: ShadowJob) -> ShadowJobBoardListing:
         company = await self._session.get(Company, job.company_id)

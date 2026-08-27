@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -86,6 +86,39 @@ class ShadowJobBoardListing(BaseModel):
     description: str
     requirements: list[Any]
     published_at: datetime | None
+
+
+class SalaryBenchmark(BaseModel):
+    """Real aggregation over other published jobs with the same employment_type and (when set)
+    a case-insensitive seniority match -- deliberately not fuzzy-matched on title/location, since
+    no NLP/embedding infrastructure exists and a silently-wrong "similar roles" bucket would be
+    worse than a narrower, honest one. Gated on a minimum sample size so a thin bucket never
+    produces a single-data-point "benchmark" that could fingerprint one specific company's own
+    listing -- see ShadowJobService.compute_salary_benchmark."""
+
+    has_enough_data: bool
+    sample_size: int
+    company_count: int
+    median: int | None = None
+    this_job_vs_median: Literal["above", "at", "below"] | None = None
+
+
+class ViewTimeBenchmark(BaseModel):
+    """How quickly this company has historically opened new applicants' cards for the first time,
+    aggregated across all of the company's jobs (not just this one, so the sample size has a
+    realistic chance of clearing the minimum threshold). Reuses the real, already-populated
+    ShadowApplication.viewed_at column -- deliberately framed as "time to first view", not
+    "response time": no event in this codebase captures an actual recruiter decision/reply, only
+    a first card-open. See ShadowJobService.compute_view_time_benchmark."""
+
+    has_enough_data: bool
+    sample_size: int
+    median_hours: float | None = None
+
+
+class JobIntelligence(BaseModel):
+    salary_benchmark: SalaryBenchmark
+    view_time_benchmark: ViewTimeBenchmark
 
 
 class ShadowApplicationCreate(BaseModel):
