@@ -3,11 +3,12 @@
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 
 import { AiProvenance } from "@/components/ai-provenance";
+import { DimensionBreakdownList } from "@/components/dimension-breakdown-list";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useApplicantMatch } from "@/lib/queries/candidate-search";
-import { DIMENSION_RATING_VARIANT, MATCH_TIER_VARIANT } from "@/lib/status-display";
+import { MATCH_TIER_VARIANT } from "@/lib/status-display";
 
 export function MatchTab({ jobId, applicationId }: { jobId: string; applicationId: string }) {
   const { data: match, isLoading, isError } = useApplicantMatch(jobId, applicationId);
@@ -80,17 +81,7 @@ export function MatchTab({ jobId, applicationId }: { jobId: string; applicationI
         <Card>
           <CardContent className="flex flex-col gap-4 py-5">
             <h2 className="text-sm font-semibold text-foreground">Match breakdown</h2>
-            <div className="flex flex-col divide-y divide-border">
-              {match.dimension_breakdown.map((dim) => (
-                <div key={dim.dimension} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground">{dim.dimension}</p>
-                    <Badge variant={DIMENSION_RATING_VARIANT[dim.rating]}>{dim.rating}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{dim.evidence}</p>
-                </div>
-              ))}
-            </div>
+            <DimensionBreakdownList dimensions={match.dimension_breakdown} />
           </CardContent>
         </Card>
       )}

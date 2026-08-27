@@ -4,18 +4,21 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { AlertTriangle, Bookmark, BookmarkCheck, Briefcase, CheckCircle2, MapPin } from "lucide-react";
+import { Bookmark, BookmarkCheck, Briefcase, MapPin } from "lucide-react";
 
 import { ApplyDisclosureDialog } from "@/components/candidate/apply-disclosure-dialog";
+import { DimensionBreakdownList } from "@/components/dimension-breakdown-list";
 import { FormattedText } from "@/components/formatted-text";
 import { ShadowAppShell } from "@/components/shadow/shadow-app-shell";
 import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
+import { MatchToneList } from "@/components/shadow/match-tone-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { API_URL, ApiError } from "@/lib/api-client";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import { formatSalary } from "@/lib/format";
 import { useCompanyProfile } from "@/lib/queries/company";
 import { useJobMatch } from "@/lib/queries/passport-matching";
 import { useSaveJob, useSavedJobs, useUnsaveJob } from "@/lib/queries/saved-jobs";
@@ -26,53 +29,6 @@ import {
   REMOTE_PREFERENCE_LABEL,
 } from "@/lib/status-display";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
-
-function MatchToneList({
-  title,
-  items,
-  tone,
-}: {
-  title: string;
-  items: string[];
-  tone: "positive" | "caution";
-}) {
-  if (items.length === 0) return null;
-  const Icon = tone === "positive" ? CheckCircle2 : AlertTriangle;
-  return (
-    <div>
-      <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h4>
-      <ul
-        className={
-          tone === "positive"
-            ? "flex flex-col gap-1.5 rounded-xl border border-success/20 bg-success/5 p-3"
-            : "flex flex-col gap-1.5 rounded-xl border border-warning/20 bg-warning/5 p-3"
-        }
-      >
-        {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-            <Icon
-              className={
-                tone === "positive"
-                  ? "mt-0.5 h-3.5 w-3.5 shrink-0 text-success"
-                  : "mt-0.5 h-3.5 w-3.5 shrink-0 text-warning"
-              }
-            />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function formatSalary(min: number | null, max: number | null): string | null {
-  if (!min && !max) return null;
-  const fmt = (n: number) => `£${(n / 1000).toFixed(0)}k`;
-  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
-  return fmt((min ?? max)!);
-}
 
 export default function ShadowJobDetailPage() {
   const params = useParams<{ jobId: string }>();
@@ -257,6 +213,7 @@ export default function ShadowJobDetailPage() {
                       <p className="text-sm text-foreground">{match.summary}</p>
                       <MatchToneList title="Strengths" items={match.strengths} tone="positive" />
                       <MatchToneList title="Gaps" items={match.gaps} tone="caution" />
+                      <DimensionBreakdownList dimensions={match.dimension_breakdown} />
                     </CardContent>
                   </Card>
                 )}

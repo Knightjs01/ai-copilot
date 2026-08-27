@@ -80,7 +80,12 @@ export function ShadowJobCard({
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               {match && (
-                <Badge variant={MATCH_TIER_VARIANT[match.match_tier]}>{match.match_tier}</Badge>
+                <>
+                  <Badge variant={MATCH_TIER_VARIANT[match.match_tier]}>{match.match_tier}</Badge>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {match.match_score}% match
+                  </span>
+                </>
               )}
               {salary && <Badge variant="success">{salary}</Badge>}
             </div>

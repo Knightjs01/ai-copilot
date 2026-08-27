@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
 
+import { MatchDetailPanel } from "@/components/shadow/match-detail-panel";
 import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,8 +12,55 @@ import { Spinner } from "@/components/ui/spinner";
 import { useBatchJobMatches } from "@/lib/queries/passport-matching";
 import { useMyPassport } from "@/lib/queries/phantom-passport";
 import { useShadowBoard } from "@/lib/queries/shadow-jobs";
+import type { ShadowJobBoardListing, ShadowJobMatch } from "@/lib/types";
 
 const MAX_MATCH_BATCH = 24;
+
+// Collapsed by default -- a full 6-dimension breakdown plus complete strengths/gaps lists for up
+// to MAX_MATCH_BATCH ranked cards would be a wall of content on a page whose value is quick
+// scannability of *why you're ranked where you are*. The always-visible top-strength line gives
+// the at-a-glance signal; this toggle gives full richness on demand.
+function ForYouMatchRow({
+  job,
+  match,
+}: {
+  job: ShadowJobBoardListing;
+  match: ShadowJobMatch;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <ShadowJobCard
+        job={job}
+        match={match}
+        description={match.summary}
+        showSeniority={false}
+        showRequirements={false}
+        showCompanyLink={false}
+      />
+      {match.strengths[0] && (
+        <p className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+          {match.strengths[0]}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-fit items-center gap-1 px-1 text-xs font-medium text-brand hover:underline"
+      >
+        Why this matches
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+      {expanded && (
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <MatchDetailPanel match={match} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Requires an approved Passport, unlike Discover which works for anyone -- there's no valid
 // match cache key before that (see backend passport_matching/__init__.py). Sorted by match_score
@@ -83,17 +131,9 @@ export default function ShadowForYouPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {rankedJobs.map(({ job, match }) => (
-            <ShadowJobCard
-              key={job.id}
-              job={job}
-              match={match}
-              description={match.summary}
-              showSeniority={false}
-              showRequirements={false}
-              showCompanyLink={false}
-            />
+            <ForYouMatchRow key={job.id} job={job} match={match} />
           ))}
         </div>
       )}
