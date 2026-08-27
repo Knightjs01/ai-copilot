@@ -7,16 +7,29 @@ from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.modules.auth.exceptions import InvalidOrExpiredTokenError
-from app.modules.platform_admin.dependencies import get_maintenance_db, require_platform_admin
+from app.modules.platform_admin.dependencies import (
+    PlatformAdminContext,
+    get_current_platform_admin,
+    get_maintenance_db,
+    require_platform_admin,
+    require_platform_admin_permission,
+)
 from app.modules.platform_admin.models import PlatformAdmin
+from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import (
+    CreatePlatformAdminRequest,
     PlatformAdminLoginRequest,
     PlatformAdminRead,
+    PlatformAdminSummary,
     PlatformAdminTokenResponse,
     PurgeAllDataRequest,
     PurgeAllDataResult,
 )
-from app.modules.platform_admin.service import PlatformAdminAuthService, PlatformAdminDataService
+from app.modules.platform_admin.service import (
+    PlatformAdminAuthService,
+    PlatformAdminDataService,
+    PlatformAdminManagementService,
+)
 
 router = APIRouter(prefix="/platform-admin", tags=["platform-admin"])
 
@@ -82,8 +95,14 @@ async def logout(
 
 
 @router.get("/me", response_model=PlatformAdminRead)
-async def me(admin: PlatformAdmin = Depends(require_platform_admin)) -> PlatformAdminRead:
-    return PlatformAdminRead(id=admin.id, email=admin.email, full_name=admin.full_name)
+async def me(admin: PlatformAdminContext = Depends(get_current_platform_admin)) -> PlatformAdminRead:
+    return PlatformAdminRead(
+        id=admin.id,
+        email=admin.email,
+        full_name=admin.full_name,
+        roles=admin.roles,
+        permissions=sorted(admin.permissions),
+    )
 
 
 @router.post("/danger-zone/purge", response_model=PurgeAllDataResult)
@@ -92,8 +111,34 @@ async def purge_all_data(
     request: Request,
     body: PurgeAllDataRequest,
     admin: PlatformAdmin = Depends(require_platform_admin),
+    _: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.DANGER_ZONE_PURGE)
+    ),
     session: AsyncSession = Depends(get_maintenance_db),
 ) -> PurgeAllDataResult:
     return await PlatformAdminDataService(session).purge_all_tenant_data(
         admin=admin, password=body.password, confirmation_phrase=body.confirmation_phrase
+    )
+
+
+@router.get("/admins", response_model=list[PlatformAdminSummary])
+async def list_admins(
+    _: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.ADMINS_MANAGE)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> list[PlatformAdminSummary]:
+    return await PlatformAdminManagementService(session).list_admins()
+
+
+@router.post("/admins", response_model=PlatformAdminSummary, status_code=201)
+async def create_admin(
+    body: CreatePlatformAdminRequest,
+    _: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.ADMINS_MANAGE)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminSummary:
+    return await PlatformAdminManagementService(session).create_admin(
+        full_name=body.full_name, email=body.email, password=body.password, role_name=body.role
     )

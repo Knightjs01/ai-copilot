@@ -577,7 +577,7 @@ export interface IndustriesSuggestionResponse {
 
 export type EmploymentType = "full_time" | "part_time" | "contract" | "fractional";
 
-export type ShadowJobStatus = "draft" | "published" | "closed";
+export type ShadowJobStatus = "draft" | "pending_review" | "published" | "closed";
 
 export type ShadowApplicationStatus =
   | "submitted"
@@ -1218,6 +1218,28 @@ export interface PlatformAdmin {
   id: string;
   email: string;
   full_name: string;
+  roles: string[];
+  permissions: string[];
+}
+
+export type PlatformAdminRoleName =
+  | "Super Admin"
+  | "Platform Admin"
+  | "Reviewer"
+  | "Support Admin"
+  | "Analytics";
+
+export interface PlatformAdminSummary {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  roles: string[];
+  created_at: string;
+}
+
+export interface AdminShadowJob extends ShadowJob {
+  company_name: string;
 }
 
 export type AccessRequestStatus = "pending" | "approved" | "rejected";

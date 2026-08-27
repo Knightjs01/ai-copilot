@@ -13,6 +13,7 @@ import type {
   NoticePeriod,
   OverallRecommendation,
   PassportVisibility,
+  PlatformAdminRoleName,
   PrescreenOutcome,
   ProjectStatus,
   RemotePreference,
@@ -42,6 +43,22 @@ export const ROLE_VARIANT: Record<RoleName, Variant> = {
   Recruiter: "neutral",
   "Hiring Manager": "warning",
   Interviewer: "outline",
+};
+
+export const PLATFORM_ADMIN_ROLE_LABEL: Record<PlatformAdminRoleName, string> = {
+  "Super Admin": "Super Admin",
+  "Platform Admin": "Platform Admin",
+  Reviewer: "Reviewer",
+  "Support Admin": "Support Admin",
+  Analytics: "Analytics",
+};
+
+export const PLATFORM_ADMIN_ROLE_VARIANT: Record<PlatformAdminRoleName, Variant> = {
+  "Super Admin": "success",
+  "Platform Admin": "info",
+  Reviewer: "warning",
+  "Support Admin": "neutral",
+  Analytics: "outline",
 };
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
@@ -152,12 +169,14 @@ export const OVERALL_RECOMMENDATION_VARIANT: Record<OverallRecommendation, Varia
 
 export const SHADOW_JOB_STATUS_LABEL: Record<ShadowJobStatus, string> = {
   draft: "Draft",
+  pending_review: "Pending review",
   published: "Published",
   closed: "Closed",
 };
 
 export const SHADOW_JOB_STATUS_VARIANT: Record<ShadowJobStatus, Variant> = {
   draft: "neutral",
+  pending_review: "warning",
   published: "success",
   closed: "outline",
 };

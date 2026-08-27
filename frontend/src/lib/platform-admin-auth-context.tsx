@@ -15,6 +15,7 @@ interface PlatformAdminAuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  hasPermission: (permission: string) => boolean;
 }
 
 const PlatformAdminAuthContext = React.createContext<PlatformAdminAuthContextValue | null>(null);
@@ -61,9 +62,14 @@ export function PlatformAdminAuthProvider({ children }: { children: React.ReactN
     }
   }, []);
 
+  const hasPermission = React.useCallback(
+    (permission: string) => admin?.permissions.includes(permission) ?? false,
+    [admin]
+  );
+
   const value = React.useMemo(
-    () => ({ admin, isLoading, login, logout }),
-    [admin, isLoading, login, logout]
+    () => ({ admin, isLoading, login, logout, hasPermission }),
+    [admin, isLoading, login, logout, hasPermission]
   );
 
   return (

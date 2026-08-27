@@ -1,6 +1,6 @@
 import uuid
-from collections.abc import AsyncGenerator
-from typing import Any
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from typing import Any, NamedTuple
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,7 @@ from app.modules.auth import security
 from app.modules.auth.dependencies import get_bearer_token
 from app.modules.platform_admin.models import PlatformAdmin
 from app.modules.platform_admin.repository import PlatformAdminRepository
+from app.modules.platform_admin.role_repository import PlatformAdminRoleRepository
 
 
 async def get_platform_admin_token_payload(
@@ -41,6 +42,52 @@ async def require_platform_admin(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
         )
     return admin
+
+
+class PlatformAdminContext(NamedTuple):
+    """Lightweight, permission-bearing view of the authenticated admin -- mirrors
+    auth.dependencies.CurrentUser exactly. Use this when a route only needs to check
+    identity/permissions, not mutate the PlatformAdmin row."""
+
+    id: uuid.UUID
+    email: str
+    full_name: str
+    roles: list[str]
+    permissions: set[str]
+
+
+async def get_current_platform_admin(
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminContext:
+    role_repo = PlatformAdminRoleRepository(session)
+    roles = await role_repo.get_roles_for_admin(admin.id)
+    permission_codes = await role_repo.get_permission_codes_for_admin(admin.id)
+    return PlatformAdminContext(
+        id=admin.id,
+        email=admin.email,
+        full_name=admin.full_name,
+        roles=[role.name for role in roles],
+        permissions=permission_codes,
+    )
+
+
+def require_platform_admin_permission(
+    code: str,
+) -> Callable[..., Awaitable[PlatformAdminContext]]:
+    """Mirrors auth.dependencies.require_permission exactly, against PlatformAdminContext."""
+
+    async def checker(
+        current: PlatformAdminContext = Depends(get_current_platform_admin),
+    ) -> PlatformAdminContext:
+        if code not in current.permissions:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action",
+            )
+        return current
+
+    return checker
 
 
 async def get_maintenance_db() -> AsyncGenerator[AsyncSession, None]:

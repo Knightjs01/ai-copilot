@@ -15,7 +15,7 @@ import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 
 export default function PlatformAdminDashboardPage() {
   const router = useRouter();
-  const { admin, isLoading: authLoading } = usePlatformAdminAuth();
+  const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();
   const { data: stats, isLoading } = useDashboardStats();
 
   React.useEffect(() => {
@@ -68,22 +68,24 @@ export default function PlatformAdminDashboardPage() {
         </Card>
       )}
 
-      <Card className="border-danger/30">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-danger" />
-            <CardTitle>Danger Zone</CardTitle>
-          </div>
-          <CardDescription>
-            Irreversible platform-wide actions. Your own platform-admin login is never affected.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="danger" size="sm">
-            <Link href="/platform-admin/danger-zone">Open Danger Zone</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      {hasPermission("danger_zone.purge") && (
+        <Card className="border-danger/30">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-danger" />
+              <CardTitle>Danger Zone</CardTitle>
+            </div>
+            <CardDescription>
+              Irreversible platform-wide actions. Your own platform-admin login is never affected.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="danger" size="sm">
+              <Link href="/platform-admin/danger-zone">Open Danger Zone</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

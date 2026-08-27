@@ -74,6 +74,16 @@ class ShadowJobRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_status(self, status: str) -> list[ShadowJob]:
+        """Deliberately not company-scoped -- the platform-admin review queue spans every
+        company, same reasoning as list_published below."""
+        result = await self._session.execute(
+            select(ShadowJob)
+            .where(ShadowJob.status == status, ShadowJob.deleted_at.is_(None))
+            .order_by(ShadowJob.created_at.asc())
+        )
+        return list(result.scalars().all())
+
     async def list_published(
         self,
         *,

@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.modules.auth import security
-from app.modules.auth.exceptions import InvalidCredentialsError, InvalidOrExpiredTokenError
+from app.modules.auth.exceptions import (
+    EmailAlreadyRegisteredError,
+    InvalidCredentialsError,
+    InvalidOrExpiredTokenError,
+    InvalidRoleError,
+)
 from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 from app.modules.platform_admin.models import PlatformAdmin
@@ -14,7 +19,8 @@ from app.modules.platform_admin.repository import (
     PlatformAdminRepository,
     PlatformAdminTokenRepository,
 )
-from app.modules.platform_admin.schemas import PurgeAllDataResult
+from app.modules.platform_admin.role_repository import PlatformAdminRoleRepository
+from app.modules.platform_admin.schemas import PlatformAdminSummary, PurgeAllDataResult
 
 # Tables a "wipe all tenant data" action must never touch, regardless of how the live table list
 # changes over time: migration bookkeeping, the seeded non-tenant permission catalog, and this
@@ -26,6 +32,10 @@ _PURGE_EXCLUDED_TABLES = frozenset(
         "platform_admins",
         "platform_admin_audit_logs",
         "platform_admin_refresh_tokens",
+        "platform_admin_roles",
+        "platform_admin_permissions",
+        "platform_admin_role_permissions",
+        "platform_admin_role_assignments",
     }
 )
 
@@ -186,3 +196,54 @@ class PlatformAdminDataService:
             ordered.extend(ready)
             remaining -= set(ready)
         return ordered
+
+
+class PlatformAdminManagementService:
+    """Team page backing service -- lists platform admins and creates new ones with a directly-
+    set initial password (no email-invite ceremony yet, see the plan this shipped under)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+        self._admins = PlatformAdminRepository(session)
+        self._roles = PlatformAdminRoleRepository(session)
+
+    async def list_admins(self) -> list[PlatformAdminSummary]:
+        admins = await self._admins.list_all()
+        summaries = []
+        for admin in admins:
+            roles = await self._roles.get_roles_for_admin(admin.id)
+            summaries.append(
+                PlatformAdminSummary(
+                    id=admin.id,
+                    email=admin.email,
+                    full_name=admin.full_name,
+                    is_active=admin.is_active,
+                    roles=[role.name for role in roles],
+                    created_at=admin.created_at,
+                )
+            )
+        return summaries
+
+    async def create_admin(
+        self, *, full_name: str, email: str, password: str, role_name: str
+    ) -> PlatformAdminSummary:
+        if await self._admins.get_by_email(email) is not None:
+            raise EmailAlreadyRegisteredError()
+
+        role = await self._roles.get_role_by_name(role_name)
+        if role is None:
+            raise InvalidRoleError()
+
+        admin = await self._admins.create(
+            full_name=full_name, email=email, hashed_password=security.hash_password(password)
+        )
+        await self._roles.assign_role_to_admin(admin_id=admin.id, role_id=role.id)
+
+        return PlatformAdminSummary(
+            id=admin.id,
+            email=admin.email,
+            full_name=admin.full_name,
+            is_active=admin.is_active,
+            roles=[role.name],
+            created_at=admin.created_at,
+        )

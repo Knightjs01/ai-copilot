@@ -8,17 +8,22 @@ import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { cn } from "@/lib/utils";
 import type { PlatformAdmin } from "@/lib/types";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { href: string; label: string; permission?: string }[] = [
   { href: "/platform-admin", label: "Dashboard" },
-  { href: "/platform-admin/requests", label: "Requests" },
-  { href: "/platform-admin/companies", label: "Companies" },
-  { href: "/platform-admin/activity", label: "Activity" },
-  { href: "/platform-admin/danger-zone", label: "Danger Zone" },
+  { href: "/platform-admin/requests", label: "Requests", permission: "companies.view" },
+  { href: "/platform-admin/companies", label: "Companies", permission: "companies.view" },
+  { href: "/platform-admin/jobs", label: "Jobs", permission: "jobs.view" },
+  { href: "/platform-admin/activity", label: "Activity", permission: "audit.view" },
+  { href: "/platform-admin/team", label: "Team", permission: "admins.manage" },
+  { href: "/platform-admin/danger-zone", label: "Danger Zone", permission: "danger_zone.purge" },
 ];
 
 export function PlatformAdminNav({ admin }: { admin: PlatformAdmin }) {
   const pathname = usePathname();
-  const { logout } = usePlatformAdminAuth();
+  const { logout, hasPermission } = usePlatformAdminAuth();
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -32,7 +37,7 @@ export function PlatformAdminNav({ admin }: { admin: PlatformAdmin }) {
         </Button>
       </div>
       <nav className="flex gap-1 border-b border-border">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

@@ -36,6 +36,7 @@ from app.modules.shadow_jobs.exceptions import (
     PassportRequiredError,
     ShadowApplicationNotFoundError,
     ShadowJobNotFoundError,
+    ShadowJobNotPendingReviewError,
     ShadowJobNotPublishedError,
     TalentPoolGrantRequiredError,
 )
@@ -158,6 +159,21 @@ class ShadowJobService:
         )
         return job
 
+    async def submit_for_review(self, *, actor: User, job_id: uuid.UUID) -> ShadowJob:
+        """Recruiter-facing action -- lands the job in the platform-admin review queue rather
+        than going live immediately (see approve_pending_job/reject_pending_job below, the actual
+        gate). Named/audited distinctly from publish_job since it no longer publishes anything."""
+        job = await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)
+        job.status = ShadowJobStatus.PENDING_REVIEW.value
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="shadow_job.submitted_for_review",
+            target_type="shadow_job",
+            target_id=job.id,
+        )
+        return job
+
     async def publish_job(self, *, actor: User, job_id: uuid.UUID) -> ShadowJob:
         job = await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)
         job.status = ShadowJobStatus.PUBLISHED.value
@@ -170,6 +186,53 @@ class ShadowJobService:
             target_id=job.id,
         )
         return job
+
+    async def get_job_any_company(self, job_id: uuid.UUID) -> ShadowJob:
+        """No company scoping -- used by the platform-admin review queue, which operates across
+        every company's jobs."""
+        job = await self._jobs.get_by_id(job_id)
+        if job is None or job.deleted_at is not None:
+            raise ShadowJobNotFoundError()
+        return job
+
+    async def approve_pending_job(self, *, job_id: uuid.UUID) -> ShadowJob:
+        """The actual approval gate. Publishing here (not moving the recruiter's own publish
+        button) is deliberate -- alert emails must only fire once a job is genuinely public, not
+        the moment a recruiter submits it. The authoritative "who approved this" record is the
+        PlatformAdminAuditLog entry the caller (platform_admin/jobs_api.py) writes separately;
+        this company-side entry has no actor_user_id since a platform admin isn't a company user."""
+        job = await self.get_job_any_company(job_id)
+        if job.status != ShadowJobStatus.PENDING_REVIEW.value:
+            raise ShadowJobNotPendingReviewError()
+        job.status = ShadowJobStatus.PUBLISHED.value
+        job.published_at = datetime.now(timezone.utc)
+        await self._audit.record(
+            company_id=job.company_id,
+            actor_user_id=None,
+            action="shadow_job.published",
+            target_type="shadow_job",
+            target_id=job.id,
+            extra_data={"reviewed_by": "platform_admin"},
+        )
+        return job
+
+    async def reject_pending_job(self, *, job_id: uuid.UUID) -> ShadowJob:
+        job = await self.get_job_any_company(job_id)
+        if job.status != ShadowJobStatus.PENDING_REVIEW.value:
+            raise ShadowJobNotPendingReviewError()
+        job.status = ShadowJobStatus.DRAFT.value
+        await self._audit.record(
+            company_id=job.company_id,
+            actor_user_id=None,
+            action="shadow_job.rejected",
+            target_type="shadow_job",
+            target_id=job.id,
+            extra_data={"reviewed_by": "platform_admin"},
+        )
+        return job
+
+    async def list_pending_review(self) -> list[ShadowJob]:
+        return await self._jobs.list_by_status(ShadowJobStatus.PENDING_REVIEW.value)
 
     async def publish_project_to_shadow(
         self, *, actor: User, project_id: uuid.UUID, body: ShadowJobCreate
@@ -199,9 +262,10 @@ class ShadowJobService:
                 requirements=body.requirements,
             )
             job = await self.update_job(actor=actor, job_id=existing.id, body=update_body)
-        # published_at reflects the most recent publish action, not just the first one -- safe to
-        # call unconditionally, publish_job just sets status + refreshes the timestamp.
-        return await self.publish_job(actor=actor, job_id=job.id)
+        # Lands in the review queue, not live -- safe to call unconditionally on a re-publish too;
+        # an already-published job re-entering review on every edit is deliberate, not a bug (see
+        # the plan this shipped under: admin approval is a real gate, not a one-time formality).
+        return await self.submit_for_review(actor=actor, job_id=job.id)
 
     async def close_job(self, *, actor: User, job_id: uuid.UUID) -> ShadowJob:
         job = await self.get_job_for_company(company_id=actor.company_id, job_id=job_id)

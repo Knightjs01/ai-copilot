@@ -140,6 +140,9 @@ export default function ProjectDetailPage() {
         </h1>
         <div className="flex items-center gap-2">
           {shadowJob?.status === "published" && <LiveRoleLink jobId={shadowJob.id} />}
+          {shadowJob?.status === "pending_review" && (
+            <Badge variant="warning">Pending review</Badge>
+          )}
           {canPublishToShadow && (
             <PublishToShadowDialog project={project} existingShadowJob={shadowJob} />
           )}

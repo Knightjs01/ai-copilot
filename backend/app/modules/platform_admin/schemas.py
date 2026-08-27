@@ -2,7 +2,9 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from app.modules.shadow_jobs.schemas import ShadowJobRead
 
 
 class PlatformAdminLoginRequest(BaseModel):
@@ -19,6 +21,32 @@ class PlatformAdminRead(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
+    roles: list[str] = []
+    permissions: list[str] = []
+
+
+class PlatformAdminSummary(BaseModel):
+    id: uuid.UUID
+    email: str
+    full_name: str
+    is_active: bool
+    roles: list[str]
+    created_at: datetime
+
+
+class CreatePlatformAdminRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str = Field(min_length=8)
+    role: str
+
+
+class AdminShadowJobRead(ShadowJobRead):
+    company_name: str
+
+
+class RejectShadowJobRequest(BaseModel):
+    reason: str | None = None
 
 
 class PurgeAllDataRequest(BaseModel):

@@ -105,20 +105,20 @@ export function PublishToShadowDialog({
       <DialogTrigger asChild>
         <Button variant="secondary" size="sm">
           <Rocket className="h-3.5 w-3.5" />
-          {existingShadowJob ? "Update Shadow listing" : "Publish to Shadow"}
+          {existingShadowJob ? "Resubmit for review" : "Submit for review"}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {existingShadowJob ? "Update Shadow listing" : "Publish to Shadow"}
+            {existingShadowJob ? "Resubmit for review" : "Submit for review"}
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            This copies a snapshot of the role onto Shadow&apos;s public job board. Nothing here
-            updates automatically afterward — re-open this dialog any time to publish a fresh
-            snapshot.
+            This copies a snapshot of the role and sends it to a Phantom admin for review. It
+            won&apos;t appear on Shadow&apos;s public job board until approved — re-open this
+            dialog any time to submit a fresh snapshot.
           </p>
 
           <Field label="Job title" htmlFor="shadowTitle">
@@ -242,7 +242,7 @@ export function PublishToShadowDialog({
             </p>
           )}
           {publish.isError && (
-            <p className="text-sm font-medium text-danger">Couldn&apos;t publish. Try again.</p>
+            <p className="text-sm font-medium text-danger">Couldn&apos;t submit. Try again.</p>
           )}
         </div>
         <DialogFooter>
@@ -256,10 +256,10 @@ export function PublishToShadowDialog({
           </Button>
           <Button type="button" onClick={handlePublish} disabled={!canPublish || publish.isPending}>
             {publish.isPending
-              ? "Publishing…"
+              ? "Submitting…"
               : existingShadowJob
-                ? "Re-publish"
-                : "Publish to Shadow"}
+                ? "Resubmit for review"
+                : "Submit for review"}
           </Button>
         </DialogFooter>
       </DialogContent>

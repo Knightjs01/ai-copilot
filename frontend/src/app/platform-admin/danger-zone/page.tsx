@@ -12,13 +12,15 @@ import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 
 export default function PlatformAdminDangerZonePage() {
   const router = useRouter();
-  const { admin, isLoading: authLoading } = usePlatformAdminAuth();
+  const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();
 
   React.useEffect(() => {
-    if (!authLoading && !admin) router.push("/platform-admin/login");
-  }, [authLoading, admin, router]);
+    if (authLoading) return;
+    if (!admin) router.push("/platform-admin/login");
+    else if (!hasPermission("danger_zone.purge")) router.push("/platform-admin");
+  }, [authLoading, admin, hasPermission, router]);
 
-  if (authLoading || !admin) {
+  if (authLoading || !admin || !hasPermission("danger_zone.purge")) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Spinner className="h-6 w-6 text-muted-foreground" />

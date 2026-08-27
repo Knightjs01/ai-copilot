@@ -16,6 +16,11 @@ class ShadowJobNotPublishedError(ShadowJobError):
     detail = "This job is not open for applications"
 
 
+class ShadowJobNotPendingReviewError(ShadowJobError):
+    status_code = 400
+    detail = "This job isn't waiting for review"
+
+
 class ShadowApplicationNotFoundError(ShadowJobError):
     status_code = 404
     detail = "Application not found"

@@ -17,8 +17,11 @@ from app.modules.company_access.schemas import (
 )
 from app.modules.company_access.service import CompanyAccessRequestService
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
-from app.modules.platform_admin.dependencies import require_platform_admin
-from app.modules.platform_admin.models import PlatformAdmin
+from app.modules.platform_admin.dependencies import (
+    PlatformAdminContext,
+    require_platform_admin_permission,
+)
+from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import PlatformAdminAuditLogRead
 
 router = APIRouter(prefix="/company-access", tags=["company-access"])
@@ -39,7 +42,9 @@ async def submit_access_request(
 @router.get("/requests", response_model=list[CompanyAccessRequestRead])
 async def list_access_requests(
     status_filter: str | None = Query(default="pending", alias="status"),
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> list[CompanyAccessRequestRead]:
     return await CompanyAccessRequestService(session).list_requests(status=status_filter)
@@ -48,7 +53,9 @@ async def list_access_requests(
 @router.get("/requests/{request_id}", response_model=CompanyAccessRequestRead)
 async def get_access_request(
     request_id: uuid.UUID,
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> CompanyAccessRequestRead:
     return await CompanyAccessRequestService(session).get_request(request_id)
@@ -57,7 +64,9 @@ async def get_access_request(
 @router.post("/requests/{request_id}/approve", response_model=CompanyAccessRequestRead)
 async def approve_access_request(
     request_id: uuid.UUID,
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> CompanyAccessRequestRead:
@@ -70,7 +79,9 @@ async def approve_access_request(
 async def reject_access_request(
     request_id: uuid.UUID,
     body: RejectAccessRequestBody = RejectAccessRequestBody(),
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> CompanyAccessRequestRead:
@@ -83,7 +94,9 @@ async def reject_access_request(
 async def request_more_info(
     request_id: uuid.UUID,
     body: RequestInfoBody,
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> CompanyAccessRequestRead:
@@ -94,7 +107,9 @@ async def request_more_info(
 
 @router.get("/stats", response_model=AccessRequestStatsRead)
 async def get_stats(
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> AccessRequestStatsRead:
     request_stats = await CompanyAccessRequestService(session).get_stats()
@@ -104,7 +119,9 @@ async def get_stats(
 
 @router.get("/audit-log", response_model=list[PlatformAdminAuditLogRead])
 async def get_audit_log(
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.AUDIT_VIEW)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> list[PlatformAdminAuditLogRead]:
     entries = await PlatformAdminAuditService(session).list_recent()

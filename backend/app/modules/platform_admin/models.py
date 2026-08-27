@@ -35,3 +35,46 @@ class PlatformAdminRefreshToken(UUIDPrimaryKeyMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlatformAdminRole(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Mirrors auth.models.Role, minus company_id -- platform admins aren't multi-tenant (one
+    platform, not many companies each needing their own copy of a role), so a role name is
+    globally unique rather than scoped per-company."""
+
+    __tablename__ = "platform_admin_roles"
+
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+    is_system: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class PlatformAdminPermission(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "platform_admin_permissions"
+
+    code: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    description: Mapped[str] = mapped_column(String(255))
+
+
+class PlatformAdminRolePermission(Base):
+    __tablename__ = "platform_admin_role_permissions"
+
+    role_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("platform_admin_roles.id"), primary_key=True
+    )
+    permission_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("platform_admin_permissions.id"), primary_key=True
+    )
+
+
+class PlatformAdminRoleAssignment(Base):
+    """Mirrors auth.models.UserRole -- named distinctly (not "platform_admin_user_roles") to
+    avoid any confusion with the company-user table of a similar shape."""
+
+    __tablename__ = "platform_admin_role_assignments"
+
+    admin_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("platform_admins.id"), primary_key=True
+    )
+    role_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("platform_admin_roles.id"), primary_key=True
+    )

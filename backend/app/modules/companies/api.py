@@ -26,8 +26,11 @@ from app.modules.companies.schemas import (
     ProfileReviewRejectBody,
 )
 from app.modules.companies.service import CompanyService
-from app.modules.platform_admin.dependencies import require_platform_admin
-from app.modules.platform_admin.models import PlatformAdmin
+from app.modules.platform_admin.dependencies import (
+    PlatformAdminContext,
+    require_platform_admin_permission,
+)
+from app.modules.platform_admin.permissions import PlatformAdminPermissions
 
 router = APIRouter(
     prefix="/companies", tags=["companies"], dependencies=[Depends(require_mfa_enrolled)]
@@ -175,7 +178,9 @@ async def get_company_cover_image(
 @admin_router.get("", response_model=list[AdminCompanySummary])
 async def list_companies_for_admin(
     profile_status: str | None = Query(default=None),
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> list[AdminCompanySummary]:
     pairs = await CompanyService(session).list_companies_with_user_counts(
@@ -200,7 +205,9 @@ async def list_companies_for_admin(
 @admin_router.get("/{company_id}/profile-review/preview", response_model=CompanyProfileRead)
 async def preview_company_profile_for_admin(
     company_id: uuid.UUID,
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> CompanyProfileRead:
     return await CompanyService(session).preview_profile(actor_company_id=company_id)
@@ -209,7 +216,9 @@ async def preview_company_profile_for_admin(
 @admin_router.post("/{company_id}/suspend", response_model=CompanyRead)
 async def suspend_company(
     company_id: uuid.UUID,
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> CompanyRead:
     service = CompanyService(session)
@@ -220,7 +229,9 @@ async def suspend_company(
 @admin_router.post("/{company_id}/reactivate", response_model=CompanyRead)
 async def reactivate_company(
     company_id: uuid.UUID,
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
     session: AsyncSession = Depends(get_db),
 ) -> CompanyRead:
     service = CompanyService(session)
@@ -231,7 +242,9 @@ async def reactivate_company(
 @admin_router.post("/{company_id}/profile-review/approve", response_model=CompanyRead)
 async def approve_profile_review(
     company_id: uuid.UUID,
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> CompanyRead:
@@ -244,7 +257,9 @@ async def approve_profile_review(
 async def reject_profile_review(
     company_id: uuid.UUID,
     body: ProfileReviewRejectBody = ProfileReviewRejectBody(),
-    admin: PlatformAdmin = Depends(require_platform_admin),
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> CompanyRead:

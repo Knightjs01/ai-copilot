@@ -19,7 +19,6 @@ from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.dependencies import require_verified_domain
-from app.modules.job_alerts.service import JobAlertService
 from app.modules.shadow_jobs.exceptions import ShadowJobNotFoundError
 from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.repository import ShadowJobRepository
@@ -116,13 +115,11 @@ async def publish_job(
     actor: User = Depends(require_verified_domain),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
     session: AsyncSession = Depends(get_tenant_db),
-    email_sender: EmailSender = Depends(get_email_sender),
 ) -> ShadowJobRead:
+    # Submits into the platform-admin review queue -- it does not go live yet (see
+    # platform_admin/jobs_api.py's approve route, the actual publish + alert-notify moment).
     service = ShadowJobService(session)
-    job = await service.publish_job(actor=actor, job_id=job_id)
-    # No background job runner exists in this codebase -- job alert matching happens
-    # synchronously, right here, the one real moment a "new matching job" notification can fire.
-    await JobAlertService(session, email_sender=email_sender).notify_matching_alerts(job)
+    job = await service.submit_for_review(actor=actor, job_id=job_id)
     return await _to_job_read(service, job)
 
 
@@ -342,9 +339,8 @@ async def publish_project_to_shadow(
     actor: User = Depends(require_verified_domain),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_CREATE)),
     session: AsyncSession = Depends(get_tenant_db),
-    email_sender: EmailSender = Depends(get_email_sender),
 ) -> ShadowJobRead:
+    # Submits into the platform-admin review queue -- see publish_job's comment above.
     service = ShadowJobService(session)
     job = await service.publish_project_to_shadow(actor=actor, project_id=project_id, body=body)
-    await JobAlertService(session, email_sender=email_sender).notify_matching_alerts(job)
     return await _to_job_read(service, job)

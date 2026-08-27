@@ -6,9 +6,11 @@ import { platformAdminApiClient } from "@/lib/platform-admin-api-client";
 import type {
   AccessRequestStats,
   AdminCompanySummary,
+  AdminShadowJob,
   CompanyAccessRequest,
   CompanyProfile,
   PlatformAdminAuditLogEntry,
+  PlatformAdminSummary,
 } from "@/lib/types";
 
 export function useAccessRequests(status: string = "pending") {
@@ -142,6 +144,60 @@ export function useReactivateCompany() {
     mutationFn: (companyId: string) =>
       platformAdminApiClient.post(`/companies/${companyId}/reactivate`),
     onSuccess: () => invalidateCompanyQueues(queryClient),
+  });
+}
+
+export function usePendingReviewJobs() {
+  return useQuery({
+    queryKey: ["platform-admin", "jobs", "pending-review"],
+    queryFn: () => platformAdminApiClient.get<AdminShadowJob[]>("/platform-admin/jobs/pending-review"),
+  });
+}
+
+function invalidateJobQueues(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: ["platform-admin", "jobs"] });
+  void queryClient.invalidateQueries({ queryKey: ["platform-admin", "audit-log"] });
+}
+
+export function useApproveJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      platformAdminApiClient.post<AdminShadowJob>(`/platform-admin/jobs/${jobId}/approve`),
+    onSuccess: () => invalidateJobQueues(queryClient),
+  });
+}
+
+export function useRejectJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ jobId, reason }: { jobId: string; reason?: string }) =>
+      platformAdminApiClient.post<AdminShadowJob>(`/platform-admin/jobs/${jobId}/reject`, {
+        reason,
+      }),
+    onSuccess: () => invalidateJobQueues(queryClient),
+  });
+}
+
+export function useAdmins() {
+  return useQuery({
+    queryKey: ["platform-admin", "admins"],
+    queryFn: () => platformAdminApiClient.get<PlatformAdminSummary[]>("/platform-admin/admins"),
+  });
+}
+
+export function useCreateAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { fullName: string; email: string; password: string; role: string }) =>
+      platformAdminApiClient.post<PlatformAdminSummary>("/platform-admin/admins", {
+        full_name: input.fullName,
+        email: input.email,
+        password: input.password,
+        role: input.role,
+      }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["platform-admin", "admins"] }),
   });
 }
 

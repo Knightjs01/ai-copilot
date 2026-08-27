@@ -20,6 +20,7 @@ class EmploymentType(str, enum.Enum):
 
 class ShadowJobStatus(str, enum.Enum):
     DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
     PUBLISHED = "published"
     CLOSED = "closed"
 

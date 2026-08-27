@@ -20,6 +20,18 @@ class PlatformAdminRepository:
         )
         return result.scalar_one_or_none()
 
+    async def list_all(self) -> list[PlatformAdmin]:
+        result = await self._session.execute(select(PlatformAdmin).order_by(PlatformAdmin.created_at))
+        return list(result.scalars().all())
+
+    async def create(
+        self, *, full_name: str, email: str, hashed_password: str
+    ) -> PlatformAdmin:
+        admin = PlatformAdmin(full_name=full_name, email=email, hashed_password=hashed_password)
+        self._session.add(admin)
+        await self._session.flush()
+        return admin
+
 
 class PlatformAdminTokenRepository:
     """Mirrors auth.repository.tokens.TokenRepository's refresh-token methods exactly, against
