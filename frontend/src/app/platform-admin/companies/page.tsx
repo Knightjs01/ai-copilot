@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { EditCommercialDialog } from "@/components/platform-admin/edit-commercial-dialog";
 import { PlatformAdminNav } from "@/components/platform-admin/platform-admin-nav";
 import { ProfileReviewDialog } from "@/components/platform-admin/profile-review-dialog";
 import {
@@ -37,6 +38,14 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
               {COMPANY_PROFILE_STATUS_LABEL[company.profile_status]}
             </Badge>
             {!company.is_verified_domain && <Badge variant="outline">unverified domain</Badge>}
+            {company.commercial_plan_code && (
+              <Badge variant="outline">
+                {company.commercial_plan_code.charAt(0).toUpperCase() +
+                  company.commercial_plan_code.slice(1)}
+                {company.active_role_limit_override !== null &&
+                  ` (${company.active_role_limit_override} override)`}
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">{company.email_domain}</p>
           <p className="text-xs text-muted-foreground">
@@ -50,6 +59,7 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
         )}
 
         <div className="flex shrink-0 gap-2">
+          <EditCommercialDialog company={company} />
           {company.profile_status === "pending_review" && (
             <ProfileReviewDialog companyId={company.id} companyName={company.name} />
           )}

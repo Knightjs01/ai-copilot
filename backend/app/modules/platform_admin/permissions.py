@@ -6,6 +6,7 @@ class PlatformAdminPermissions:
     JOBS_VIEW = "jobs.view"
     DANGER_ZONE_PURGE = "danger_zone.purge"
     AUDIT_VIEW = "audit.view"
+    COMMERCIAL_MANAGE = "commercial.manage"
 
 
 ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
@@ -19,6 +20,9 @@ ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
     PlatformAdminPermissions.JOBS_VIEW: "View the job-review queue",
     PlatformAdminPermissions.DANGER_ZONE_PURGE: "Purge all tenant data platform-wide",
     PlatformAdminPermissions.AUDIT_VIEW: "View the platform-admin activity log",
+    PlatformAdminPermissions.COMMERCIAL_MANAGE: (
+        "Change a company commercial plan and active-role limit override"
+    ),
 }
 
 
@@ -44,6 +48,7 @@ PLATFORM_ADMIN_ROLE_PERMISSIONS: dict[str, list[str]] = {
         PlatformAdminPermissions.JOBS_REVIEW,
         PlatformAdminPermissions.JOBS_VIEW,
         PlatformAdminPermissions.AUDIT_VIEW,
+        PlatformAdminPermissions.COMMERCIAL_MANAGE,
     ],
     PlatformAdminRoleName.REVIEWER: [
         PlatformAdminPermissions.COMPANIES_VIEW,

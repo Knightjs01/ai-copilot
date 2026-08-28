@@ -39,3 +39,8 @@ class RoleFieldsExtractionFailedError(ProjectError):
 class ProjectNotReadyToApproveError(ProjectError):
     status_code = 400
     detail = "Project is not ready to approve"
+
+
+class ActiveRoleLimitExceededError(ProjectError):
+    status_code = 409
+    detail = "Active role limit reached for your plan"

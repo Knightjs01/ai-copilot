@@ -13,6 +13,7 @@ from app.modules.auth.email import (
 from app.modules.auth.models import User
 from app.modules.auth.repository.users import UserRepository
 from app.modules.candidates.storage import FileStorage
+from app.modules.commercial.repository import CommercialPlanRepository
 from app.modules.companies.domain_verification import extract_email_domain, is_verified_domain
 from app.modules.companies.exceptions import (
     CompanyAlreadyInStatusError,
@@ -26,6 +27,12 @@ from app.modules.companies.schemas import CompanyProfileRead, CompanyRead, Compa
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 
 _SLUG_INVALID_CHARS = re.compile(r"[^a-z0-9]+")
+
+# Every new company starts on Core -- see commercial/. Assigned at creation, not left null,
+# so a freshly-provisioned company is never accidentally unlimited (get_effective_limit treats a
+# null plan the same as "no limit configured" -- that's meant for a Scale company an admin
+# hasn't set a number for yet, not the default state of a brand-new signup).
+_DEFAULT_COMMERCIAL_PLAN_CODE = "core"
 
 _ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/png": ".png",
@@ -74,6 +81,7 @@ class CompanyService:
         self._session = session
         self._repository = CompanyRepository(session)
         self._versions = CompanyProfileVersionRepository(session)
+        self._commercial_plans = CommercialPlanRepository(session)
         self._users = UserRepository(session)
         self._audit = AuditService(session)
         self._platform_audit = PlatformAdminAuditService(session)
@@ -89,11 +97,13 @@ class CompanyService:
             slug = f"{base_slug}-{suffix}"
 
         email_domain = extract_email_domain(owner_email)
+        default_plan = await self._commercial_plans.get_by_code(_DEFAULT_COMMERCIAL_PLAN_CODE)
         return await self._repository.create(
             name=name,
             slug=slug,
             email_domain=email_domain,
             is_verified_domain=is_verified_domain(email_domain),
+            commercial_plan_id=default_plan.id if default_plan is not None else None,
         )
 
     async def get_company(self, company_id: uuid.UUID) -> Company | None:

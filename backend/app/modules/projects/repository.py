@@ -1,14 +1,34 @@
 import uuid
 
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.projects.models import Project, ProjectMember, ProjectStatus
+
+# A Project counts as an "active role" for commercial purposes while it's still an open hiring
+# process -- draft included, since drafting a role already occupies a slot in "how many hiring
+# processes am I running at once" (see commercial/service.py). It stops counting the moment it's
+# filled, cancelled, or soft-deleted (archived).
+_ACTIVE_STATUSES = (
+    ProjectStatus.DRAFT.value,
+    ProjectStatus.OPEN.value,
+    ProjectStatus.ON_HOLD.value,
+)
 
 
 class ProjectRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def count_active_by_company(self, company_id: uuid.UUID) -> int:
+        result = await self._session.execute(
+            select(func.count()).where(
+                Project.company_id == company_id,
+                Project.deleted_at.is_(None),
+                Project.status.in_(_ACTIVE_STATUSES),
+            )
+        )
+        return int(result.scalar_one())
 
     async def create(
         self,

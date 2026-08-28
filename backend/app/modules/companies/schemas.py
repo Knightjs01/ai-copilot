@@ -81,3 +81,5 @@ class AdminCompanySummary(BaseModel):
     profile_status: str
     user_count: int
     created_at: datetime
+    commercial_plan_code: str | None
+    active_role_limit_override: int | None

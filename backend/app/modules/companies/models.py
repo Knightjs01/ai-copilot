@@ -79,6 +79,16 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
 
     status: Mapped[str] = mapped_column(String(20), default=CompanyStatus.APPROVED.value)
 
+    # Commercial Phase 1 -- see app/modules/commercial/. commercial_plan_id is nullable only
+    # because SQLAlchemy models can't express "always backfilled" the way the migration's own
+    # UPDATE does; every real company row has one from the moment this shipped.
+    # active_role_limit_override is genuinely optional -- most companies just use their plan's
+    # own default and never get one.
+    commercial_plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("commercial_plans.id"), nullable=True
+    )
+    active_role_limit_override: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
 
 class CompanyProfileVersion(UUIDPrimaryKeyMixin, Base):
     """An immutable snapshot, created only on an explicit platform-admin approval — mirrors

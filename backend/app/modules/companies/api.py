@@ -17,6 +17,7 @@ from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidates.storage import FileStorage
+from app.modules.commercial.service import CommercialService
 from app.modules.companies.dependencies import get_media_storage
 from app.modules.companies.schemas import (
     AdminCompanySummary,
@@ -186,6 +187,9 @@ async def list_companies_for_admin(
     pairs = await CompanyService(session).list_companies_with_user_counts(
         profile_status=profile_status
     )
+    plan_code_by_id = {
+        plan.id: plan.code for plan in await CommercialService(session).get_plan_catalog()
+    }
     return [
         AdminCompanySummary(
             id=company.id,
@@ -197,6 +201,12 @@ async def list_companies_for_admin(
             profile_status=company.profile_status,
             user_count=user_count,
             created_at=company.created_at,
+            commercial_plan_code=(
+                plan_code_by_id.get(company.commercial_plan_id)
+                if company.commercial_plan_id is not None
+                else None
+            ),
+            active_role_limit_override=company.active_role_limit_override,
         )
         for company, user_count in pairs
     ]

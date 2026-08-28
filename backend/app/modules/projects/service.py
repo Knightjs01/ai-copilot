@@ -8,6 +8,7 @@ from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.auth.service.user_service import UserService
+from app.modules.commercial.service import CommercialService
 from app.modules.hiring_blueprint.models import HiringBlueprint
 from app.modules.hiring_blueprint.repository import HiringBlueprintRepository
 from app.modules.hiring_manager_alignment.models import HiringManagerAlignment
@@ -15,6 +16,7 @@ from app.modules.hiring_manager_alignment.repository import HiringManagerAlignme
 from app.modules.privacy_gateway.exceptions import ExtractionFailedError, UnsupportedFileTypeError
 from app.modules.privacy_gateway.extraction import extract_text
 from app.modules.projects.exceptions import (
+    ActiveRoleLimitExceededError,
     InvalidHiringManagerError,
     InvalidProjectMemberError,
     JDExtractionFailedError,
@@ -44,6 +46,7 @@ class ProjectService:
         self._blueprints = HiringBlueprintRepository(session)
         self._alignments = HiringManagerAlignmentRepository(session)
         self._shadow_jobs = ShadowJobRepository(session)
+        self._commercial = CommercialService(session)
 
     async def create_project(
         self,
@@ -56,6 +59,7 @@ class ProjectService:
         role_brief: str | None = None,
     ) -> Project:
         await self._validate_hiring_manager(actor.company_id, hiring_manager_id)
+        await self._enforce_active_role_limit(actor.company_id)
 
         project = await self._repository.create(
             company_id=actor.company_id,
@@ -342,6 +346,23 @@ class ProjectService:
             target_type="project",
             target_id=project.id,
         )
+
+    async def _enforce_active_role_limit(self, company_id: uuid.UUID) -> None:
+        """The one enforcement point for the commercial active-role limit -- see
+        commercial/service.py. A null effective limit means unlimited (Scale with no override
+        set yet), so it never blocks. Counted as "concurrent," not "lifetime": closing a role
+        (filled/cancelled) or archiving it frees the slot immediately, per
+        ProjectRepository._ACTIVE_STATUSES."""
+
+        limit = await self._commercial.get_effective_limit_by_company_id(company_id)
+        if limit is None:
+            return
+        active_count = await self._repository.count_active_by_company(company_id)
+        if active_count >= limit:
+            raise ActiveRoleLimitExceededError(
+                f"You've reached your plan's limit of {limit} active role"
+                f"{'s' if limit != 1 else ''}. Close a role or upgrade your plan to create another."
+            )
 
     async def _validate_hiring_manager(
         self, company_id: uuid.UUID, hiring_manager_id: uuid.UUID | None

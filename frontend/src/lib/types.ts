@@ -746,6 +746,24 @@ export interface Company {
   status: CompanyStatus;
 }
 
+export type CommercialPlanCode = "core" | "growth" | "scale";
+
+export interface CommercialPlan {
+  id: string;
+  code: CommercialPlanCode;
+  name: string;
+  monthly_price_pence: number;
+  annual_price_pence: number;
+  active_role_limit: number | null;
+  is_active: boolean;
+}
+
+export interface CompanyCommercialSummary {
+  plan: CommercialPlan | null;
+  active_role_count: number;
+  effective_limit: number | null;
+}
+
 export interface CompanyUpdateInput {
   description?: string | null;
   culture?: string | null;
@@ -1285,6 +1303,8 @@ export interface AdminCompanySummary {
   profile_status: CompanyProfileStatus;
   user_count: number;
   created_at: string;
+  commercial_plan_code: CommercialPlanCode | null;
+  active_role_limit_override: number | null;
 }
 
 export interface PlatformAdminAuditLogEntry {

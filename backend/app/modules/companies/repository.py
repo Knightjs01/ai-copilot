@@ -12,13 +12,20 @@ class CompanyRepository:
         self._session = session
 
     async def create(
-        self, *, name: str, slug: str, email_domain: str, is_verified_domain: bool
+        self,
+        *,
+        name: str,
+        slug: str,
+        email_domain: str,
+        is_verified_domain: bool,
+        commercial_plan_id: uuid.UUID | None = None,
     ) -> Company:
         company = Company(
             name=name,
             slug=slug,
             email_domain=email_domain,
             is_verified_domain=is_verified_domain,
+            commercial_plan_id=commercial_plan_id,
         )
         self._session.add(company)
         await self._session.flush()

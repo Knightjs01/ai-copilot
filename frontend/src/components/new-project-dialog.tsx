@@ -38,6 +38,7 @@ export function NewProjectDialog({
 } = {}) {
   const router = useRouter();
   const [internalOpen, setInternalOpen] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
   const open = openProp ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
   const createProject = useCreateProject();
@@ -50,17 +51,27 @@ export function NewProjectDialog({
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (values: FormValues) => {
-    const project = await createProject.mutateAsync({
-      title: values.title,
-      department: values.department || undefined,
-    });
-    reset();
-    setOpen(false);
-    router.push(`/projects/${project.id}`);
+    setFormError(null);
+    try {
+      const project = await createProject.mutateAsync({
+        title: values.title,
+        department: values.department || undefined,
+      });
+      reset();
+      setOpen(false);
+      router.push(`/projects/${project.id}`);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Couldn't create that project.");
+    }
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setFormError(null);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {!hideTrigger && (
         <DialogTrigger asChild>
           <Button>
@@ -80,11 +91,12 @@ export function NewProjectDialog({
           <Field label="Department" htmlFor="department">
             <Input id="department" placeholder="Engineering" {...register("department")} />
           </Field>
+          {formError && <p className="text-sm font-medium text-danger">{formError}</p>}
           <DialogFooter>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setOpen(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={createProject.isPending}
             >
               Cancel
