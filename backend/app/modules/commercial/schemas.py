@@ -15,6 +15,20 @@ class CommercialPlanRead(BaseModel):
     is_active: bool
 
 
+class PublicCommercialPlanRead(BaseModel):
+    """The public-facing shape -- no id/is_active, same "expose only what's needed" discipline as
+    CompanyProfileRead. This is what an anonymous /pricing page visitor gets; the admin-only
+    CommercialPlanRead above stays the internal shape."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    code: str
+    name: str
+    monthly_price_pence: int
+    annual_price_pence: int
+    active_role_limit: int | None
+
+
 class CompanyCommercialSummary(BaseModel):
     """What a company sees about its own plan -- real numbers only, no fabricated usage. A null
     effective_limit means unlimited (a Scale company an admin hasn't set a specific number for

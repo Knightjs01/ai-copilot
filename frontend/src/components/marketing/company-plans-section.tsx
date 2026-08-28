@@ -7,11 +7,11 @@ import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PillToggleGroup } from "@/components/ui/pill-toggle";
-import { annualSavingsPercent, COMPANY_PLANS, type BillingPeriod } from "@/lib/pricing-config";
+import { annualSavingsPercent, type BillingPeriod, type CompanyPlan } from "@/lib/pricing-config";
 
 const CARD_FEATURE_COUNT = 8;
 
-export function CompanyPlansSection() {
+export function CompanyPlansSection({ plans }: { plans: CompanyPlan[] }) {
   const [billingPeriod, setBillingPeriod] = React.useState<BillingPeriod>("monthly");
 
   return (
@@ -28,8 +28,8 @@ export function CompanyPlansSection() {
           />
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {COMPANY_PLANS.map((plan) => {
+        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+          {plans.map((plan) => {
             const price = billingPeriod === "annual" ? plan.price.annual : plan.price.monthly;
             const savings = annualSavingsPercent(plan);
             const cardFeatures = plan.features.slice(0, CARD_FEATURE_COUNT);
@@ -53,12 +53,11 @@ export function CompanyPlansSection() {
 
                 <div className="flex flex-col gap-1">
                   <div className="flex items-end gap-1.5">
+                    {price !== null && plan.priceIsFrom && (
+                      <span className="pb-1 text-xs text-muted-foreground">From</span>
+                    )}
                     <span className="text-3xl font-semibold tracking-tight text-foreground">
-                      {price === null
-                        ? "Custom"
-                        : billingPeriod === "annual"
-                          ? `£${price.toLocaleString("en-GB")}`
-                          : `£${price.toLocaleString("en-GB")}`}
+                      {price === null ? "Custom" : `£${price.toLocaleString("en-GB")}`}
                     </span>
                     {price !== null && (
                       <span className="pb-1 text-xs text-muted-foreground">

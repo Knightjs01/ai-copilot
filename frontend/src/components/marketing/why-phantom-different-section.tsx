@@ -31,6 +31,11 @@ export function WhyPhantomDifferentSection() {
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Why Phantom is different
           </h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            Traditional ATS platforms help you manage candidates you already know. Traditional
+            job boards reach people actively looking. Phantom discovers high-quality talent who
+            may never publicly advertise that they&apos;re looking.
+          </p>
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">

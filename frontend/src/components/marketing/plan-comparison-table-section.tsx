@@ -1,17 +1,9 @@
 import * as React from "react";
 import { Check, Minus } from "lucide-react";
 
-import { COMPANY_PLANS, FEATURE_COMPARISON_ROWS, type FeatureRow } from "@/lib/pricing-config";
+import { getFeatureComparisonRows, type CompanyPlan, type FeatureRow } from "@/lib/pricing-config";
 
-const CATEGORIES = Array.from(new Set(FEATURE_COMPARISON_ROWS.map((row) => row.category)));
-
-function Cell({
-  row,
-  planId,
-}: {
-  row: FeatureRow;
-  planId: (typeof COMPANY_PLANS)[number]["id"];
-}) {
+function Cell({ row, planId }: { row: FeatureRow; planId: CompanyPlan["id"] }) {
   const value = row.values[planId];
 
   if (value === false) {
@@ -25,7 +17,10 @@ function Cell({
   return <span className="text-xs text-foreground">{value}</span>;
 }
 
-export function PlanComparisonTableSection() {
+export function PlanComparisonTableSection({ plans }: { plans: CompanyPlan[] }) {
+  const rows = getFeatureComparisonRows(plans);
+  const categories = Array.from(new Set(rows.map((row) => row.category)));
+
   return (
     <section id="compare-plans" className="border-t border-border scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
@@ -42,7 +37,7 @@ export function PlanComparisonTableSection() {
                 <th className="sticky left-0 z-10 bg-secondary/20 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Feature
                 </th>
-                {COMPANY_PLANS.map((plan) => (
+                {plans.map((plan) => (
                   <th
                     key={plan.id}
                     className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
@@ -53,23 +48,24 @@ export function PlanComparisonTableSection() {
               </tr>
             </thead>
             <tbody>
-              {CATEGORIES.map((category) => (
+              {categories.map((category) => (
                 <React.Fragment key={category}>
                   <tr className="border-b border-border bg-secondary/30">
                     <td
-                      colSpan={COMPANY_PLANS.length + 1}
+                      colSpan={plans.length + 1}
                       className="sticky left-0 px-4 py-2 text-xs font-semibold text-foreground"
                     >
                       {category}
                     </td>
                   </tr>
-                  {FEATURE_COMPARISON_ROWS.filter((row) => row.category === category).map(
-                    (row) => (
+                  {rows
+                    .filter((row) => row.category === category)
+                    .map((row) => (
                       <tr key={row.label} className="border-b border-border last:border-b-0">
                         <td className="sticky left-0 z-10 bg-card px-4 py-3 text-xs text-foreground">
                           {row.label}
                         </td>
-                        {COMPANY_PLANS.map((plan) => (
+                        {plans.map((plan) => (
                           <td key={plan.id} className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center">
                               <Cell row={row} planId={plan.id} />
@@ -77,8 +73,7 @@ export function PlanComparisonTableSection() {
                           </td>
                         ))}
                       </tr>
-                    )
-                  )}
+                    ))}
                 </React.Fragment>
               ))}
             </tbody>

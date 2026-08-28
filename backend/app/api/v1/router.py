@@ -7,6 +7,7 @@ from app.modules.auth.api import router as auth_router
 from app.modules.candidate_auth.api import router as candidate_auth_router
 from app.modules.candidates.api import router as candidates_router
 from app.modules.commercial.api import admin_router as commercial_admin_router
+from app.modules.commercial.api import public_router as commercial_public_router
 from app.modules.commercial.api import router as commercial_router
 from app.modules.companies.api import admin_router as companies_admin_router
 from app.modules.companies.api import public_router as companies_public_router
@@ -78,6 +79,7 @@ api_router.include_router(platform_admin_router)
 api_router.include_router(platform_admin_jobs_router)
 api_router.include_router(commercial_router)
 api_router.include_router(commercial_admin_router)
+api_router.include_router(commercial_public_router)
 
 # Everything past pre-screen (interview loops, scorecards, offer, decision) is handled in the
 # company's ATS (Greenhouse), not this platform — see README Roadmap.

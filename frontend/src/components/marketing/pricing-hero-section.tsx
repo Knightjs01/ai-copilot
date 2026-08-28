@@ -12,12 +12,16 @@ export function PricingHeroSection() {
         </div>
 
         <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl">
-          Simple pricing for a smarter way to hire.
+          Hire beyond the active job market.
         </h1>
 
         <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-          Start with the hiring platform. Add private talent discovery and intelligence as your
-          team grows.
+          One platform for anonymous talent discovery, AI-powered hiring, ATS workflows and job
+          advertising.
+        </p>
+
+        <p className="text-sm font-medium text-foreground">
+          Candidates use Phantom for free. Companies pay for the platform.
         </p>
       </div>
     </section>

@@ -8,6 +8,7 @@ import { PricingFinalCtaSection } from "@/components/marketing/pricing-final-cta
 import { PricingHeroSection } from "@/components/marketing/pricing-hero-section";
 import { PricingHowItWorksSection } from "@/components/marketing/pricing-how-it-works-section";
 import { WhyPhantomDifferentSection } from "@/components/marketing/why-phantom-different-section";
+import { getCommercialPlans } from "@/lib/pricing-config";
 
 export const metadata: Metadata = {
   title: "Pricing | Phantom Hire",
@@ -15,15 +16,17 @@ export const metadata: Metadata = {
     "Candidates are free. Companies pay for the hiring infrastructure, talent discovery and intelligence that make Phantom different.",
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const plans = await getCommercialPlans();
+
   return (
     <>
       <PricingHeroSection />
-      <CompanyPlansSection />
+      <CompanyPlansSection plans={plans} />
       <WhyPhantomDifferentSection />
       <PricingHowItWorksSection />
       <CandidatePassportPricingSection />
-      <PlanComparisonTableSection />
+      <PlanComparisonTableSection plans={plans} />
       <PricingFaqSection />
       <PricingFinalCtaSection />
     </>

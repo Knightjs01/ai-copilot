@@ -13,6 +13,7 @@ from app.modules.auth.dependencies import (
 from app.modules.commercial.schemas import (
     CommercialPlanRead,
     CompanyCommercialSummary,
+    PublicCommercialPlanRead,
     UpdateCompanyCommercialRequest,
 )
 from app.modules.commercial.service import CommercialService
@@ -29,6 +30,16 @@ router = APIRouter(
 )
 
 admin_router = APIRouter(prefix="/platform-admin/commercial", tags=["commercial"])
+
+public_router = APIRouter(prefix="/commercial", tags=["commercial"])
+
+
+@public_router.get("/plans", response_model=list[PublicCommercialPlanRead])
+async def list_public_commercial_plans(
+    session: AsyncSession = Depends(get_db),
+) -> list[PublicCommercialPlanRead]:
+    plans = await CommercialService(session).get_plan_catalog()
+    return [PublicCommercialPlanRead.model_validate(p) for p in plans]
 
 
 @router.get("/me/commercial-summary", response_model=CompanyCommercialSummary)
