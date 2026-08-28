@@ -169,6 +169,23 @@ export function useReactivateCompany() {
   });
 }
 
+export function useVerifyCompany() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (companyId: string) => platformAdminApiClient.post(`/companies/${companyId}/verify`),
+    onSuccess: () => invalidateCompanyQueues(queryClient),
+  });
+}
+
+export function useUnverifyCompany() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (companyId: string) =>
+      platformAdminApiClient.post(`/companies/${companyId}/unverify`),
+    onSuccess: () => invalidateCompanyQueues(queryClient),
+  });
+}
+
 export function useChangePassword() {
   return useMutation({
     mutationFn: (input: { currentPassword: string; newPassword: string }) =>

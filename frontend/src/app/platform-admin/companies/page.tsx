@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { BadgeCheck, Building2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import {
   useAllCompanies,
   useReactivateCompany,
   useSuspendCompany,
+  useUnverifyCompany,
+  useVerifyCompany,
 } from "@/lib/queries/platform-admin";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { COMPANY_PROFILE_STATUS_LABEL, COMPANY_PROFILE_STATUS_VARIANT } from "@/lib/status-display";
@@ -23,7 +25,10 @@ import type { AdminCompanySummary } from "@/lib/types";
 function CompanyRow({ company }: { company: AdminCompanySummary }) {
   const suspend = useSuspendCompany();
   const reactivate = useReactivateCompany();
-  const isPending = suspend.isPending || reactivate.isPending;
+  const verify = useVerifyCompany();
+  const unverify = useUnverifyCompany();
+  const isPending =
+    suspend.isPending || reactivate.isPending || verify.isPending || unverify.isPending;
 
   return (
     <Card>
@@ -38,6 +43,12 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
               {COMPANY_PROFILE_STATUS_LABEL[company.profile_status]}
             </Badge>
             {!company.is_verified_domain && <Badge variant="outline">unverified domain</Badge>}
+            {company.is_verified_employer && (
+              <Badge variant="gold">
+                <BadgeCheck className="h-3 w-3" />
+                Verified employer
+              </Badge>
+            )}
             {company.commercial_plan_code && (
               <Badge variant="outline">
                 {company.commercial_plan_code.charAt(0).toUpperCase() +
@@ -54,7 +65,7 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
           </p>
         </div>
 
-        {(suspend.isError || reactivate.isError) && (
+        {(suspend.isError || reactivate.isError || verify.isError || unverify.isError) && (
           <p className="text-sm font-medium text-danger">Couldn&apos;t save. Try again.</p>
         )}
 
@@ -62,6 +73,27 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
           <EditCommercialDialog company={company} />
           {company.profile_status === "pending_review" && (
             <ProfileReviewDialog companyId={company.id} companyName={company.name} />
+          )}
+          {company.is_verified_employer ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => unverify.mutate(company.id)}
+              disabled={isPending}
+            >
+              {unverify.isPending ? "Removing…" : "Unverify"}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => verify.mutate(company.id)}
+              disabled={isPending}
+            >
+              {verify.isPending ? "Verifying…" : "Verify employer"}
+            </Button>
           )}
           {company.status === "suspended" ? (
             <Button

@@ -728,6 +728,11 @@ export type CompanyStatus = "approved" | "suspended";
 
 export type CompanyProfileStatus = "draft" | "pending_review" | "live" | "paused" | "suspended";
 
+export interface ContentItem {
+  title: string;
+  body: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -744,6 +749,24 @@ export interface Company {
   hiring_process_overview: string | null;
   profile_status: CompanyProfileStatus;
   status: CompanyStatus;
+  tagline: string | null;
+  website: string | null;
+  founded_year: number | null;
+  headquarters: string | null;
+  employee_count: number | null;
+  is_verified_employer: boolean;
+  values: ContentItem[];
+  looking_for: string[];
+  hiring_highlights: ContentItem[];
+}
+
+export interface ProfileStats {
+  active_role_count: number;
+  total_hires: number;
+  // Company.employee_count directly -- a real, company-entered headcount, not a count of
+  // Phantom Hire logins. Null until the company fills it in.
+  team_size: number | null;
+  candidates_in_pipeline: number;
 }
 
 export type CommercialPlanCode = "core" | "growth" | "scale";
@@ -771,10 +794,19 @@ export interface CompanyUpdateInput {
   size?: CompanySizeBand | null;
   industry?: string[];
   hiring_process_overview?: string | null;
+  tagline?: string | null;
+  website?: string | null;
+  founded_year?: number | null;
+  headquarters?: string | null;
+  employee_count?: number | null;
+  values?: ContentItem[];
+  looking_for?: string[];
+  hiring_highlights?: ContentItem[];
 }
 
 // Public /companies/{slug} shape (and the self-service preview shape) -- no id/email_domain/
-// is_verified_domain/profile_status.
+// is_verified_domain/profile_status. is_verified_employer IS included -- the one verification
+// signal safe to show a candidate (unlike is_verified_domain, an internal heuristic).
 export interface CompanyProfile {
   name: string;
   slug: string;
@@ -786,6 +818,14 @@ export interface CompanyProfile {
   logo_url: string | null;
   cover_image_url: string | null;
   hiring_process_overview: string | null;
+  tagline: string | null;
+  website: string | null;
+  founded_year: number | null;
+  headquarters: string | null;
+  is_verified_employer: boolean;
+  values: ContentItem[];
+  looking_for: string[];
+  hiring_highlights: ContentItem[];
 }
 
 export interface ShadowCareerEntrySummary {
@@ -1305,6 +1345,7 @@ export interface AdminCompanySummary {
   created_at: string;
   commercial_plan_code: CommercialPlanCode | null;
   active_role_limit_override: number | null;
+  is_verified_employer: boolean;
 }
 
 export interface PlatformAdminAuditLogEntry {

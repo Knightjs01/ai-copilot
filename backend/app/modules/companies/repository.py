@@ -82,6 +82,14 @@ class CompanyRepository:
         size: str | None,
         industry: list[Any],
         hiring_process_overview: str | None,
+        tagline: str | None,
+        website: str | None,
+        founded_year: int | None,
+        headquarters: str | None,
+        employee_count: int | None,
+        values: list[Any],
+        looking_for: list[Any],
+        hiring_highlights: list[Any],
     ) -> Company:
         company.description = description
         company.culture = culture
@@ -89,6 +97,14 @@ class CompanyRepository:
         company.size = size
         company.industry = industry
         company.hiring_process_overview = hiring_process_overview
+        company.tagline = tagline
+        company.website = website
+        company.founded_year = founded_year
+        company.headquarters = headquarters
+        company.employee_count = employee_count
+        company.values = values
+        company.looking_for = looking_for
+        company.hiring_highlights = hiring_highlights
         await self._session.flush()
         return company
 

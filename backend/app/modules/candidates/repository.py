@@ -1,6 +1,7 @@
 import uuid
+from collections.abc import Iterable
 
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.candidates.models import Candidate, CandidateSource, CandidateStatus
@@ -65,6 +66,19 @@ class CandidateRepository:
 
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def count_by_statuses(self, company_id: uuid.UUID, statuses: Iterable[str]) -> int:
+        """Used for company-wide profile stats (total hires, candidates in pipeline) -- a plain
+        count, not a full row fetch, since neither caller needs anything but the number."""
+
+        result = await self._session.execute(
+            select(func.count()).where(
+                Candidate.company_id == company_id,
+                Candidate.deleted_at.is_(None),
+                Candidate.status.in_(list(statuses)),
+            )
+        )
+        return int(result.scalar_one())
 
     async def list_all_by_project_id(self, project_id: uuid.UUID) -> list[Candidate]:
         """Unpaginated, includes soft-deleted rows — used only by project_deletion's hard-delete

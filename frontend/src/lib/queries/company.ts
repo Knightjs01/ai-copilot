@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
-import type { Company, CompanyProfile, CompanyUpdateInput } from "@/lib/types";
+import type { Company, CompanyProfile, CompanyUpdateInput, ProfileStats } from "@/lib/types";
 
 export function useMyCompany() {
   return useQuery({
@@ -19,7 +19,19 @@ export function useUpdateCompany() {
     mutationFn: (input: CompanyUpdateInput) => apiClient.patch<Company>("/companies/me", input),
     onSuccess: (data) => {
       queryClient.setQueryData(["company", "me"], data);
+      // team_size now comes from employee_count (part of this same PATCH) -- the stats card's
+      // own query key needs invalidating too, or it keeps showing the pre-edit number.
+      void queryClient.invalidateQueries({ queryKey: ["company", "me", "profile-stats"] });
     },
+  });
+}
+
+// Internal-only real numbers (active roles, total hires, team size, pipeline) -- never part of
+// the shared public/preview shape, see backend ProfileStats' own docstring for why.
+export function useProfileStats() {
+  return useQuery({
+    queryKey: ["company", "me", "profile-stats"],
+    queryFn: () => apiClient.get<ProfileStats>("/companies/me/profile-stats"),
   });
 }
 

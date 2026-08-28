@@ -12,6 +12,8 @@ from app.modules.auth.email import (
 )
 from app.modules.auth.models import User
 from app.modules.auth.repository.users import UserRepository
+from app.modules.candidates.models import CandidateStatus
+from app.modules.candidates.repository import CandidateRepository
 from app.modules.candidates.storage import FileStorage
 from app.modules.commercial.repository import CommercialPlanRepository
 from app.modules.companies.domain_verification import extract_email_domain, is_verified_domain
@@ -23,8 +25,14 @@ from app.modules.companies.exceptions import (
 )
 from app.modules.companies.models import Company, CompanyProfileStatus, CompanyStatus
 from app.modules.companies.repository import CompanyProfileVersionRepository, CompanyRepository
-from app.modules.companies.schemas import CompanyProfileRead, CompanyRead, CompanyUpdate
+from app.modules.companies.schemas import (
+    CompanyProfileRead,
+    CompanyRead,
+    CompanyUpdate,
+    ProfileStats,
+)
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
+from app.modules.projects.repository import ProjectRepository
 
 _SLUG_INVALID_CHARS = re.compile(r"[^a-z0-9]+")
 
@@ -33,6 +41,16 @@ _SLUG_INVALID_CHARS = re.compile(r"[^a-z0-9]+")
 # null plan the same as "no limit configured" -- that's meant for a Scale company an admin
 # hasn't set a number for yet, not the default state of a brand-new signup).
 _DEFAULT_COMMERCIAL_PLAN_CODE = "core"
+
+# Mirrors dashboard/service.py's own _IN_PROCESS_STATUSES exactly -- kept as a separate literal
+# copy rather than importing it, same reasoning already applied to the permissions catalog
+# migration keeping its own copy: a small, stable constant, not worth a cross-module dependency.
+_IN_PROCESS_CANDIDATE_STATUSES = {
+    CandidateStatus.NEW.value,
+    CandidateStatus.SCREENING.value,
+    CandidateStatus.INTERVIEWING.value,
+    CandidateStatus.OFFER.value,
+}
 
 _ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/png": ".png",
@@ -82,6 +100,8 @@ class CompanyService:
         self._repository = CompanyRepository(session)
         self._versions = CompanyProfileVersionRepository(session)
         self._commercial_plans = CommercialPlanRepository(session)
+        self._candidates = CandidateRepository(session)
+        self._projects = ProjectRepository(session)
         self._users = UserRepository(session)
         self._audit = AuditService(session)
         self._platform_audit = PlatformAdminAuditService(session)
@@ -138,6 +158,72 @@ class CompanyService:
                 if "hiring_process_overview" in fields_set
                 else company.hiring_process_overview
             ),
+            tagline=body.tagline if "tagline" in fields_set else company.tagline,
+            website=body.website if "website" in fields_set else company.website,
+            founded_year=(
+                body.founded_year if "founded_year" in fields_set else company.founded_year
+            ),
+            headquarters=(
+                body.headquarters if "headquarters" in fields_set else company.headquarters
+            ),
+            employee_count=(
+                body.employee_count if "employee_count" in fields_set else company.employee_count
+            ),
+            values=(
+                [item.model_dump() for item in body.values]
+                if "values" in fields_set and body.values is not None
+                else company.values
+            ),
+            looking_for=(
+                list(body.looking_for)
+                if "looking_for" in fields_set and body.looking_for is not None
+                else company.looking_for
+            ),
+            hiring_highlights=(
+                [item.model_dump() for item in body.hiring_highlights]
+                if "hiring_highlights" in fields_set and body.hiring_highlights is not None
+                else company.hiring_highlights
+            ),
+        )
+
+    async def set_verified_employer(
+        self, *, admin_id: uuid.UUID, company_id: uuid.UUID, is_verified: bool
+    ) -> Company:
+        """The one honest verification signal -- see Company.is_verified_employer's docstring.
+        Deliberately no "already in that state" guard (unlike suspend/reactivate): this is a
+        content flag an admin can freely re-confirm, not a lifecycle transition where re-entering
+        the same state would be a meaningful error."""
+
+        company = await self._repository.get_by_id(company_id)
+        if company is None:
+            raise CompanyNotFoundError()
+        company.is_verified_employer = is_verified
+        await self._session.flush()
+        await self._platform_audit.record(
+            admin_id=admin_id,
+            action="company.verified_employer_set",
+            target_type="company",
+            target_id=company.id,
+            extra_data={"company_name": company.name, "is_verified": is_verified},
+        )
+        return company
+
+    async def get_profile_stats(self, company_id: uuid.UUID) -> ProfileStats:
+        company = await self._repository.get_by_id(company_id)
+        if company is None:
+            raise CompanyNotFoundError()
+        active_role_count = await self._projects.count_active_by_company(company_id)
+        total_hires = await self._candidates.count_by_statuses(
+            company_id, {CandidateStatus.HIRED.value}
+        )
+        candidates_in_pipeline = await self._candidates.count_by_statuses(
+            company_id, _IN_PROCESS_CANDIDATE_STATUSES
+        )
+        return ProfileStats(
+            active_role_count=active_role_count,
+            total_hires=total_hires,
+            team_size=company.employee_count,
+            candidates_in_pipeline=candidates_in_pipeline,
         )
 
     async def upload_logo(self, *, actor: User, content: bytes, content_type: str) -> Company:
@@ -264,7 +350,11 @@ class CompanyService:
         version = await self._versions.get_by_id(company.current_profile_version_id)
         if version is None:
             return None
-        return CompanyProfileRead.model_validate(version.snapshot)
+        profile = CompanyProfileRead.model_validate(version.snapshot)
+        # is_verified_employer is deliberately read live, not frozen into the snapshot -- it's an
+        # admin action independent of the company's own draft/review cycle, and a company
+        # shouldn't have to resubmit their profile for the verified badge to appear or disappear.
+        return profile.model_copy(update={"is_verified_employer": company.is_verified_employer})
 
     # --- Admin: profile review queue ------------------------------------------------------------
 
@@ -408,6 +498,15 @@ class CompanyService:
             hiring_process_overview=company.hiring_process_overview,
             profile_status=company.profile_status,
             status=company.status,
+            tagline=company.tagline,
+            website=company.website,
+            founded_year=company.founded_year,
+            headquarters=company.headquarters,
+            employee_count=company.employee_count,
+            is_verified_employer=company.is_verified_employer,
+            values=company.values,
+            looking_for=company.looking_for,
+            hiring_highlights=company.hiring_highlights,
         )
 
     def _draft_to_profile_read(self, company: Company) -> CompanyProfileRead:
@@ -424,6 +523,14 @@ class CompanyService:
                 company.slug, "cover-image", company.cover_image_storage_key
             ),
             hiring_process_overview=company.hiring_process_overview,
+            tagline=company.tagline,
+            website=company.website,
+            founded_year=company.founded_year,
+            headquarters=company.headquarters,
+            is_verified_employer=company.is_verified_employer,
+            values=company.values,
+            looking_for=company.looking_for,
+            hiring_highlights=company.hiring_highlights,
         )
 
     @staticmethod

@@ -89,6 +89,27 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     )
     active_role_limit_override: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Company Profile Visual Rebuild -- see the plan this shipped under. tagline/website/
+    # founded_year/headquarters are plain "who we are" facts with no precedent elsewhere.
+    # values/hiring_highlights mirror benefits/industry's existing JSONB-list pattern, just with
+    # {title, body} objects instead of plain strings.
+    tagline: Mapped[str | None] = mapped_column(String(255), default=None)
+    website: Mapped[str | None] = mapped_column(String(255), default=None)
+    founded_year: Mapped[int | None] = mapped_column(Integer, default=None)
+    headquarters: Mapped[str | None] = mapped_column(String(255), default=None)
+    # Distinct from `size` (a coarse public-facing band, e.g. "51-200") -- this is a precise,
+    # company-entered headcount, internal-only (see ProfileStats.team_size's docstring): the
+    # count of Phantom Hire logins is a completely different, smaller number than a company's
+    # real employee count, and conflating the two was a real bug caught before this shipped.
+    employee_count: Mapped[int | None] = mapped_column(Integer, default=None)
+    # Deliberately distinct from is_verified_domain above (an automatic denylist heuristic, not a
+    # real check) -- this is the one honest "Phantom verified this employer" signal, settable only
+    # by a platform admin. Never present in CompanyUpdate; a company can never set this on itself.
+    is_verified_employer: Mapped[bool] = mapped_column(Boolean, default=False)
+    values: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    looking_for: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    hiring_highlights: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+
 
 class CompanyProfileVersion(UUIDPrimaryKeyMixin, Base):
     """An immutable snapshot, created only on an explicit platform-admin approval — mirrors

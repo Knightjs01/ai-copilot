@@ -25,6 +25,7 @@ from app.modules.companies.schemas import (
     CompanyRead,
     CompanyUpdate,
     ProfileReviewRejectBody,
+    ProfileStats,
 )
 from app.modules.companies.service import CompanyService
 from app.modules.platform_admin.dependencies import (
@@ -66,6 +67,14 @@ async def update_my_company(
     if company is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
     return service.to_read(company)
+
+
+@router.get("/me/profile-stats", response_model=ProfileStats)
+async def get_my_profile_stats(
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> ProfileStats:
+    return await CompanyService(session).get_profile_stats(current_user.company_id)
 
 
 @router.get("/me/preview", response_model=CompanyProfileRead)
@@ -207,6 +216,7 @@ async def list_companies_for_admin(
                 else None
             ),
             active_role_limit_override=company.active_role_limit_override,
+            is_verified_employer=company.is_verified_employer,
         )
         for company, user_count in pairs
     ]
@@ -246,6 +256,36 @@ async def reactivate_company(
 ) -> CompanyRead:
     service = CompanyService(session)
     company = await service.reactivate_company(admin_id=admin.id, company_id=company_id)
+    return service.to_read(company)
+
+
+@admin_router.post("/{company_id}/verify", response_model=CompanyRead)
+async def verify_employer(
+    company_id: uuid.UUID,
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> CompanyRead:
+    service = CompanyService(session)
+    company = await service.set_verified_employer(
+        admin_id=admin.id, company_id=company_id, is_verified=True
+    )
+    return service.to_read(company)
+
+
+@admin_router.post("/{company_id}/unverify", response_model=CompanyRead)
+async def unverify_employer(
+    company_id: uuid.UUID,
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> CompanyRead:
+    service = CompanyService(session)
+    company = await service.set_verified_employer(
+        admin_id=admin.id, company_id=company_id, is_verified=False
+    )
     return service.to_read(company)
 
 

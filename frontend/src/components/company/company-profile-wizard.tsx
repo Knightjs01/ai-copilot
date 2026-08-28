@@ -21,7 +21,7 @@ import {
   useUploadCoverImage,
   useUploadLogo,
 } from "@/lib/queries/company";
-import type { CompanySizeBand } from "@/lib/types";
+import type { CompanySizeBand, ContentItem } from "@/lib/types";
 
 const STEPS: PassportWizardStep[] = [
   { id: "identity", label: "Identity" },
@@ -47,6 +47,14 @@ export function CompanyProfileWizard() {
   const [size, setSize] = React.useState<CompanySizeBand | null>(null);
   const [industry, setIndustry] = React.useState<string[]>([]);
   const [hiringProcessOverview, setHiringProcessOverview] = React.useState("");
+  const [tagline, setTagline] = React.useState("");
+  const [website, setWebsite] = React.useState("");
+  const [foundedYear, setFoundedYear] = React.useState("");
+  const [headquarters, setHeadquarters] = React.useState("");
+  const [employeeCount, setEmployeeCount] = React.useState("");
+  const [values, setValues] = React.useState<ContentItem[]>([]);
+  const [lookingFor, setLookingFor] = React.useState<string[]>([]);
+  const [hiringHighlights, setHiringHighlights] = React.useState<ContentItem[]>([]);
 
   React.useEffect(() => {
     if (!company || loadedOnce) return;
@@ -56,6 +64,14 @@ export function CompanyProfileWizard() {
     setSize(company.size);
     setIndustry(company.industry);
     setHiringProcessOverview(company.hiring_process_overview ?? "");
+    setTagline(company.tagline ?? "");
+    setWebsite(company.website ?? "");
+    setFoundedYear(company.founded_year !== null ? String(company.founded_year) : "");
+    setHeadquarters(company.headquarters ?? "");
+    setEmployeeCount(company.employee_count !== null ? String(company.employee_count) : "");
+    setValues(company.values);
+    setLookingFor(company.looking_for);
+    setHiringHighlights(company.hiring_highlights);
     setLoadedOnce(true);
   }, [company, loadedOnce]);
 
@@ -72,6 +88,14 @@ export function CompanyProfileWizard() {
         size,
         industry,
         hiring_process_overview: hiringProcessOverview || null,
+        tagline: tagline || null,
+        website: website || null,
+        founded_year: foundedYear ? Number(foundedYear) : null,
+        headquarters: headquarters || null,
+        employee_count: employeeCount ? Number(employeeCount) : null,
+        values,
+        looking_for: lookingFor,
+        hiring_highlights: hiringHighlights,
       });
       return true;
     } catch {
@@ -94,11 +118,11 @@ export function CompanyProfileWizard() {
   }
 
   const completedIndices = new Set<number>();
-  if (company.logo_url || size || industry.length > 0) completedIndices.add(0);
+  if (company.logo_url || size || industry.length > 0 || tagline) completedIndices.add(0);
   if (description || culture) completedIndices.add(1);
-  if (benefits.length > 0) completedIndices.add(2);
+  if (benefits.length > 0 || values.length > 0 || lookingFor.length > 0) completedIndices.add(2);
   if (company.cover_image_url) completedIndices.add(3);
-  if (hiringProcessOverview) completedIndices.add(4);
+  if (hiringProcessOverview || hiringHighlights.length > 0) completedIndices.add(4);
 
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-border bg-background p-6 shadow-xl shadow-slate-900/5 sm:p-10">
@@ -128,6 +152,16 @@ export function CompanyProfileWizard() {
                 logoUrl={company.logo_url}
                 onUploadLogo={(file) => uploadLogo.mutate(file)}
                 isUploadingLogo={uploadLogo.isPending}
+                tagline={tagline}
+                onTaglineChange={setTagline}
+                website={website}
+                onWebsiteChange={setWebsite}
+                foundedYear={foundedYear}
+                onFoundedYearChange={setFoundedYear}
+                headquarters={headquarters}
+                onHeadquartersChange={setHeadquarters}
+                employeeCount={employeeCount}
+                onEmployeeCountChange={setEmployeeCount}
                 size={size}
                 onSizeChange={setSize}
                 industry={industry}
@@ -143,7 +177,14 @@ export function CompanyProfileWizard() {
               />
             )}
             {activeStep === 2 && (
-              <EmployeeExperienceStep benefits={benefits} onBenefitsChange={setBenefits} />
+              <EmployeeExperienceStep
+                values={values}
+                onValuesChange={setValues}
+                lookingFor={lookingFor}
+                onLookingForChange={setLookingFor}
+                benefits={benefits}
+                onBenefitsChange={setBenefits}
+              />
             )}
             {activeStep === 3 && (
               <MediaStep
@@ -156,6 +197,8 @@ export function CompanyProfileWizard() {
               <HiringProfileStep
                 hiringProcessOverview={hiringProcessOverview}
                 onHiringProcessOverviewChange={setHiringProcessOverview}
+                hiringHighlights={hiringHighlights}
+                onHiringHighlightsChange={setHiringHighlights}
               />
             )}
             {activeStep === 5 && <ReviewStep profileStatus={company.profile_status} />}
