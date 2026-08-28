@@ -12,6 +12,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 
+import { CommercialUsageBanner } from "@/components/company/commercial-usage-banner";
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import { DashboardPanel } from "@/components/project/dashboard-panel";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +132,8 @@ export default function ProjectsPage() {
           </div>
           <NewProjectDialog />
         </div>
+
+        <CommercialUsageBanner />
 
         <div className="flex flex-wrap gap-2">
           {STATUS_FILTERS.map((f) => (
