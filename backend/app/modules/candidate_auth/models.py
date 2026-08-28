@@ -68,6 +68,23 @@ class CandidateRefreshToken(UUIDPrimaryKeyMixin, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class CandidateVerificationToken(UUIDPrimaryKeyMixin, Base):
+    """Email-verification tokens for candidates. Unlike auth.models.VerificationToken (which
+    serves email-verify/password-reset/invite via a `purpose` column), candidates only need this
+    for one thing today -- a single-purpose table is simpler and honest about current scope
+    rather than building a generic multi-purpose token system nothing else here needs yet."""
+
+    __tablename__ = "candidate_verification_tokens"
+
+    candidate_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("candidate_users.id"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class CandidateWebAuthnCredential(UUIDPrimaryKeyMixin, Base):
     """Same shape as auth.models.WebAuthnCredential, scoped to a candidate instead of a company
     user. No company_id — candidates have none — so this relies on application-layer scoping

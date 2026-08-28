@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""
     brevo_sender_email: str = ""
 
+    # No default on purpose, same as anthropic_api_key. Empty means
+    # app.modules.geocoding.service.GeocodingService.autocomplete degrades to returning no
+    # suggestions (the location field still accepts free-typed text) rather than erroring — local
+    # dev without this key set is never blocked.
+    geoapify_api_key: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

@@ -14,7 +14,10 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
-from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
+from app.modules.candidate_auth.dependencies import (
+    require_candidate_mfa_enrolled,
+    require_verified_candidate,
+)
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.passport_matching.dependencies import get_passport_matching_llm_client
 from app.modules.passport_matching.llm_client import PassportMatchingLLMClient
@@ -60,6 +63,7 @@ async def get_match(
 async def batch_get_matches(
     body: BatchMatchRequest,
     candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
+    _: CandidateUser = Depends(require_verified_candidate),
     session: AsyncSession = Depends(get_db),
     llm_client: PassportMatchingLLMClient = Depends(get_passport_matching_llm_client),
 ) -> list[PassportJobMatchRead]:

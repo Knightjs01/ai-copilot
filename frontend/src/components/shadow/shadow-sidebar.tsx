@@ -91,7 +91,7 @@ function SidebarLogo() {
         alt="Phantom Shadow"
         width={2172}
         height={724}
-        className="h-8 w-auto"
+        className="h-11 w-auto"
         priority
       />
     </Link>

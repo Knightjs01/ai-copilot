@@ -11,14 +11,26 @@ import { ShadowAuthShell } from "@/components/shadow/shadow-auth-shell";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordStrengthBar } from "@/components/ui/password-strength-bar";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import { scorePasswordStrength } from "@/lib/password-strength";
 
-const schema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().optional(),
-  email: z.string().email("Enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
+const schema = z
+  .object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().optional(),
+    email: z.string().email("Enter a valid email"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => scorePasswordStrength(data.password) !== "weak", {
+    message: "Choose a stronger password",
+    path: ["password"],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -30,8 +42,11 @@ export function ShadowSignupForm() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), mode: "onChange" });
+
+  const password = watch("password") ?? "";
 
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
@@ -77,6 +92,19 @@ export function ShadowSignupForm() {
             type="password"
             autoComplete="new-password"
             {...register("password")}
+          />
+        </Field>
+        <PasswordStrengthBar password={password} />
+        <Field
+          label="Confirm password"
+          htmlFor="confirmPassword"
+          error={errors.confirmPassword?.message}
+        >
+          <Input
+            id="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            {...register("confirmPassword")}
           />
         </Field>
         {formError && <p className="text-sm font-medium text-danger">{formError}</p>}

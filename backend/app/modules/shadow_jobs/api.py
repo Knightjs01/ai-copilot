@@ -16,7 +16,10 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
-from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
+from app.modules.candidate_auth.dependencies import (
+    require_candidate_mfa_enrolled,
+    require_verified_candidate,
+)
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.dependencies import require_verified_domain
 from app.modules.shadow_jobs.exceptions import ShadowJobNotFoundError
@@ -280,6 +283,7 @@ async def get_job_intelligence(
 async def apply_to_job(
     job_id: uuid.UUID,
     candidate: CandidateUser = Depends(require_candidate_mfa_enrolled),
+    _: CandidateUser = Depends(require_verified_candidate),
     session: AsyncSession = Depends(get_db),
 ) -> ShadowApplicationRead:
     return await ShadowJobService(session).apply(candidate=candidate, job_id=job_id)

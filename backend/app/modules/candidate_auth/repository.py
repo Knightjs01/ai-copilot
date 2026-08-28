@@ -8,6 +8,7 @@ from app.modules.candidate_auth.models import (
     CandidateMfaBackupCode,
     CandidateRefreshToken,
     CandidateUser,
+    CandidateVerificationToken,
     CandidateWebAuthnCredential,
 )
 
@@ -116,6 +117,44 @@ class CandidateRefreshTokenRepository:
             )
         )
         return result.scalar_one_or_none()
+
+
+class CandidateVerificationTokenRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(
+        self, *, candidate_user_id: uuid.UUID, token_hash: str, expires_at: datetime
+    ) -> CandidateVerificationToken:
+        token = CandidateVerificationToken(
+            candidate_user_id=candidate_user_id, token_hash=token_hash, expires_at=expires_at
+        )
+        self._session.add(token)
+        await self._session.flush()
+        return token
+
+    async def get_by_hash(self, token_hash: str) -> CandidateVerificationToken | None:
+        result = await self._session.execute(
+            select(CandidateVerificationToken).where(
+                CandidateVerificationToken.token_hash == token_hash
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def mark_used(self, token: CandidateVerificationToken) -> None:
+        token.used_at = datetime.now(timezone.utc)
+        await self._session.flush()
+
+    async def invalidate_pending_for_candidate(self, candidate_user_id: uuid.UUID) -> None:
+        await self._session.execute(
+            update(CandidateVerificationToken)
+            .where(
+                CandidateVerificationToken.candidate_user_id == candidate_user_id,
+                CandidateVerificationToken.used_at.is_(None),
+            )
+            .values(used_at=datetime.now(timezone.utc))
+        )
+        await self._session.flush()
 
 
 class CandidateMfaBackupCodeRepository:

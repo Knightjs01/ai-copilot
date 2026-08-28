@@ -5,6 +5,7 @@ import { Lock, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 
 interface PersonalInfoStepProps {
   firstName: string;
@@ -35,7 +36,7 @@ export function PersonalInfoStep({
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Personal identity — private</CardTitle>
+          <CardTitle>Personal Identity - Remains Private</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex items-start gap-2.5 rounded-xl border border-border bg-background px-4 py-3">
@@ -71,11 +72,11 @@ export function PersonalInfoStep({
             <Input id="phone" value={phone} onChange={(e) => onPhoneChange(e.target.value)} />
           </Field>
           <Field label="Location" htmlFor="location">
-            <Input
+            <LocationAutocomplete
               id="location"
               placeholder="e.g. London, UK"
               value={location}
-              onChange={(e) => onLocationChange(e.target.value)}
+              onChange={onLocationChange}
             />
           </Field>
         </CardContent>

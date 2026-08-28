@@ -12,6 +12,7 @@ from app.modules.companies.api import router as companies_router
 from app.modules.company_access.api import router as company_access_router
 from app.modules.copilot.api import router as copilot_router
 from app.modules.dashboard.api import router as dashboard_router
+from app.modules.geocoding.api import router as geocoding_router
 from app.modules.hiring_blueprint.api import router as hiring_blueprint_router
 from app.modules.hiring_manager_alignment.api import router as hiring_manager_alignment_router
 from app.modules.historic_vault.api import router as historic_vault_router
@@ -54,6 +55,7 @@ api_router.include_router(project_deletion_router)
 api_router.include_router(analytics_router)
 api_router.include_router(identity_vault_router)
 api_router.include_router(dashboard_router)
+api_router.include_router(geocoding_router)
 api_router.include_router(historic_vault_router)
 api_router.include_router(candidate_auth_router)
 api_router.include_router(phantom_passport_router)

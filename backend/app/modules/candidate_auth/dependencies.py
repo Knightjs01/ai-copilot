@@ -75,3 +75,24 @@ async def require_candidate_mfa_enrolled(
             ),
         )
     return candidate
+
+
+async def require_verified_candidate(
+    candidate: CandidateUser = Depends(get_current_candidate),
+) -> CandidateUser:
+    """Gate for the two actions that constitute "using the Shadow job board" (applying, and the
+    For You match listing) -- no grace period, unlike require_candidate_mfa_enrolled: a candidate
+    is only ever asked to verify after they've already finished building a Passport, so there's
+    no day-1 friction a grace period would exist to soften. Building/editing the Passport itself,
+    and the verify/resend-verification endpoints, are deliberately NOT behind this gate — a
+    candidate must always be able to finish what they're doing and to verify at all."""
+
+    if not candidate.is_email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Verify your email address to continue. "
+                "Resend via POST /candidate-auth/resend-verification."
+            ),
+        )
+    return candidate

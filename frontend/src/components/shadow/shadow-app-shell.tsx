@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { ShadowAppHeader } from "@/components/shadow/shadow-app-header";
 import { ShadowSidebar } from "@/components/shadow/shadow-sidebar";
@@ -20,13 +20,19 @@ export function ShadowAppShell({
   children,
   requireAuth = false,
   mainClassName,
+  chromeless = false,
 }: {
   children: React.ReactNode;
   requireAuth?: boolean;
   mainClassName?: string;
+  // No sidebar/header nav -- used by the Passport build wizard so it feels like a contained
+  // walkthrough rather than a page inside the wider Shadow app. Still requires auth exactly like
+  // the normal candidate shell; only the chrome around the content changes.
+  chromeless?: boolean;
 }) {
   const { candidate, isLoading } = useCandidateAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -35,10 +41,57 @@ export function ShadowAppShell({
     }
   }, [requireAuth, isLoading, candidate, router]);
 
-  if (requireAuth && (isLoading || !candidate)) {
+  // A candidate must confirm their email before using the authenticated Shadow experience --
+  // except the Passport wizard itself (they haven't finished building it yet) and this page's own
+  // destination (or they could never get there). No grace period, matching require_verified_candidate
+  // on the backend -- verification is only ever asked for after the wizard is already done.
+  React.useEffect(() => {
+    if (
+      requireAuth &&
+      candidate &&
+      !candidate.is_email_verified &&
+      pathname !== "/shadow/passport" &&
+      pathname !== "/shadow/verify-email"
+    ) {
+      router.replace("/shadow/verify-email");
+    }
+  }, [requireAuth, candidate, pathname, router]);
+
+  const pendingVerificationRedirect =
+    requireAuth &&
+    !!candidate &&
+    !candidate.is_email_verified &&
+    pathname !== "/shadow/passport" &&
+    pathname !== "/shadow/verify-email";
+
+  if (requireAuth && (isLoading || !candidate || pendingVerificationRedirect)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Spinner className="h-6 w-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (candidate && chromeless) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
+          <div className="mx-auto flex h-16 max-w-4xl items-center px-6">
+            <Link href="/shadow" aria-label="Shadow home">
+              <Image
+                src="/phantom-shadow-logo-new.png"
+                alt="Phantom Shadow"
+                width={2172}
+                height={724}
+                className="h-9 w-auto"
+                priority
+              />
+            </Link>
+          </div>
+        </header>
+        <main className={cn("mx-auto w-full px-6 py-10", mainClassName ?? "max-w-4xl")}>
+          {children}
+        </main>
       </div>
     );
   }

@@ -8,6 +8,8 @@ from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.modules.auth import security
+from app.modules.auth.dependencies import get_email_sender
+from app.modules.auth.email import EmailSender
 from app.modules.candidate_auth.dependencies import get_current_candidate
 from app.modules.candidate_auth.exceptions import CandidateInvalidOrExpiredTokenError
 from app.modules.candidate_auth.models import CandidateUser
@@ -20,9 +22,11 @@ from app.modules.candidate_auth.schemas import (
     CandidateMfaEnableResponse,
     CandidateMfaSetupResponse,
     CandidateMfaVerifyRequest,
+    CandidateResendVerificationRequest,
     CandidateSessionRead,
     CandidateSignupRequest,
     CandidateTokenResponse,
+    CandidateVerifyEmailRequest,
     CandidateWebAuthnAuthenticationOptionsRequest,
     CandidateWebAuthnAuthenticationVerifyRequest,
     CandidateWebAuthnCredentialRead,
@@ -68,9 +72,10 @@ async def signup(
     body: CandidateSignupRequest,
     response: Response,
     session: AsyncSession = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
 ) -> CandidateTokenResponse:
     user_agent, ip_address = _client_context(request)
-    _, tokens = await CandidateAuthService(session).signup(
+    _, tokens = await CandidateAuthService(session, email_sender=email_sender).signup(
         email=body.email,
         password=body.password,
         first_name=body.first_name,
@@ -80,6 +85,27 @@ async def signup(
     )
     _set_refresh_cookie(response, tokens.refresh_token)
     return CandidateTokenResponse(access_token=tokens.access_token)
+
+
+@router.post("/resend-verification", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+async def resend_verification(
+    request: Request,
+    body: CandidateResendVerificationRequest,
+    session: AsyncSession = Depends(get_db),
+    email_sender: EmailSender = Depends(get_email_sender),
+) -> None:
+    await CandidateAuthService(session, email_sender=email_sender).request_email_verification(
+        email=body.email
+    )
+
+
+@router.post("/verify-email", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
+async def verify_email(
+    request: Request, body: CandidateVerifyEmailRequest, session: AsyncSession = Depends(get_db)
+) -> None:
+    await CandidateAuthService(session).verify_email(token_plain=body.token)
 
 
 @router.post("/login", response_model=CandidateTokenResponse | CandidateMfaChallengeResponse)

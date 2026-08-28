@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import webauthn as webauthn_core
 from app.core.config import get_settings
 from app.modules.auth import security
+from app.modules.auth.email import ConsoleEmailSender, EmailSender, build_verification_email
 from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.auth.webauthn_challenge_store import WebAuthnChallengeStore
 from app.modules.candidate_auth.exceptions import (
@@ -27,6 +28,7 @@ from app.modules.candidate_auth.repository import (
     CandidateMfaBackupCodeRepository,
     CandidateRefreshTokenRepository,
     CandidateUserRepository,
+    CandidateVerificationTokenRepository,
     CandidateWebAuthnCredentialRepository,
 )
 
@@ -43,14 +45,16 @@ class CandidateMfaChallenge(NamedTuple):
 
 
 class CandidateAuthService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, email_sender: EmailSender | None = None) -> None:
         self._session = session
         self._settings = get_settings()
         self._candidates = CandidateUserRepository(session)
         self._tokens = CandidateRefreshTokenRepository(session)
+        self._verification_tokens = CandidateVerificationTokenRepository(session)
         self._mfa_backup_codes = CandidateMfaBackupCodeRepository(session)
         self._webauthn_credentials = CandidateWebAuthnCredentialRepository(session)
         self._webauthn_challenges = WebAuthnChallengeStore(realm="candidate")
+        self._email_sender = email_sender or ConsoleEmailSender()
 
     async def signup(
         self,
@@ -71,6 +75,7 @@ class CandidateAuthService:
             first_name=first_name,
             last_name=last_name,
         )
+        await self._send_verification_email(candidate)
         tokens = await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
         return candidate, tokens
 
@@ -347,3 +352,36 @@ class CandidateAuthService:
             ip_address=ip_address,
         )
         return IssuedCandidateTokens(access_token=access_token, refresh_token=refresh_token_plain)
+
+    async def request_email_verification(self, *, email: str) -> None:
+        candidate = await self._candidates.get_by_email(email)
+        if candidate is not None and not candidate.is_email_verified:
+            await self._send_verification_email(candidate)
+
+    async def verify_email(self, *, token_plain: str) -> None:
+        token_hash = security.hash_opaque_token(token_plain)
+        token = await self._verification_tokens.get_by_hash(token_hash)
+        if (
+            token is None
+            or token.used_at is not None
+            or token.expires_at < datetime.now(timezone.utc)
+        ):
+            raise CandidateInvalidOrExpiredTokenError()
+        await self._verification_tokens.mark_used(token)
+
+        candidate = await self._candidates.get_by_id(token.candidate_user_id)
+        if candidate is None:
+            raise CandidateInvalidOrExpiredTokenError()
+        candidate.is_email_verified = True
+
+    async def _send_verification_email(self, candidate: CandidateUser) -> None:
+        await self._verification_tokens.invalidate_pending_for_candidate(candidate.id)
+        token_plain = security.generate_opaque_token()
+        await self._verification_tokens.create(
+            candidate_user_id=candidate.id,
+            token_hash=security.hash_opaque_token(token_plain),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+        )
+        verify_url = f"{self._settings.frontend_base_url}/shadow/verify-email?token={token_plain}"
+        subject, body = build_verification_email(verify_url=verify_url)
+        await self._email_sender.send(to=candidate.email, subject=subject, body=body)

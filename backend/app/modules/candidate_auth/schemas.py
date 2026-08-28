@@ -52,6 +52,14 @@ class CandidateMfaDisableRequest(BaseModel):
     password: str
 
 
+class CandidateResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class CandidateVerifyEmailRequest(BaseModel):
+    token: str
+
+
 class CandidateMeResponse(BaseModel):
     id: uuid.UUID
     email: str

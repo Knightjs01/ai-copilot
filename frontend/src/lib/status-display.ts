@@ -304,7 +304,7 @@ export const VERIFICATION_STATUS_LABEL: Record<VerificationStatus, string> = {
 export const VISIBILITY_LABEL: Record<PassportVisibility, string> = {
   private: "Private",
   match_only: "Match-only",
-  discoverable: "Discoverable",
+  discoverable: "Discoverable (Recommended)",
 };
 
 // One honest line per state for dynamic helper copy under the visibility toggle -- match_only

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { PartyPopper, ShieldCheck, X } from "lucide-react";
+import { Mail, PartyPopper, ShieldCheck, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,14 @@ export function PassportSuccessOverlay({
                   <Badge variant="gold">Version {versionNumber}</Badge>
                 </div>
               </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-xl border border-border bg-secondary/40 p-3.5 text-left">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">
+                Check your inbox to confirm your email address before you can browse and apply on
+                Shadow.
+              </p>
             </div>
 
             <div className="flex flex-col gap-2.5">

@@ -120,6 +120,13 @@ export function PassportWizard() {
   const [activeStep, setActiveStep] = React.useState(0);
   const [stepInitialized, setStepInitialized] = React.useState(false);
 
+  // Advancing (or going back) a step should never leave the reader scrolled to wherever the
+  // previous step's content ended -- the top of each new step is where the important stuff
+  // (title, first field) lives.
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeStep]);
+
   const [summarySuggestion, setSummarySuggestion] = React.useState<string | null>(null);
   const [summarySuggestionError, setSummarySuggestionError] = React.useState<string | null>(null);
   const [skillsSuggestions, setSkillsSuggestions] = React.useState<string[] | null>(null);

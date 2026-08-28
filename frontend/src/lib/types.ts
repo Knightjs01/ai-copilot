@@ -1243,6 +1243,14 @@ export interface AdminShadowJob extends ShadowJob {
   company_name: string;
 }
 
+export interface LocationSuggestion {
+  formatted: string;
+  city: string | null;
+  country: string | null;
+  lat: number;
+  lon: number;
+}
+
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
 
 // The employer access-request queue -- the replacement for self-service company signup. See
