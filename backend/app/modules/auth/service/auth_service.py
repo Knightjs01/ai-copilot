@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, NamedTuple
@@ -11,6 +12,7 @@ from app.modules.auth import security
 from app.modules.auth.email import (
     ConsoleEmailSender,
     EmailSender,
+    EmailSendError,
     build_password_reset_email,
     build_verification_email,
 )
@@ -39,6 +41,7 @@ from app.modules.auth.service.role_seeding import seed_system_roles
 from app.modules.auth.webauthn_challenge_store import WebAuthnChallengeStore
 from app.modules.companies.service import CompanyService
 
+logger = logging.getLogger("app.auth")
 
 _BACKUP_CODE_COUNT = 10
 
@@ -91,7 +94,17 @@ class AuthService:
         )
         await self._roles.assign_role_to_user(user_id=user.id, role_id=roles[RoleName.OWNER].id)
 
-        await self._send_verification_email(user)
+        try:
+            await self._send_verification_email(user)
+        except EmailSendError:
+            # A provider outage/rejection must never block provisioning a paid-for company
+            # workspace -- the Owner can always retry via POST /auth/resend-verification (that
+            # path still raises, since a user explicitly asking for a resend deserves to know).
+            logger.warning(
+                "Failed to send verification email during company provisioning for %s",
+                user.id,
+                exc_info=True,
+            )
         await self._audit.record(
             company_id=company.id,
             actor_user_id=user.id,

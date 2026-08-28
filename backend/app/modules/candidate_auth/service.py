@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, NamedTuple
@@ -7,7 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import webauthn as webauthn_core
 from app.core.config import get_settings
 from app.modules.auth import security
-from app.modules.auth.email import ConsoleEmailSender, EmailSender, build_verification_email
+from app.modules.auth.email import (
+    ConsoleEmailSender,
+    EmailSender,
+    EmailSendError,
+    build_verification_email,
+)
 from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.auth.webauthn_challenge_store import WebAuthnChallengeStore
 from app.modules.candidate_auth.exceptions import (
@@ -31,6 +37,8 @@ from app.modules.candidate_auth.repository import (
     CandidateVerificationTokenRepository,
     CandidateWebAuthnCredentialRepository,
 )
+
+logger = logging.getLogger("app.candidate_auth")
 
 _BACKUP_CODE_COUNT = 10
 
@@ -75,7 +83,17 @@ class CandidateAuthService:
             first_name=first_name,
             last_name=last_name,
         )
-        await self._send_verification_email(candidate)
+        try:
+            await self._send_verification_email(candidate)
+        except EmailSendError:
+            # A provider outage/rejection must never block account creation -- the candidate can
+            # always retry via POST /candidate-auth/resend-verification (that path still raises,
+            # since a user explicitly asking for a resend deserves to know it failed).
+            logger.warning(
+                "Failed to send verification email during candidate signup for %s",
+                candidate.id,
+                exc_info=True,
+            )
         tokens = await self.issue_tokens(candidate, user_agent=user_agent, ip_address=ip_address)
         return candidate, tokens
 
