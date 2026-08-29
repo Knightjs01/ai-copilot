@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Eye, IdCard, LayoutGrid, Sparkles } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 const PRODUCTS = [
   {
     icon: IdCard,
@@ -8,6 +10,9 @@ const PRODUCTS = [
     tagline: "The identity layer.",
     body: "A reusable, verified, anonymous professional profile that puts candidates in control.",
     href: "/passport",
+    // The flagship, candidate-facing product -- given a distinct colored treatment below so it
+    // reads as the core feature of the ecosystem, not just one of four equal tiles.
+    featured: true,
   },
   {
     icon: Eye,
@@ -44,7 +49,7 @@ export function ProductEcosystemSection() {
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               Four Layers
               <br />
-              One Hiring Platform
+              <span className="text-brand">One Hiring Platform</span>
             </h2>
           </div>
           <p className="text-lg leading-relaxed text-muted-foreground">
@@ -54,29 +59,85 @@ export function ProductEcosystemSection() {
           </p>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PRODUCTS.map((product) => (
-            <div
-              key={product.name}
-              className="flex flex-col gap-3 rounded-2xl border border-border p-6"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                <product.icon className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-foreground">{product.name}</h3>
-                <p className="text-sm font-medium text-brand">{product.tagline}</p>
-              </div>
-              <p className="text-sm leading-relaxed text-muted-foreground">{product.body}</p>
-              <Link
-                href={product.href}
-                className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80"
+        <div className="relative mt-14">
+          {/* Decorative connecting thread behind the row -- desktop only, hidden once the grid
+              stacks below lg so it never has to track a layout it doesn't match. */}
+          <div className="pointer-events-none absolute inset-x-8 top-8 hidden h-px bg-gradient-to-r from-brand/0 via-brand/25 to-electric/0 lg:block" />
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {PRODUCTS.map((product, index) => (
+              <div
+                key={product.name}
+                className={cn(
+                  "relative flex flex-col gap-3 rounded-2xl p-6",
+                  product.featured
+                    ? "bg-gradient-to-br from-brand to-electric text-brand-foreground shadow-xl shadow-brand/25"
+                    : "border border-border bg-background"
+                )}
               >
-                Learn more
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          ))}
+                <span
+                  className={cn(
+                    "absolute right-5 top-5 text-xs font-bold tracking-wide",
+                    product.featured ? "text-brand-foreground/60" : "text-muted-foreground/70"
+                  )}
+                >
+                  0{index + 1}
+                </span>
+
+                <div
+                  className={cn(
+                    "flex h-14 w-14 items-center justify-center rounded-xl",
+                    product.featured
+                      ? "bg-white/15 text-brand-foreground"
+                      : "bg-gradient-to-br from-brand to-electric text-white shadow-lg shadow-brand/30"
+                  )}
+                >
+                  <product.icon className="h-6 w-6" />
+                </div>
+
+                <div>
+                  <h3
+                    className={cn(
+                      "text-base font-semibold",
+                      product.featured ? "text-brand-foreground" : "text-foreground"
+                    )}
+                  >
+                    {product.name}
+                  </h3>
+                  <p
+                    className={cn(
+                      "text-sm font-medium",
+                      product.featured ? "text-brand-foreground/90" : "text-brand"
+                    )}
+                  >
+                    {product.tagline}
+                  </p>
+                </div>
+
+                <p
+                  className={cn(
+                    "flex-1 text-sm leading-relaxed",
+                    product.featured ? "text-brand-foreground/80" : "text-muted-foreground"
+                  )}
+                >
+                  {product.body}
+                </p>
+
+                <Link
+                  href={product.href}
+                  className={cn(
+                    "mt-2 inline-flex items-center gap-1.5 text-sm font-medium",
+                    product.featured
+                      ? "text-brand-foreground hover:text-brand-foreground/80"
+                      : "text-brand hover:text-brand/80"
+                  )}
+                >
+                  Learn more
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
