@@ -5,11 +5,10 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const SPECIALIST_SECTORS = [
-  "Technology",
-  "Security & Intelligence",
-  "Financial Services",
-  "Defence",
-  "Aerospace & Executive Search",
+  "Private Equity",
+  "Private Funds",
+  "Fund Managers",
+  "Fund Administration",
 ];
 
 export function HeroSection() {

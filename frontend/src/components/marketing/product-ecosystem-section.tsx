@@ -42,7 +42,9 @@ export function ProductEcosystemSection() {
               The Phantom ecosystem
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Four products. One powerful hiring platform.
+              Four Products
+              <br />
+              One Hiring Platform
             </h2>
           </div>
           <p className="text-lg leading-relaxed text-muted-foreground">
