@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle } from "lucide-react";
 
 import { ShadowAuthShell } from "@/components/shadow/shadow-auth-shell";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { candidateApiClient } from "@/lib/candidate-api-client";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import type { CandidateMeResponse } from "@/lib/types";
 
 type VerifyState = "verifying" | "success" | "error" | "no-token";
 
@@ -61,6 +62,47 @@ function ResendForm() {
         {isSubmitting ? "Sending…" : "Resend verification email"}
       </Button>
     </form>
+  );
+}
+
+// For a candidate who already verified via a link opened elsewhere (another tab/device) and is
+// still sitting on this page -- re-checks the real, current status server-side before navigating,
+// rather than trusting stale client state or just linking straight to Shadow.
+function VerifiedContinueButton() {
+  const router = useRouter();
+  const { refreshCandidate } = useCandidateAuth();
+  const [checking, setChecking] = React.useState(false);
+  const [checkError, setCheckError] = React.useState<string | null>(null);
+
+  const onClick = async () => {
+    setChecking(true);
+    setCheckError(null);
+    try {
+      const me = await candidateApiClient.get<CandidateMeResponse>("/candidate-auth/me");
+      if (me.is_email_verified) {
+        // ShadowAppShell gates /shadow on its own cached candidate.is_email_verified -- refresh
+        // that shared context too, or it'll immediately bounce back here on the stale value.
+        await refreshCandidate();
+        router.push("/shadow");
+      } else {
+        setCheckError(
+          "Your email hasn't been verified yet. Check your inbox for the link, or request a new one above."
+        );
+      }
+    } catch {
+      setCheckError("Couldn't check your verification status. Try again.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button type="button" variant="secondary" className="w-full" onClick={onClick} disabled={checking}>
+        {checking ? "Checking…" : "Email Verified - Take me to Shadow"}
+      </Button>
+      {checkError && <p className="text-sm font-medium text-danger">{checkError}</p>}
+    </div>
   );
 }
 
@@ -125,6 +167,7 @@ function VerifyEmailBody() {
         verification link.
       </p>
       <ResendForm />
+      <VerifiedContinueButton />
     </div>
   );
 }
