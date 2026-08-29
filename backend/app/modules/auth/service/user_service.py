@@ -22,6 +22,7 @@ from app.modules.auth.repository.tokens import TokenRepository
 from app.modules.auth.repository.users import UserRepository
 from app.modules.auth.service.auth_service import AuthService, IssuedTokens
 from app.modules.companies.service import CompanyService
+from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 
 
 class UserWithRoles(NamedTuple):
@@ -37,6 +38,7 @@ class UserService:
         self._tokens = TokenRepository(session)
         self._companies = CompanyService(session)
         self._audit = AuditService(session)
+        self._platform_audit = PlatformAdminAuditService(session)
         self._email_sender = email_sender or ConsoleEmailSender()
         self._auth = AuthService(session, email_sender=self._email_sender)
 
@@ -83,6 +85,64 @@ class UserService:
             target_type="user",
             target_id=user.id,
             extra_data={"role": role_name},
+        )
+        return user
+
+    async def admin_invite_user(
+        self,
+        *,
+        admin_id: uuid.UUID,
+        company_id: uuid.UUID,
+        email: str,
+        full_name: str,
+        role_name: str,
+    ) -> User:
+        """Company Onboarding Phase 1's "Company Users" step -- mirrors invite_user's body
+        exactly, keyed on an explicit company_id (a platform admin isn't a company User, so
+        there's no inviter.company_id to scope from) and audited via PlatformAdminAuditService
+        instead of the company-scoped AuditService, since the actor here is platform staff, not
+        a member of the company being onboarded. The Owner was already created by
+        AuthService.admin_provision_company; this covers every other initial teammate."""
+
+        if role_name == RoleName.OWNER:
+            raise PermissionDeniedError("Cannot invite a user directly as Owner")
+
+        if await self._users.get_by_email(email) is not None:
+            raise EmailAlreadyRegisteredError()
+
+        role = await self._roles.get_role_by_name(company_id, role_name)
+        if role is None:
+            raise InvalidRoleError()
+
+        user = await self._users.create(
+            company_id=company_id,
+            email=email,
+            hashed_password=None,
+            full_name=full_name,
+            is_active=False,
+        )
+        await self._roles.assign_role_to_user(user_id=user.id, role_id=role.id)
+
+        token_plain = security.generate_opaque_token()
+        await self._tokens.create_verification_token(
+            user_id=user.id,
+            purpose=TokenPurpose.INVITE,
+            token_hash=security.hash_opaque_token(token_plain),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        )
+        company = await self._companies.get_company(company_id)
+        accept_url = f"{self._settings.frontend_base_url}/accept-invite?token={token_plain}"
+        subject, body = build_invite_email(
+            company_name=company.name if company else "your company", accept_url=accept_url
+        )
+        await self._email_sender.send(to=email, subject=subject, body=body)
+
+        await self._platform_audit.record(
+            admin_id=admin_id,
+            action="company_user.admin_invited",
+            target_type="user",
+            target_id=user.id,
+            extra_data={"company_id": str(company_id), "role": role_name},
         )
         return user
 

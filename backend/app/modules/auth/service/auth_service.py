@@ -13,10 +13,12 @@ from app.modules.auth.email import (
     ConsoleEmailSender,
     EmailSender,
     EmailSendError,
+    build_invite_email,
     build_password_reset_email,
     build_verification_email,
 )
 from app.modules.auth.exceptions import (
+    EmailAlreadyRegisteredError,
     InvalidCredentialsError,
     InvalidMfaCodeError,
     InvalidOrExpiredTokenError,
@@ -39,7 +41,9 @@ from app.modules.auth.repository.users import UserRepository
 from app.modules.auth.repository.webauthn import WebAuthnCredentialRepository
 from app.modules.auth.service.role_seeding import seed_system_roles
 from app.modules.auth.webauthn_challenge_store import WebAuthnChallengeStore
+from app.modules.companies.models import Company
 from app.modules.companies.service import CompanyService
+from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 
 logger = logging.getLogger("app.auth")
 
@@ -64,6 +68,7 @@ class AuthService:
         self._tokens = TokenRepository(session)
         self._companies = CompanyService(session)
         self._audit = AuditService(session)
+        self._platform_audit = PlatformAdminAuditService(session)
         self._webauthn_credentials = WebAuthnCredentialRepository(session)
         self._webauthn_challenges = WebAuthnChallengeStore(realm="company")
         self._email_sender = email_sender or ConsoleEmailSender()
@@ -113,6 +118,63 @@ class AuthService:
             target_id=user.id,
         )
         return user
+
+    async def admin_provision_company(
+        self,
+        *,
+        admin_id: uuid.UUID,
+        company_name: str,
+        owner_email: str,
+        owner_full_name: str,
+        commercial_plan_code: str | None = None,
+    ) -> Company:
+        """Company Onboarding Phase 1 -- a platform admin originating a brand-new company with
+        no prospect and no prior access request (see company_access.service.approve_request for
+        the other, older path into provisioning). Reuses the exact same domain checks that path
+        enforces (ensure_email_available_for_new_company mirrors submit_request's own two checks)
+        so a staff-created company can't collide with an existing workspace or claim a
+        disposable-email domain. The Owner is created inactive with no password and invited via
+        the same accept-invite mechanism invite_user already uses for every other teammate --
+        extended here to permit Owner, which invite_user itself still refuses -- so an admin
+        never handles or even sees the Owner's password."""
+
+        await self._companies.ensure_email_available_for_new_company(owner_email)
+        if await self._users.get_by_email(owner_email) is not None:
+            raise EmailAlreadyRegisteredError()
+
+        company = await self._companies.create_company(
+            name=company_name, owner_email=owner_email, commercial_plan_code=commercial_plan_code
+        )
+        roles = await seed_system_roles(self._roles, company.id)
+
+        user = await self._users.create(
+            company_id=company.id,
+            email=owner_email,
+            hashed_password=None,
+            full_name=owner_full_name,
+            is_active=False,
+        )
+        await self._roles.assign_role_to_user(user_id=user.id, role_id=roles[RoleName.OWNER].id)
+
+        token_plain = security.generate_opaque_token()
+        await self._tokens.create_verification_token(
+            user_id=user.id,
+            purpose=TokenPurpose.INVITE,
+            token_hash=security.hash_opaque_token(token_plain),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        )
+        accept_url = f"{self._settings.frontend_base_url}/accept-invite?token={token_plain}"
+        subject, body = build_invite_email(company_name=company.name, accept_url=accept_url)
+        await self._email_sender.send(to=owner_email, subject=subject, body=body)
+
+        await self._platform_audit.record(
+            admin_id=admin_id,
+            action="company.created",
+            target_type="company",
+            target_id=company.id,
+            extra_data={"company_name": company.name, "owner_email": owner_email},
+        )
+        return company
 
     async def login(
         self,

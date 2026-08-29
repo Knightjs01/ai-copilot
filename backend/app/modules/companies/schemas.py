@@ -101,6 +101,36 @@ class ProfileReviewRejectBody(BaseModel):
     reason: str | None = Field(default=None, max_length=1000)
 
 
+class PublishChangesRequest(BaseModel):
+    """Company Onboarding Phase 2's self-publish action -- the checkbox is a real, checked
+    field, not just a disabled-until-checked frontend affordance: the backend independently
+    refuses to publish without it (see ChangesNotConfirmedError), same discipline as every other
+    confirmation step in this codebase (e.g. the purge phrase)."""
+
+    confirmed: bool = Field(default=False)
+
+
+class AdminCreateCompanyRequest(BaseModel):
+    """Company Onboarding Phase 1 -- a platform admin originating a brand-new company with no
+    prior access request. commercial_plan_code is optional; omitted, the company gets the same
+    default (Core) every self-service-approved company already gets."""
+
+    company_name: str = Field(min_length=1, max_length=200)
+    owner_email: str = Field(min_length=3, max_length=320)
+    owner_full_name: str = Field(min_length=1, max_length=200)
+    commercial_plan_code: str | None = Field(default=None)
+
+
+class AdminInviteCompanyUserRequest(BaseModel):
+    """Mirrors auth.schemas' self-service InviteUserRequest body exactly -- the only difference
+    is who's authorized to call it (a platform admin mid-onboarding, not an existing company
+    user) and which company_id it targets (from the URL, not the caller's own session)."""
+
+    email: str = Field(min_length=3, max_length=320)
+    full_name: str = Field(min_length=1, max_length=200)
+    role_name: str
+
+
 class AdminCompanySummary(BaseModel):
     """Platform-admin-facing company directory row -- a leaner, distinct shape from CompanyRead
     (that one is for the owning company's own settings page; this includes admin-only fields

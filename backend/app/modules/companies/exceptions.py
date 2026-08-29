@@ -24,3 +24,8 @@ class InvalidProfileTransitionError(CompanyError):
 class InvalidMediaFileError(CompanyError):
     status_code = 400
     detail = "Invalid media file"
+
+
+class ChangesNotConfirmedError(CompanyError):
+    status_code = 400
+    detail = "You must confirm you approve these changes before publishing."

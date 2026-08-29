@@ -48,6 +48,7 @@ export async function refreshPlatformAdminAccessToken(): Promise<string | null> 
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
+  formData?: FormData;
   skipAuthRetry?: boolean;
   extraHeaders?: Record<string, string>;
 }
@@ -60,7 +61,7 @@ function stepUpHeaders(token?: string): Record<string, string> | undefined {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, skipAuthRetry = false, extraHeaders } = options;
+  const { method = "GET", body, formData, skipAuthRetry = false, extraHeaders } = options;
   const headers: Record<string, string> = {};
   if (platformAdminAccessToken) headers.Authorization = `Bearer ${platformAdminAccessToken}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -70,7 +71,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     method,
     headers,
     credentials: "include",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
 
   if (res.status === 401 && !skipAuthRetry) {
@@ -99,4 +100,7 @@ export const platformAdminApiClient = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown, stepUpToken?: string) =>
     request<T>(path, { method: "POST", body, extraHeaders: stepUpHeaders(stepUpToken) }),
+  patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
+  postForm: <T>(path: string, formData: FormData) =>
+    request<T>(path, { method: "POST", formData }),
 };

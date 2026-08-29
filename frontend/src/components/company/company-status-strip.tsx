@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ProfileSubmittedOverlay } from "@/components/company/profile-submitted-overlay";
+import { PublishChangesDialog } from "@/components/company/publish-changes-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +56,7 @@ export function CompanyStatusStrip({ status }: { status: CompanyProfileStatus })
         </p>
       </div>
       <div className="flex gap-2">
-        {(status === "draft" || status === "live" || status === "paused") && (
+        {status === "draft" && (
           <Button
             type="button"
             variant="brand"
@@ -66,6 +67,7 @@ export function CompanyStatusStrip({ status }: { status: CompanyProfileStatus })
             {submitForReview.isPending ? "Submitting…" : "Submit for review"}
           </Button>
         )}
+        {(status === "live" || status === "paused") && <PublishChangesDialog />}
         {status === "live" && (
           <Button type="button" variant="secondary" size="sm" onClick={handlePause} disabled={pause.isPending}>
             {pause.isPending ? "Pausing…" : "Pause"}

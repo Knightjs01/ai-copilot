@@ -88,6 +88,18 @@ export function useResumeProfile() {
   return useProfileAction("/companies/me/resume");
 }
 
+// Company Onboarding Phase 2 -- self-publish, no staff review, only valid from live/paused (the
+// backend independently enforces both the status guard and the confirmed checkbox).
+export function usePublishChanges() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post<Company>("/companies/me/publish-changes", { confirmed: true }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["company", "me"], data);
+    },
+  });
+}
+
 // Public /companies/{slug} -- no auth required, resolves a 404 to null (either the slug doesn't
 // exist or the profile isn't currently visible -- both look identical, matching the backend's
 // own non-leaking shape).

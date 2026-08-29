@@ -7,6 +7,7 @@ class PlatformAdminPermissions:
     DANGER_ZONE_PURGE = "danger_zone.purge"
     AUDIT_VIEW = "audit.view"
     COMMERCIAL_MANAGE = "commercial.manage"
+    COMPANIES_CREATE = "companies.create"
 
 
 ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
@@ -22,6 +23,10 @@ ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
     PlatformAdminPermissions.AUDIT_VIEW: "View the platform-admin activity log",
     PlatformAdminPermissions.COMMERCIAL_MANAGE: (
         "Change a company commercial plan and active-role limit override"
+    ),
+    PlatformAdminPermissions.COMPANIES_CREATE: (
+        "Originate a brand-new company + Owner with no prior access request, and author its "
+        "initial Shadow profile before activation"
     ),
 }
 

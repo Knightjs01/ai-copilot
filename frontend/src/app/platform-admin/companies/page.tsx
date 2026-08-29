@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, Building2 } from "lucide-react";
+import Link from "next/link";
+import { BadgeCheck, Building2, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -124,7 +125,7 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
 
 export default function PlatformAdminCompaniesPage() {
   const router = useRouter();
-  const { admin, isLoading: authLoading } = usePlatformAdminAuth();
+  const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();
   const { data: companies, isLoading } = useAllCompanies();
 
   React.useEffect(() => {
@@ -142,6 +143,17 @@ export default function PlatformAdminCompaniesPage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-10">
       <PlatformAdminNav admin={admin} />
+
+      {hasPermission("companies.create") && (
+        <div className="flex justify-end">
+          <Button asChild size="sm">
+            <Link href="/platform-admin/companies/new">
+              <Plus className="h-3.5 w-3.5" />
+              New company
+            </Link>
+          </Button>
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex justify-center py-16">

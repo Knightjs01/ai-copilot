@@ -18,6 +18,7 @@ from app.modules.candidates.storage import FileStorage
 from app.modules.commercial.repository import CommercialPlanRepository
 from app.modules.companies.domain_verification import extract_email_domain, is_verified_domain
 from app.modules.companies.exceptions import (
+    ChangesNotConfirmedError,
     CompanyAlreadyInStatusError,
     CompanyNotFoundError,
     InvalidMediaFileError,
@@ -31,6 +32,7 @@ from app.modules.companies.schemas import (
     CompanyUpdate,
     ProfileStats,
 )
+from app.modules.company_access.exceptions import ExistingWorkspaceError, FreeEmailDomainError
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 from app.modules.projects.repository import ProjectRepository
 
@@ -108,7 +110,9 @@ class CompanyService:
         self._storage = storage
         self._email_sender = email_sender
 
-    async def create_company(self, *, name: str, owner_email: str) -> Company:
+    async def create_company(
+        self, *, name: str, owner_email: str, commercial_plan_code: str | None = None
+    ) -> Company:
         base_slug = slugify(name)
         slug = base_slug
         suffix = 1
@@ -117,17 +121,35 @@ class CompanyService:
             slug = f"{base_slug}-{suffix}"
 
         email_domain = extract_email_domain(owner_email)
-        default_plan = await self._commercial_plans.get_by_code(_DEFAULT_COMMERCIAL_PLAN_CODE)
+        plan = await self._commercial_plans.get_by_code(
+            commercial_plan_code or _DEFAULT_COMMERCIAL_PLAN_CODE
+        )
+        if plan is None:
+            # An unrecognized code from an admin-facing caller must not silently fall through
+            # to "no plan" (which get_effective_limit treats as unlimited) -- fall back to the
+            # real default plan instead of failing the whole company-creation flow over it.
+            plan = await self._commercial_plans.get_by_code(_DEFAULT_COMMERCIAL_PLAN_CODE)
         return await self._repository.create(
             name=name,
             slug=slug,
             email_domain=email_domain,
             is_verified_domain=is_verified_domain(email_domain),
-            commercial_plan_id=default_plan.id if default_plan is not None else None,
+            commercial_plan_id=plan.id if plan is not None else None,
         )
 
     async def get_company(self, company_id: uuid.UUID) -> Company | None:
         return await self._repository.get_by_id(company_id)
+
+    async def ensure_email_available_for_new_company(self, email: str) -> None:
+        """Same two checks company_access.service.submit_request already enforces for a
+        prospect-submitted request -- reused here so a staff-created company can't collide with
+        an existing workspace's domain or claim a disposable/free-email domain either."""
+
+        domain = extract_email_domain(email)
+        if not is_verified_domain(domain):
+            raise FreeEmailDomainError()
+        if await self._repository.get_by_email_domain(domain) is not None:
+            raise ExistingWorkspaceError()
 
     # --- Self-service: draft editing ------------------------------------------------------------
 
@@ -226,24 +248,33 @@ class CompanyService:
             candidates_in_pipeline=candidates_in_pipeline,
         )
 
-    async def upload_logo(self, *, actor: User, content: bytes, content_type: str) -> Company:
+    async def upload_logo(
+        self, *, company_id: uuid.UUID, content: bytes, content_type: str
+    ) -> Company:
         return await self._upload_media(
-            actor=actor, content=content, content_type=content_type, field="logo_storage_key"
+            company_id=company_id,
+            content=content,
+            content_type=content_type,
+            field="logo_storage_key",
         )
 
     async def upload_cover_image(
-        self, *, actor: User, content: bytes, content_type: str
+        self, *, company_id: uuid.UUID, content: bytes, content_type: str
     ) -> Company:
         return await self._upload_media(
-            actor=actor,
+            company_id=company_id,
             content=content,
             content_type=content_type,
             field="cover_image_storage_key",
         )
 
     async def _upload_media(
-        self, *, actor: User, content: bytes, content_type: str, field: str
+        self, *, company_id: uuid.UUID, content: bytes, content_type: str, field: str
     ) -> Company:
+        # Takes company_id directly rather than an actor: User -- the only thing ever used from
+        # actor was its company_id, and the platform-admin onboarding flow has no User to pass
+        # (an admin isn't a company User row) -- reused as-is by both the self-service routes
+        # (passing actor.company_id) and the new admin-onboarding routes (passing an explicit id).
         assert self._storage is not None, "CompanyService needs storage= for media uploads"
         extension = _ALLOWED_IMAGE_CONTENT_TYPES.get(content_type)
         if extension is None:
@@ -254,12 +285,12 @@ class CompanyService:
                 f"Image exceeds the {self._settings.max_media_size_mb}MB limit"
             )
 
-        company = await self._repository.get_by_id(actor.company_id)
+        company = await self._repository.get_by_id(company_id)
         if company is None:
             raise CompanyNotFoundError()
 
         label = "logo" if field == "logo_storage_key" else "cover"
-        key = f"{actor.company_id}/{label}/{uuid.uuid4()}{extension}"
+        key = f"{company_id}/{label}/{uuid.uuid4()}{extension}"
         await self._storage.save(key=key, content=content, content_type=content_type)
 
         old_key = getattr(company, field)
@@ -305,6 +336,52 @@ class CompanyService:
             action="company.profile_submitted_for_review",
             target_type="company",
             target_id=company.id,
+        )
+        return company
+
+    async def self_publish_changes(self, *, actor: User, confirmed: bool) -> Company:
+        """Company Onboarding Phase 2 -- once a company's profile has gone live at least once
+        (staff-authored via Phase 1's onboarding wizard), the company's own admins can edit and
+        publish further changes themselves, without a second staff review. Deliberately scoped
+        to LIVE/PAUSED only: a profile that has never been approved (DRAFT) or is actively under
+        staff review (PENDING_REVIEW) still goes through the existing submit_for_review /
+        approve_profile_review pipeline untouched -- this is a new, narrower path alongside that
+        one, not a replacement for it. `confirmed` is independently enforced here, not just a
+        disabled frontend button -- mirrors this codebase's other real confirmation checks."""
+
+        if not confirmed:
+            raise ChangesNotConfirmedError()
+
+        company = await self._repository.get_by_id(actor.company_id)
+        if company is None:
+            raise CompanyNotFoundError()
+        if company.profile_status not in (
+            CompanyProfileStatus.LIVE.value,
+            CompanyProfileStatus.PAUSED.value,
+        ):
+            raise InvalidProfileTransitionError()
+
+        next_version_number = await self._versions.get_latest_version_number(company.id) + 1
+        snapshot = self._draft_to_profile_read(company).model_dump(mode="json")
+        version = await self._versions.create(
+            company_id=company.id,
+            version_number=next_version_number,
+            snapshot=snapshot,
+            approved_by_admin_id=None,
+        )
+        # profile_status is left exactly as it was -- publishing new content while PAUSED
+        # updates what *will* be shown, it doesn't silently un-pause a profile the company
+        # deliberately hid (is_profile_publicly_visible already excludes PAUSED regardless of
+        # current_profile_version_id).
+        company.current_profile_version_id = version.id
+        await self._session.flush()
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="company.profile_self_published",
+            target_type="company",
+            target_id=company.id,
+            extra_data={"version_number": next_version_number},
         )
         return company
 
@@ -398,6 +475,24 @@ class CompanyService:
             )
             await self._notify_company_users(company.id, subject=subject, body=body)
         return company
+
+    async def admin_activate_profile(self, *, admin_id: uuid.UUID, company_id: uuid.UUID) -> Company:
+        """One-click activation for a staff-authored onboarding profile (Company Onboarding
+        Phase 1) -- the same admin is both author and approver here, so there's no second
+        reviewer to hand a pending_review queue entry to. Runs submit_for_review's own state
+        check inline (that method requires a company User actor, which an admin isn't) and then
+        reuses approve_profile_review verbatim for the real work -- the version snapshot, the
+        LIVE transition, the audit entry, and the notification email are all identical to a
+        normal staff review, just triggered by one action instead of two."""
+
+        company = await self._repository.get_by_id(company_id)
+        if company is None:
+            raise CompanyNotFoundError()
+        if company.profile_status not in _SUBMITTABLE_STATUSES:
+            raise InvalidProfileTransitionError()
+        company.profile_status = CompanyProfileStatus.PENDING_REVIEW.value
+        await self._session.flush()
+        return await self.approve_profile_review(admin_id=admin_id, company_id=company_id)
 
     async def reject_profile_review(
         self, *, admin_id: uuid.UUID, company_id: uuid.UUID, reason: str | None
