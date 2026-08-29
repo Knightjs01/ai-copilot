@@ -26,7 +26,7 @@ async def test_send_posts_expected_payload_to_brevo() -> None:
     assert call_args[0] == "https://api.brevo.com/v3/smtp/email"
     assert call_kwargs["headers"]["api-key"] == "fake-key"
     payload = call_kwargs["json"]
-    assert payload["sender"] == {"email": "noreply@example.com"}
+    assert payload["sender"] == {"name": "Phantom Hire", "email": "noreply@example.com"}
     assert payload["to"] == [{"email": "jordan@example.com"}]
     assert payload["subject"] == "Hello"
     assert "Body text" in payload["htmlContent"]

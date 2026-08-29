@@ -36,9 +36,17 @@ class BrevoEmailSender:
     Railway's outbound IP (which isn't static and can change on redeploy, breaking every send at
     once until someone manually re-approves it in Brevo). None means connect directly."""
 
-    def __init__(self, *, api_key: str, sender_email: str, proxy_url: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        sender_email: str,
+        sender_name: str = "Phantom Hire",
+        proxy_url: str | None = None,
+    ) -> None:
         self._api_key = api_key
         self._sender_email = sender_email
+        self._sender_name = sender_name
         self._proxy_url = proxy_url or None
 
     async def send(self, *, to: str, subject: str, body: str) -> None:
@@ -55,7 +63,7 @@ class BrevoEmailSender:
                     "accept": "application/json",
                 },
                 json={
-                    "sender": {"email": self._sender_email},
+                    "sender": {"name": self._sender_name, "email": self._sender_email},
                     "to": [{"email": to}],
                     "subject": subject,
                     "htmlContent": html_content,
