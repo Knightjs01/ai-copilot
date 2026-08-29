@@ -84,7 +84,7 @@ export function TagInput({
             }
           }}
           onBlur={commitDraft}
-          placeholder={values.length === 0 ? placeholder : undefined}
+          placeholder={placeholder}
           className="min-w-[120px] flex-1 border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
         />
       </div>

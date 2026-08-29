@@ -202,7 +202,7 @@ export function ProfessionalProfileStep({
                 id="skills"
                 values={skills}
                 onValuesChange={onSkillsChange}
-                placeholder="Type a skill and press Enter"
+                placeholder="Add your own and press Enter"
                 suggestions={skillsSuggestions ?? undefined}
                 onRequestSuggestions={onRequestSkillsSuggestion}
                 isSuggesting={isSuggestingSkills}
