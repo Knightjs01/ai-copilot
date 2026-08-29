@@ -39,3 +39,13 @@ class CandidateInvalidWebAuthnCredentialError(CandidateAuthError):
 class CandidateWebAuthnCredentialNotFoundError(CandidateAuthError):
     status_code = 404
     detail = "Passkey not found"
+
+
+class CandidateEmailDeliveryError(CandidateAuthError):
+    """Raised only for an explicit resend-verification request, which deserves to know it
+    failed -- see auth.exceptions.EmailDeliveryError's docstring for why a raw EmailSendError
+    must never be allowed to reach the API layer unconverted (it isn't an AppError, so it
+    produces a bare 500 the browser reports as "Failed to fetch" instead of a real message)."""
+
+    status_code = 502
+    detail = "Couldn't send that email right now. Try again in a moment."

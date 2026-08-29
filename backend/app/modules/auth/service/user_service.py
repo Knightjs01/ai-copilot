@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
@@ -7,7 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.modules.audit.service import AuditService
 from app.modules.auth import security
-from app.modules.auth.email import ConsoleEmailSender, EmailSender, build_invite_email
+from app.modules.auth.email import (
+    ConsoleEmailSender,
+    EmailSender,
+    EmailSendError,
+    build_invite_email,
+)
 from app.modules.auth.exceptions import (
     EmailAlreadyRegisteredError,
     InvalidRoleError,
@@ -23,6 +29,8 @@ from app.modules.auth.repository.users import UserRepository
 from app.modules.auth.service.auth_service import AuthService, IssuedTokens
 from app.modules.companies.service import CompanyService
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
+
+logger = logging.getLogger("app.auth")
 
 
 class UserWithRoles(NamedTuple):
@@ -76,7 +84,13 @@ class UserService:
         subject, body = build_invite_email(
             company_name=company.name if company else "your company", accept_url=accept_url
         )
-        await self._email_sender.send(to=email, subject=subject, body=body)
+        try:
+            await self._email_sender.send(to=email, subject=subject, body=body)
+        except EmailSendError:
+            # A provider outage must never block creating the invite itself -- same reasoning as
+            # AuthService.provision_company_and_owner. There's no resend-invite route yet;
+            # flagged as a real gap, not fixed here.
+            logger.warning("Failed to send teammate invite email for %s", user.id, exc_info=True)
 
         await self._audit.record(
             company_id=inviter.company_id,
@@ -135,7 +149,14 @@ class UserService:
         subject, body = build_invite_email(
             company_name=company.name if company else "your company", accept_url=accept_url
         )
-        await self._email_sender.send(to=email, subject=subject, body=body)
+        try:
+            await self._email_sender.send(to=email, subject=subject, body=body)
+        except EmailSendError:
+            logger.warning(
+                "Failed to send teammate invite email for %s (admin-invited)",
+                user.id,
+                exc_info=True,
+            )
 
         await self._platform_audit.record(
             admin_id=admin_id,

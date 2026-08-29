@@ -41,13 +41,17 @@ export function ShadowAppShell({
     }
   }, [requireAuth, isLoading, candidate, router]);
 
-  // A candidate must confirm their email before using the authenticated Shadow experience --
-  // except the Passport wizard itself (they haven't finished building it yet) and this page's own
-  // destination (or they could never get there). No grace period, matching require_verified_candidate
-  // on the backend -- verification is only ever asked for after the wizard is already done.
+  // A logged-in candidate must confirm their email before using ANY of the authenticated Shadow
+  // experience -- including the public board itself (requireAuth=false pages like /shadow),
+  // not just the requireAuth-only routes. Deliberately NOT gated on requireAuth: an anonymous,
+  // logged-out visitor still gets today's lightweight board (candidate is null, so this never
+  // fires for them) -- only a signed-in-but-unverified candidate is redirected away. Exceptions:
+  // the Passport wizard itself (they haven't finished building it yet) and this page's own
+  // destination (or they could never get there). No grace period, matching
+  // require_verified_candidate on the backend -- verification is only ever asked for after the
+  // wizard is already done.
   React.useEffect(() => {
     if (
-      requireAuth &&
       candidate &&
       !candidate.is_email_verified &&
       pathname !== "/shadow/passport" &&
@@ -55,16 +59,15 @@ export function ShadowAppShell({
     ) {
       router.replace("/shadow/verify-email");
     }
-  }, [requireAuth, candidate, pathname, router]);
+  }, [candidate, pathname, router]);
 
   const pendingVerificationRedirect =
-    requireAuth &&
     !!candidate &&
     !candidate.is_email_verified &&
     pathname !== "/shadow/passport" &&
     pathname !== "/shadow/verify-email";
 
-  if (requireAuth && (isLoading || !candidate || pendingVerificationRedirect)) {
+  if ((requireAuth && (isLoading || !candidate)) || pendingVerificationRedirect) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Spinner className="h-6 w-6 text-muted-foreground" />

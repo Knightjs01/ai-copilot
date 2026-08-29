@@ -18,6 +18,7 @@ from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.auth.webauthn_challenge_store import WebAuthnChallengeStore
 from app.modules.candidate_auth.exceptions import (
     CandidateEmailAlreadyRegisteredError,
+    CandidateEmailDeliveryError,
     CandidateInvalidCredentialsError,
     CandidateInvalidMfaCodeError,
     CandidateInvalidOrExpiredTokenError,
@@ -374,7 +375,10 @@ class CandidateAuthService:
     async def request_email_verification(self, *, email: str) -> None:
         candidate = await self._candidates.get_by_email(email)
         if candidate is not None and not candidate.is_email_verified:
-            await self._send_verification_email(candidate)
+            try:
+                await self._send_verification_email(candidate)
+            except EmailSendError as exc:
+                raise CandidateEmailDeliveryError() from exc
 
     async def verify_email(self, *, token_plain: str) -> None:
         token_hash = security.hash_opaque_token(token_plain)

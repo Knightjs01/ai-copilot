@@ -59,3 +59,16 @@ class InvalidWebAuthnCredentialError(AuthError):
 class WebAuthnCredentialNotFoundError(AuthError):
     status_code = 404
     detail = "Passkey not found"
+
+
+class EmailDeliveryError(AuthError):
+    """Raised only where the caller explicitly asked for an email and deserves to know it
+    failed (a resend-verification click) -- as opposed to signup/provisioning/invite flows,
+    which must never fail the primary action over a mail-provider hiccup and instead log a
+    warning and let the recipient retry. A raw EmailSendError must never reach this far
+    unconverted -- it isn't an AppError, so FastAPI's default handling of it is a bare 500 with
+    no guaranteed CORS headers, which the browser reports as a generic "Failed to fetch" instead
+    of a real error message."""
+
+    status_code = 502
+    detail = "Couldn't send that email right now. Try again in a moment."

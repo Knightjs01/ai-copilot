@@ -19,6 +19,7 @@ from app.modules.auth.email import (
 )
 from app.modules.auth.exceptions import (
     EmailAlreadyRegisteredError,
+    EmailDeliveryError,
     InvalidCredentialsError,
     InvalidMfaCodeError,
     InvalidOrExpiredTokenError,
@@ -165,7 +166,17 @@ class AuthService:
         )
         accept_url = f"{self._settings.frontend_base_url}/accept-invite?token={token_plain}"
         subject, body = build_invite_email(company_name=company.name, accept_url=accept_url)
-        await self._email_sender.send(to=owner_email, subject=subject, body=body)
+        try:
+            await self._email_sender.send(to=owner_email, subject=subject, body=body)
+        except EmailSendError:
+            # A provider outage must never block creating the company itself -- same reasoning
+            # as provision_company_and_owner's own try/except above. There's no resend-invite
+            # route yet for an Owner created this way; flagged as a real gap, not fixed here.
+            logger.warning(
+                "Failed to send Owner invite email during admin company creation for %s",
+                user.id,
+                exc_info=True,
+            )
 
         await self._platform_audit.record(
             admin_id=admin_id,
@@ -338,7 +349,10 @@ class AuthService:
     async def request_email_verification(self, *, email: str) -> None:
         user = await self._users.get_by_email(email)
         if user is not None and not user.is_email_verified:
-            await self._send_verification_email(user)
+            try:
+                await self._send_verification_email(user)
+            except EmailSendError as exc:
+                raise EmailDeliveryError() from exc
 
     async def verify_email(self, *, token_plain: str) -> None:
         token = await self.consume_verification_token(
@@ -366,7 +380,16 @@ class AuthService:
         )
         reset_url = f"{self._settings.frontend_base_url}/reset-password?token={token_plain}"
         subject, body = build_password_reset_email(reset_url=reset_url)
-        await self._email_sender.send(to=user.email, subject=subject, body=body)
+        try:
+            await self._email_sender.send(to=user.email, subject=subject, body=body)
+        except EmailSendError:
+            # Swallow, don't raise -- unlike request_email_verification, this path's whole point
+            # is to look identical whether or not the account exists; raising a distinct error
+            # only when a real account's send fails would itself be the enumeration leak this
+            # method exists to avoid.
+            logger.warning(
+                "Failed to send password reset email for %s", user.id, exc_info=True
+            )
 
     async def reset_password(self, *, token_plain: str, new_password: str) -> None:
         token = await self.consume_verification_token(
