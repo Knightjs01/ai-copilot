@@ -27,6 +27,7 @@ from app.modules.companies.exceptions import (
 from app.modules.companies.models import Company, CompanyProfileStatus, CompanyStatus
 from app.modules.companies.repository import CompanyProfileVersionRepository, CompanyRepository
 from app.modules.companies.schemas import (
+    CompanyBoardCard,
     CompanyProfileRead,
     CompanyRead,
     CompanyUpdate,
@@ -432,6 +433,29 @@ class CompanyService:
         # admin action independent of the company's own draft/review cycle, and a company
         # shouldn't have to resubmit their profile for the verified badge to appear or disappear.
         return profile.model_copy(update={"is_verified_employer": company.is_verified_employer})
+
+    async def list_board(self, *, limit: int = 12) -> list[CompanyBoardCard]:
+        """Shadow's "Explore companies" -- every company with a real, currently-visible public
+        profile (same gate as get_public_profile), newest-approved first. list_all already orders
+        by created_at desc; re-filtering here for is_profile_publicly_visible catches PAUSED
+        companies that list_all's profile_status filter alone wouldn't (e.g. a company paused
+        after having been LIVE)."""
+
+        companies = await self._repository.list_all()
+        visible = [c for c in companies if is_profile_publicly_visible(c)]
+        return [
+            CompanyBoardCard(
+                name=c.name,
+                slug=c.slug,
+                tagline=c.tagline,
+                logo_url=self._media_url(c.slug, "logo", c.logo_storage_key),
+                industry=c.industry,
+                employee_count=c.employee_count,
+                headquarters=c.headquarters,
+                is_verified_employer=c.is_verified_employer,
+            )
+            for c in visible[:limit]
+        ]
 
     # --- Admin: profile review queue ------------------------------------------------------------
 

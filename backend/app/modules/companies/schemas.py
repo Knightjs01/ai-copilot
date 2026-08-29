@@ -97,6 +97,21 @@ class CompanyProfileRead(BaseModel):
     hiring_highlights: list[Any]
 
 
+class CompanyBoardCard(BaseModel):
+    """Lightweight public shape for a browsable company listing (Shadow's "Explore companies") --
+    deliberately thinner than CompanyProfileRead, which is for the full detail page. No
+    description/culture/benefits/etc: just enough for a card."""
+
+    name: str
+    slug: str
+    tagline: str | None
+    logo_url: str | None
+    industry: list[Any]
+    employee_count: int | None
+    headquarters: str | None
+    is_verified_employer: bool
+
+
 class ProfileReviewRejectBody(BaseModel):
     reason: str | None = Field(default=None, max_length=1000)
 

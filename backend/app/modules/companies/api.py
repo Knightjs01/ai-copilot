@@ -27,6 +27,7 @@ from app.modules.companies.schemas import (
     AdminCompanySummary,
     AdminCreateCompanyRequest,
     AdminInviteCompanyUserRequest,
+    CompanyBoardCard,
     CompanyProfileRead,
     CompanyRead,
     CompanyUpdate,
@@ -191,6 +192,14 @@ async def resume_profile(
     service = CompanyService(session)
     company = await service.resume_profile(actor=actor)
     return service.to_read(company)
+
+
+@public_router.get("/board", response_model=list[CompanyBoardCard])
+async def get_companies_board(
+    limit: int = Query(default=12, ge=1, le=50),
+    session: AsyncSession = Depends(get_db),
+) -> list[CompanyBoardCard]:
+    return await CompanyService(session).list_board(limit=limit)
 
 
 @public_router.get("/{slug}", response_model=CompanyProfileRead)

@@ -852,6 +852,17 @@ export interface CompanyProfile {
   hiring_highlights: ContentItem[];
 }
 
+export interface CompanyBoardCard {
+  name: string;
+  slug: string;
+  tagline: string | null;
+  logo_url: string | null;
+  industry: string[];
+  employee_count: number | null;
+  headquarters: string | null;
+  is_verified_employer: boolean;
+}
+
 export interface ShadowCareerEntrySummary {
   title: string;
   company_name_anonymized: string;

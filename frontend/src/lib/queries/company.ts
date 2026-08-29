@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
 import { fetchOrNull } from "@/lib/queries/helpers";
-import type { Company, CompanyProfile, CompanyUpdateInput, ProfileStats } from "@/lib/types";
+import type {
+  Company,
+  CompanyBoardCard,
+  CompanyProfile,
+  CompanyUpdateInput,
+  ProfileStats,
+} from "@/lib/types";
 
 export function useMyCompany() {
   return useQuery({
@@ -108,5 +114,13 @@ export function useCompanyProfile(slug: string | undefined) {
     queryKey: ["company", "profile", slug],
     queryFn: () => fetchOrNull(() => apiClient.get<CompanyProfile>(`/companies/${slug}`)),
     enabled: !!slug,
+  });
+}
+
+// Public /companies/board -- no auth required. Shadow's "Explore companies" section.
+export function useCompanyBoard(limit = 12) {
+  return useQuery({
+    queryKey: ["company", "board", limit],
+    queryFn: () => apiClient.get<CompanyBoardCard[]>(`/companies/board?limit=${limit}`),
   });
 }
