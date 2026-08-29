@@ -30,6 +30,25 @@ async def test_send_posts_expected_payload_to_brevo() -> None:
     assert payload["to"] == [{"email": "jordan@example.com"}]
     assert payload["subject"] == "Hello"
     assert "Body text" in payload["htmlContent"]
+    assert payload["textContent"] == "Body text"
+
+
+async def test_send_escapes_html_and_linkifies_urls() -> None:
+    sender = _make_sender()
+    mock_post = AsyncMock(return_value=_fake_response(201))
+
+    with patch("httpx.AsyncClient.post", mock_post):
+        await sender.send(
+            to="jordan@example.com",
+            subject="Hello",
+            body="<script>alert(1)</script>\n\nVisit https://example.com/path?a=1&b=2 now.",
+        )
+
+    payload = mock_post.await_args.kwargs["json"]
+    html_content = payload["htmlContent"]
+    assert "<script>" not in html_content
+    assert "&lt;script&gt;" in html_content
+    assert '<a href="https://example.com/path?a=1&amp;b=2"' in html_content
 
 
 async def test_send_raises_on_non_2xx_response() -> None:
