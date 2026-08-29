@@ -1,12 +1,14 @@
 "use client";
 
-import { CheckCircle2, Download, Trash2, UploadCloud } from "lucide-react";
+import * as React from "react";
+import { CheckCircle2, Download, FileText, Trash2, UploadCloud } from "lucide-react";
 
+import { AnonymisedCvDialog } from "@/components/candidate/passport-wizard/anonymised-cv-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dropzone } from "@/components/ui/dropzone";
 import { Spinner } from "@/components/ui/spinner";
-import type { CvDocumentStatus } from "@/lib/types";
+import type { CareerEntryInput, CvDocumentStatus } from "@/lib/types";
 
 interface UploadCvStepProps {
   onFileSelected: (file: File) => Promise<void>;
@@ -23,6 +25,13 @@ interface UploadCvStepProps {
   onDeleteOriginalCv: () => void;
   isDeletingOriginalCv: boolean;
   vaultError: string | null;
+  seniority: string;
+  summary: string;
+  skills: string[];
+  industries: string[];
+  careerEntries: CareerEntryInput[];
+  onApproveAnonymisedCv: () => void;
+  onEditAnonymisedCv: () => void;
 }
 
 export function UploadCvStep({
@@ -40,7 +49,16 @@ export function UploadCvStep({
   onDeleteOriginalCv,
   isDeletingOriginalCv,
   vaultError,
+  seniority,
+  summary,
+  skills,
+  industries,
+  careerEntries,
+  onApproveAnonymisedCv,
+  onEditAnonymisedCv,
 }: UploadCvStepProps) {
+  const [showCvDialog, setShowCvDialog] = React.useState(false);
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -75,6 +93,16 @@ export function UploadCvStep({
                 </p>
               </div>
             </div>
+          )}
+          {hasParsedData && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="self-start"
+              onClick={() => setShowCvDialog(true)}
+            >
+              <FileText className="h-4 w-4" /> Review my anonymised CV
+            </Button>
           )}
           {!hasParsedData && (
             <p className="text-xs text-muted-foreground">
@@ -153,6 +181,19 @@ export function UploadCvStep({
           {vaultError && <p className="text-sm font-medium text-danger">{vaultError}</p>}
         </CardContent>
       </Card>
+
+      <AnonymisedCvDialog
+        open={showCvDialog}
+        onOpenChange={setShowCvDialog}
+        headline={parsedSummary?.headline ?? ""}
+        seniority={seniority}
+        summary={summary}
+        skills={skills}
+        industries={industries}
+        careerEntries={careerEntries}
+        onApprove={onApproveAnonymisedCv}
+        onDeclineAndEdit={onEditAnonymisedCv}
+      />
     </div>
   );
 }

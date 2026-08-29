@@ -481,6 +481,16 @@ export function PassportWizard() {
                 }}
                 isDeletingOriginalCv={deleteOriginalCv.isPending}
                 vaultError={vaultError}
+                seniority={seniority}
+                summary={summary}
+                skills={skills}
+                industries={industries}
+                careerEntries={careerEntries}
+                onApproveAnonymisedCv={() => setReviewed(true)}
+                onEditAnonymisedCv={() => {
+                  setReviewed(false);
+                  goToStep(2);
+                }}
               />
             )}
 
