@@ -36,7 +36,9 @@ def get_email_sender() -> EmailSender:
         settings = get_settings()
         if settings.brevo_api_key:
             _default_email_sender = BrevoEmailSender(
-                api_key=settings.brevo_api_key, sender_email=settings.brevo_sender_email
+                api_key=settings.brevo_api_key,
+                sender_email=settings.brevo_sender_email,
+                proxy_url=settings.outbound_proxy_url or None,
             )
         else:
             _default_email_sender = ConsoleEmailSender()

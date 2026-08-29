@@ -29,18 +29,24 @@ class ConsoleEmailSender:
 class BrevoEmailSender:
     """Real EmailSender implementation, backed by Brevo's transactional email API. sender_email
     must already be a verified sender/domain in the Brevo account — Brevo rejects sends from
-    unverified senders."""
+    unverified senders.
 
-    def __init__(self, *, api_key: str, sender_email: str) -> None:
+    proxy_url routes the request through a static-IP proxy (e.g. QuotaGuardStatic) so Brevo's
+    account-level "Authorized IPs" restriction can stay on and pointed at one fixed IP, instead of
+    Railway's outbound IP (which isn't static and can change on redeploy, breaking every send at
+    once until someone manually re-approves it in Brevo). None means connect directly."""
+
+    def __init__(self, *, api_key: str, sender_email: str, proxy_url: str | None = None) -> None:
         self._api_key = api_key
         self._sender_email = sender_email
+        self._proxy_url = proxy_url or None
 
     async def send(self, *, to: str, subject: str, body: str) -> None:
         # body is currently always plain text (see build_*_email below) — sent as htmlContent
         # since Brevo requires either htmlContent or textContent; wrapping in <pre> preserves the
         # plain-text link formatting without needing a separate HTML template per email type.
         html_content = f"<pre style='font-family: inherit; white-space: pre-wrap;'>{body}</pre>"
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, proxy=self._proxy_url) as client:
             response = await client.post(
                 _BREVO_API_URL,
                 headers={

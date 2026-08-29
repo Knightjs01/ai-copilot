@@ -70,6 +70,15 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""
     brevo_sender_email: str = ""
 
+    # Optional. Brevo's account-security "Authorized IPs" feature blocks API calls from IPs it
+    # hasn't seen before -- fine for a static server, but Railway's outbound IP isn't fixed, so
+    # every redeploy risks re-triggering that block for every candidate's email at once. Routing
+    # just the Brevo call through a static-IP proxy (e.g. QuotaGuardStatic) lets that Brevo
+    # allowlist stay on permanently, pointed at one IP that never changes. Empty means
+    # BrevoEmailSender connects directly (Brevo's IP restriction must then be off, or the direct
+    # egress IP allowlisted manually). Expected form: http://user:pass@host:port.
+    outbound_proxy_url: str = ""
+
     # No default on purpose, same as anthropic_api_key. Empty means
     # app.modules.geocoding.service.GeocodingService.autocomplete degrades to returning no
     # suggestions (the location field still accepts free-typed text) rather than erroring — local
