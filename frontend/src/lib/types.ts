@@ -400,6 +400,11 @@ export interface CandidateTokenResponse {
   token_type: string;
 }
 
+export interface CandidateMfaChallengeResponse {
+  mfa_required: true;
+  challenge_token: string;
+}
+
 export type CareerIntent =
   | "actively_looking"
   | "open_to_opportunity"

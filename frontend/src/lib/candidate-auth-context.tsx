@@ -7,12 +7,21 @@ import {
   refreshCandidateAccessToken,
   setCandidateAccessToken,
 } from "@/lib/candidate-api-client";
-import type { CandidateMeResponse, CandidateTokenResponse } from "@/lib/types";
+import type {
+  CandidateMeResponse,
+  CandidateMfaChallengeResponse,
+  CandidateTokenResponse,
+} from "@/lib/types";
+
+export type CandidateLoginResult =
+  | { mfaRequired: false }
+  | { mfaRequired: true; challengeToken: string };
 
 interface CandidateAuthContextValue {
   candidate: CandidateMeResponse | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<CandidateLoginResult>;
+  verifyMfa: (challengeToken: string, code: string) => Promise<void>;
   signup: (
     email: string,
     password: string,
@@ -23,6 +32,13 @@ interface CandidateAuthContextValue {
 }
 
 const CandidateAuthContext = React.createContext<CandidateAuthContextValue | null>(null);
+
+// Mirrors lib/auth-context.tsx's isMfaChallenge exactly, against the candidate response shape.
+function isMfaChallenge(
+  res: CandidateTokenResponse | CandidateMfaChallengeResponse
+): res is CandidateMfaChallengeResponse {
+  return "mfa_required" in res;
+}
 
 export function CandidateAuthProvider({ children }: { children: React.ReactNode }) {
   const [candidate, setCandidate] = React.useState<CandidateMeResponse | null>(null);
@@ -48,10 +64,26 @@ export function CandidateAuthProvider({ children }: { children: React.ReactNode 
   }, [loadMe]);
 
   const login = React.useCallback(
-    async (email: string, password: string) => {
-      const res = await candidateApiClient.post<CandidateTokenResponse>("/candidate-auth/login", {
-        email,
-        password,
+    async (email: string, password: string): Promise<CandidateLoginResult> => {
+      const res = await candidateApiClient.post<CandidateTokenResponse | CandidateMfaChallengeResponse>(
+        "/candidate-auth/login",
+        { email, password }
+      );
+      if (isMfaChallenge(res)) {
+        return { mfaRequired: true, challengeToken: res.challenge_token };
+      }
+      setCandidateAccessToken(res.access_token);
+      await loadMe();
+      return { mfaRequired: false };
+    },
+    [loadMe]
+  );
+
+  const verifyMfa = React.useCallback(
+    async (challengeToken: string, code: string) => {
+      const res = await candidateApiClient.post<CandidateTokenResponse>("/candidate-auth/mfa/verify", {
+        challenge_token: challengeToken,
+        code,
       });
       setCandidateAccessToken(res.access_token);
       await loadMe();
@@ -82,8 +114,8 @@ export function CandidateAuthProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const value = React.useMemo(
-    () => ({ candidate, isLoading, login, signup, logout }),
-    [candidate, isLoading, login, signup, logout]
+    () => ({ candidate, isLoading, login, verifyMfa, signup, logout }),
+    [candidate, isLoading, login, verifyMfa, signup, logout]
   );
 
   return (

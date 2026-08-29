@@ -22,8 +22,11 @@ type FormValues = z.infer<typeof schema>;
 
 export function ShadowLoginForm() {
   const router = useRouter();
-  const { login } = useCandidateAuth();
+  const { login, verifyMfa } = useCandidateAuth();
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [challengeToken, setChallengeToken] = React.useState<string | null>(null);
+  const [mfaCode, setMfaCode] = React.useState("");
+  const [isVerifyingMfa, setIsVerifyingMfa] = React.useState(false);
 
   const {
     register,
@@ -34,12 +37,73 @@ export function ShadowLoginForm() {
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
     try {
-      await login(values.email, values.password);
+      const result = await login(values.email, values.password);
+      if (result.mfaRequired) {
+        setChallengeToken(result.challengeToken);
+        return;
+      }
       router.push("/shadow/passport");
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Couldn't sign in. Try again.");
     }
   };
+
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challengeToken) return;
+    setFormError(null);
+    setIsVerifyingMfa(true);
+    try {
+      await verifyMfa(challengeToken, mfaCode);
+      router.push("/shadow/passport");
+    } catch {
+      setFormError("That code didn't match. Check your authenticator app and try again.");
+    } finally {
+      setIsVerifyingMfa(false);
+    }
+  };
+
+  if (challengeToken) {
+    return (
+      <ShadowAuthShell
+        title="Enter your code"
+        subtitle="Enter the code from your authenticator app, or one of your backup codes."
+        footer={
+          <button
+            type="button"
+            onClick={() => setChallengeToken(null)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            ← Back to sign in
+          </button>
+        }
+      >
+        <form className="flex flex-col gap-4" onSubmit={handleVerifyMfa}>
+          <Field label="Authentication code" htmlFor="mfa-code">
+            <Input
+              id="mfa-code"
+              inputMode="text"
+              autoComplete="one-time-code"
+              autoFocus
+              placeholder="123456"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+            />
+          </Field>
+          {formError && <p className="text-sm font-medium text-danger">{formError}</p>}
+          <Button
+            type="submit"
+            variant="brand"
+            size="lg"
+            className="mt-2 w-full"
+            disabled={isVerifyingMfa || mfaCode.length < 6}
+          >
+            {isVerifyingMfa ? "Verifying…" : "Verify and sign in"}
+          </Button>
+        </form>
+      </ShadowAuthShell>
+    );
+  }
 
   return (
     <ShadowAuthShell

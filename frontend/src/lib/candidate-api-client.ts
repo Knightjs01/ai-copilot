@@ -73,12 +73,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (!res.ok) {
-    let detail = res.statusText;
+    // res.statusText is empty on every HTTP/2 response in Chromium (no reason phrase in the
+    // protocol), which Railway's edge serves -- without this fallback, any non-JSON error body
+    // (e.g. slowapi's plain-text 429 rate-limit response) produces a genuinely empty ApiError
+    // message, which a form's `{formError && <p>...}` then silently renders as nothing at all.
+    let detail = res.statusText || `Request failed (${res.status})`;
     try {
       const data = (await res.json()) as { detail?: string };
       detail = data.detail ?? detail;
     } catch {
-      // Response body wasn't JSON — fall back to statusText.
+      // Response body wasn't JSON — fall back to the status-based message above.
     }
     throw new ApiError(res.status, detail);
   }
@@ -100,7 +104,7 @@ async function requestBlob(
     const newToken = await refreshCandidateAccessToken();
     if (newToken) return requestBlob(path, true);
   }
-  if (!res.ok) throw new ApiError(res.status, res.statusText);
+  if (!res.ok) throw new ApiError(res.status, res.statusText || `Request failed (${res.status})`);
 
   const disposition = res.headers.get("Content-Disposition");
   const match = disposition ? /filename="([^"]+)"/.exec(disposition) : null;
