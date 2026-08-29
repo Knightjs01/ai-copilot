@@ -4,6 +4,7 @@ import { HomeFinalCtaSection } from "@/components/marketing/home-final-cta-secti
 import { JobBoardShowcaseSection } from "@/components/marketing/job-board-showcase-section";
 import { PassportShowcaseSection } from "@/components/marketing/passport-showcase-section";
 import { PhantomAiBeatSection } from "@/components/marketing/phantom-ai-beat-section";
+import { ProductEcosystemSection } from "@/components/marketing/product-ecosystem-section";
 import { RevealBeatSection } from "@/components/marketing/reveal-beat-section";
 import { SecurityBeatSection } from "@/components/marketing/security-beat-section";
 import { TalentMemoryBeatSection } from "@/components/marketing/talent-memory-beat-section";
@@ -11,8 +12,10 @@ import { TalentMemoryBeatSection } from "@/components/marketing/talent-memory-be
 // Nav/footer/theme now come from (marketing)/layout.tsx — this renders section content only.
 //
 // A Passport-led narrative: the hero's primary visual IS the Candidate Passport (not the Ghost,
-// which is now a discreet watermark inside HeroSection), then the story follows the Passport
-// through the product -- explained, then used to discover opportunities (Shadow), calculate
+// which is now a discreet watermark inside HeroSection), followed by a four-product ecosystem
+// overview (Passport/Shadow/ATS/AI) that orients a first-time visitor before the story dives into
+// any one of them, then the story follows the Passport through the product -- explained, then
+// used to discover opportunities (Shadow), calculate
 // match (Intelligence), work inside a hiring pipeline (ATS), and finally the controlled
 // anonymous-to-identified transition (Reveal) -- before trust-building beats (Security, Talent
 // Memory, the latter explicitly framed as a preview, not live product) and a final CTA that
@@ -21,6 +24,7 @@ export function MarketingHome() {
   return (
     <>
       <HeroSection />
+      <ProductEcosystemSection />
       <PassportShowcaseSection />
       <JobBoardShowcaseSection />
       <PhantomAiBeatSection />
