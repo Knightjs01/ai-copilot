@@ -9,9 +9,10 @@ logger = logging.getLogger("app.auth.email")
 
 _BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
-# Served by the real, already-deployed frontend -- swap for a branded custom domain (e.g.
-# https://app.phantomhire.co.uk/phantom-icon.png) once one is mapped to that service.
-_LOGO_URL = "https://frontend-production-b1bf.up.railway.app/phantom-icon.png"
+# Same lockup as the real marketing nav header (frontend/src/components/marketing/marketing-nav
+# .tsx) -- served by the already-deployed frontend; swap for a branded custom domain (e.g.
+# https://app.phantomhire.io/phantom-hire-logo-new.png) once one is mapped to that service.
+_LOGO_URL = "https://frontend-production-b1bf.up.railway.app/phantom-hire-logo-new.png"
 
 _SIGN_OFF = "\n\n— The Phantom Hire Team"
 
