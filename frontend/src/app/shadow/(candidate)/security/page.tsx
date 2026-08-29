@@ -5,14 +5,14 @@ import { KeyRound, ShieldCheck } from "lucide-react";
 
 import { CandidateMfaDisableDialog } from "@/components/shadow/candidate-mfa-disable-dialog";
 import { CandidateMfaSetupDialog } from "@/components/shadow/candidate-mfa-setup-dialog";
+import { CandidateSessionsCard } from "@/components/shadow/candidate-sessions-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 
-// Mirrors (app)/security/page.tsx (the company equivalent), minus the Sessions card -- not asked
-// for here and candidate sessions aren't otherwise surfaced anywhere in Shadow today. MFA is
-// opt-in: there's no enrollment deadline enforced (see candidate_auth/dependencies.py's
+// Mirrors (app)/security/page.tsx (the company equivalent), including the Sessions card. MFA
+// itself is opt-in: there's no enrollment deadline enforced (see candidate_auth/dependencies.py's
 // require_candidate_mfa_enrolled docstring for why), so this reads as an invitation, not a
 // countdown.
 export default function ShadowSecurityPage() {
@@ -61,6 +61,8 @@ export default function ShadowSecurityPage() {
           </div>
         </CardContent>
       </Card>
+
+      <CandidateSessionsCard />
 
       <CandidateMfaSetupDialog open={setupOpen} onOpenChange={setSetupOpen} />
       <CandidateMfaDisableDialog open={disableOpen} onOpenChange={setDisableOpen} />
