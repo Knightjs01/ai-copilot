@@ -19,7 +19,7 @@ export function ShadowAuthShell({
         <Link href="/shadow" aria-label="Shadow home" className="flex flex-col items-center gap-3">
           <Image
             src="/phantom-shadow-logo-new.png"
-            alt="Phantom Shadow: Anonymous Job Board"
+            alt="Phantom Shadow: Anonymous Talent Network"
             width={2172}
             height={724}
             className="h-16 w-auto sm:h-20"

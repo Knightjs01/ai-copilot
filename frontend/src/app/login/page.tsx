@@ -12,11 +12,11 @@ const OPTIONS = [
     href: "/shadow/login",
     title: "Candidate",
     description:
-      "Build your Phantom Passport, browse the Shadow job board, and manage your applications, pseudonymously, on your terms.",
+      "Build your Phantom Passport, explore Shadow's anonymous talent network, and manage your applications, pseudonymously, on your terms.",
     cta: "Log in as a Candidate",
     logo: {
       src: "/phantom-shadow-logo-new.png",
-      alt: "Phantom Shadow: Anonymous Job Board",
+      alt: "Phantom Shadow: Anonymous Talent Network",
       width: 2172,
       height: 724,
     },

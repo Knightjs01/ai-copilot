@@ -31,7 +31,7 @@ export function JobSeekersHeroSection() {
           <div className="flex flex-col items-start gap-6">
             <Image
               src="/phantom-shadow-logo-new.png"
-              alt="Phantom Shadow: Anonymous Job Board"
+              alt="Phantom Shadow: Anonymous Talent Network"
               width={2172}
               height={724}
               className="h-9 w-auto"
@@ -50,7 +50,7 @@ export function JobSeekersHeroSection() {
             </h1>
 
             <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Shadow is Phantom Hire&apos;s anonymous job board. Build a Phantom Passport once,
+              Shadow is Phantom Hire&apos;s anonymous talent network. Build a Phantom Passport once,
               apply to roles as a Callsign, and stay invisible to your current employer, your
               network, and every company you haven&apos;t chosen to reveal yourself to.
             </p>

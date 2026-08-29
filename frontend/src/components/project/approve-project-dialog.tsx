@@ -202,13 +202,13 @@ export function ApproveProjectDialog({
                   Posted to Shadow
                 </DialogTitle>
                 <DialogDescription>
-                  &ldquo;{project.title}&rdquo; is now live on the public job board.
+                  &ldquo;{project.title}&rdquo; is now live on Shadow.
                 </DialogDescription>
               </DialogHeader>
               {shadowJob ? (
                 <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-3">
                   <p className="text-sm text-muted-foreground">
-                    This is exactly what candidates see on the public job board.
+                    This is exactly what candidates see on Shadow.
                   </p>
                   <LiveRoleLink jobId={shadowJob.id} label="Open live role" />
                 </div>

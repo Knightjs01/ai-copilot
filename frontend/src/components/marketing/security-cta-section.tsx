@@ -46,7 +46,7 @@ const ATS_BENEFITS = [
 const CANDIDATE_BENEFITS = [
   "A Passport, not a profile. Your Phantom Passport travels with you across every role you explore, private by default, revealed only when you choose.",
   "Matched on skill, not visibility. AI matching finds roles that fit what you can actually do, not what a keyword search happens to catch.",
-  "Explore under Shadow, our anonymous job board, where you exist as a Callsign until the moment you decide to step forward.",
+  "Explore under Shadow, our anonymous talent network, where you exist as a Callsign until the moment you decide to step forward.",
   "Verification without exposure, on the roadmap: reusable, cryptographic credential checks, so you prove you're qualified without re-submitting sensitive documents to every company you talk to.",
 ];
 

@@ -112,7 +112,7 @@ export function PassportSuccessOverlay({
 
             <div className="flex flex-col gap-2.5">
               <Button asChild variant="brand" size="lg">
-                <Link href="/shadow">Take me to the Shadow Job Board</Link>
+                <Link href="/shadow">Take me to Shadow</Link>
               </Button>
               <Button asChild variant="secondary">
                 <Link href="/shadow/applications">Go to my applications</Link>

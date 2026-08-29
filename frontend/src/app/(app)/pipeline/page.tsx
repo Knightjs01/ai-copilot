@@ -97,7 +97,7 @@ export default function PipelinePage() {
         <Users className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">No candidates yet</p>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Everyone who applies through the Shadow job board, or is added from a role&apos;s
+          Everyone who applies through Shadow, or is added from a role&apos;s
           Talent Pool, will appear here.
         </p>
       </div>

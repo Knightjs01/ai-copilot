@@ -9,7 +9,7 @@ const POINTS = [
   {
     icon: EyeOff,
     title: "Shadow",
-    body: "An anonymous job board where candidates discover roles under a Callsign, not a name.",
+    body: "An anonymous talent network where candidates discover roles under a Callsign, not a name.",
   },
   {
     icon: Sparkles,

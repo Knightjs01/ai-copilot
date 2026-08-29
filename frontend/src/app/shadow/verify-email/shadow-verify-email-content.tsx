@@ -98,7 +98,7 @@ function VerifyEmailBody() {
           Your email address is confirmed. You can now browse and apply on Shadow.
         </p>
         <Button asChild variant="brand" size="lg" className="w-full">
-          <Link href="/shadow">Take me to the Shadow Job Board</Link>
+          <Link href="/shadow">Take me to Shadow</Link>
         </Button>
       </div>
     );

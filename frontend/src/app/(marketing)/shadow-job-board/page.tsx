@@ -8,7 +8,7 @@ import { ShadowHowItWorksSection } from "@/components/marketing/shadow-howitwork
 import { ShadowRevealSection } from "@/components/marketing/shadow-reveal-section";
 
 export const metadata: Metadata = {
-  title: "Shadow Job Board | Phantom Hire",
+  title: "Shadow - Anonymous Talent Network | Phantom Hire",
   description:
     "The job market you can enter without being seen. Search real roles by skill, apply with your Phantom Passport, and control every reveal yourself.",
 };

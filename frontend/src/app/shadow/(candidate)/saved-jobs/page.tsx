@@ -144,7 +144,7 @@ export default function SavedJobsPage() {
             Job alerts
           </h2>
           <p className="text-sm text-muted-foreground">
-            Save a search from the job board to get emailed when a new role matches.
+            Save a search from Shadow to get emailed when a new role matches.
           </p>
         </div>
 

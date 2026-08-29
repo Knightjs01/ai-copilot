@@ -45,7 +45,7 @@ export function JobBoardMockup() {
           <div className="flex items-center justify-between gap-3">
             <Image
               src="/phantom-shadow-logo-new.png"
-              alt="Phantom Shadow — Anonymous Job Board"
+              alt="Phantom Shadow — Anonymous Talent Network"
               width={2172}
               height={724}
               className="h-8 w-auto sm:h-10"

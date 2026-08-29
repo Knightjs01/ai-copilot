@@ -51,7 +51,7 @@ export function ApplicationTab({
             {SHADOW_EFFECTIVE_STAGE_LABEL[profile.effective_stage]}
           </Badge>
         </Field>
-        <Field label="Source">Shadow job board</Field>
+        <Field label="Source">Shadow</Field>
         <Field label="Application status">
           <Badge variant={SHADOW_APPLICATION_STATUS_VARIANT[profile.status]}>
             {SHADOW_APPLICATION_STATUS_LABEL[profile.status]}

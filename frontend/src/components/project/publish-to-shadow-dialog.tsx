@@ -117,7 +117,7 @@ export function PublishToShadowDialog({
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
             This copies a snapshot of the role and sends it to a Phantom admin for review. It
-            won&apos;t appear on Shadow&apos;s public job board until approved — re-open this
+            won&apos;t appear on Shadow until approved — re-open this
             dialog any time to submit a fresh snapshot.
           </p>
 

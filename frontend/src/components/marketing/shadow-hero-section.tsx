@@ -19,7 +19,7 @@ export function ShadowHeroSection() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
         <div className="flex flex-col gap-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            Shadow Job Board
+            Shadow - Anonymous Talent Network
           </p>
           <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             The job market you can enter without being seen.
@@ -31,7 +31,7 @@ export function ShadowHeroSection() {
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="brand" size="lg">
-              <Link href="/shadow">Browse the board</Link>
+              <Link href="/shadow">Browse Shadow</Link>
             </Button>
             <Button asChild variant="secondary" size="lg">
               <Link href="/signup">Post a role</Link>

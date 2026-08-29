@@ -222,7 +222,7 @@ export function getFeatureComparisonRows(plans: CompanyPlan[]): FeatureRow[] {
     // Talent Discovery
     {
       category: "Talent Discovery",
-      label: "Shadow Job Board",
+      label: "Shadow",
       values: { core: true, growth: true, scale: true },
     },
     {

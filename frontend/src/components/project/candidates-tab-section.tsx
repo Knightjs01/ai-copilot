@@ -65,7 +65,7 @@ export function CandidatesTabSection({ projectId }: { projectId: string }) {
         <Users className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">No candidates yet</p>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Candidates apply through the Shadow job board, or you can add an existing Talent Pool
+          Candidates apply through Shadow, or you can add an existing Talent Pool
           candidate directly.
         </p>
         <div className="mt-2">

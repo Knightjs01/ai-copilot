@@ -9,7 +9,7 @@ const FOOTER_GROUPS: { label: string; links: { href: string; label: string }[] }
   {
     label: "Candidates",
     links: [
-      { href: "/shadow-job-board", label: "Shadow Job Board" },
+      { href: "/shadow-job-board", label: "Shadow" },
       { href: "/passport", label: "Candidate Passport" },
       { href: "/job-seekers", label: "For Job Seekers" },
     ],

@@ -33,7 +33,7 @@ export default function ShadowJobsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Shadow Jobs</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Post to the anonymous job board. Applicants stay pseudonymous until you request and
+            Post to Shadow, our anonymous talent network. Applicants stay pseudonymous until you request and
             they approve a reveal.
           </p>
         </div>

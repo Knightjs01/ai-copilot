@@ -15,7 +15,7 @@ export function ShadowFinalCtaSection() {
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Button asChild variant="brand" size="lg">
-            <Link href="/shadow">Browse the board</Link>
+            <Link href="/shadow">Browse Shadow</Link>
           </Button>
           <Button asChild variant="secondary" size="lg">
             <Link href="/signup">Post a role</Link>
