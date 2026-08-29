@@ -71,7 +71,7 @@ function splitFullName(fullName: string): { first: string; last: string } {
 
 export function PassportWizard() {
   const { candidate } = useCandidateAuth();
-  const { data: passport, isLoading } = useMyPassport();
+  const { data: passport, isLoading, isError, error: passportError } = useMyPassport();
   const savePassport = useSavePassport();
   const parseCv = useParseCv();
   const approvePassport = useApprovePassport();
@@ -141,6 +141,15 @@ export function PassportWizard() {
 
   React.useEffect(() => {
     if (loadedOnce) return;
+    // A real fetch error (anything other than the "no Passport yet" 404 fetchOrNull already
+    // turns into `passport === null`) must still unblock this gate -- otherwise loadedOnce never
+    // becomes true and the wizard spins forever with no explanation, which is exactly what
+    // happened when a since-fixed backend gate 403'd this same endpoint for every candidate past
+    // the MFA grace period.
+    if (isError) {
+      setLoadedOnce(true);
+      return;
+    }
     if (passport) {
       const { first, last } = splitFullName(passport.personal_info.legal_name);
       setHeadline(passport.headline ?? "");
@@ -178,7 +187,7 @@ export function PassportWizard() {
       setLastName(candidate.last_name ?? "");
       setLoadedOnce(true);
     }
-  }, [passport, candidate, loadedOnce]);
+  }, [passport, candidate, loadedOnce, isError]);
 
   // Resume-in-progress: land on the first step that still has real, missing data instead of
   // always resetting to Step 1 — grounded in the real fields already saved, no new backend state.
@@ -378,6 +387,19 @@ export function PassportWizard() {
     return (
       <div className="flex justify-center py-16">
         <Spinner className="h-6 w-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-16 text-center">
+        <p className="text-sm font-medium text-foreground">Couldn&apos;t load your Passport.</p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {passportError instanceof Error
+            ? passportError.message
+            : "Something went wrong. Try refreshing the page."}
+        </p>
       </div>
     );
   }

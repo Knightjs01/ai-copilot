@@ -4,16 +4,11 @@ from typing import Any
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.db.session import get_db
 from app.modules.auth import security
 from app.modules.auth.dependencies import get_bearer_token
-from app.modules.auth.mfa_policy import is_mfa_grace_period_expired
 from app.modules.candidate_auth.models import CandidateUser
-from app.modules.candidate_auth.repository import (
-    CandidateUserRepository,
-    CandidateWebAuthnCredentialRepository,
-)
+from app.modules.candidate_auth.repository import CandidateUserRepository
 
 
 async def get_candidate_token_payload(
@@ -50,30 +45,27 @@ async def get_current_candidate(
 
 async def require_candidate_mfa_enrolled(
     candidate: CandidateUser = Depends(get_current_candidate),
-    session: AsyncSession = Depends(get_db),
 ) -> CandidateUser:
     """Candidate-side mirror of auth.dependencies.require_mfa_enrolled — see that docstring and
-    app/modules/auth/mfa_policy.py. Applied to phantom_passport's router and to the
-    candidate-authenticated routes in shadow_jobs/shadow_reveal (those two mix both principals
-    in one router, so the gate is applied per-route there instead of at the router level)."""
+    app/modules/auth/mfa_policy.py's is_mfa_grace_period_expired. Applied to phantom_passport's
+    router and to the candidate-authenticated routes in shadow_jobs/shadow_reveal/messages/
+    interviews/job_alerts/saved_shadow_jobs/talent_pool/passport_matching/copilot (those mix both
+    principals in one router, so the gate is applied per-route there instead of at the router
+    level).
 
-    settings = get_settings()
-    has_webauthn_credential = (
-        await CandidateWebAuthnCredentialRepository(session).count_for_candidate(candidate.id) > 0
-    )
-    if is_mfa_grace_period_expired(
-        created_at=candidate.created_at,
-        mfa_enabled=candidate.mfa_enabled,
-        grace_period_days=settings.mfa_grace_period_days,
-        has_webauthn_credential=has_webauthn_credential,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "MFA enrollment is required to continue. "
-                "Set up MFA via POST /candidate-auth/mfa/setup."
-            ),
-        )
+    Deliberately NOT enforcing the grace-period expiry right now: confirmed live (2026-08-29)
+    that no candidate-facing MFA enrollment UI exists anywhere in the frontend (no equivalent of
+    components/security/mfa-setup-dialog.tsx for candidates), even though POST
+    /candidate-auth/mfa/setup and /mfa/enable exist on the backend. The grace period's whole
+    premise — "mandatory MFA from day one, grace path not instant lockout" — silently inverted
+    into the opposite once no enrollment path ever shipped: every candidate account past
+    settings.mfa_grace_period_days got a permanent 403 on nearly the entire authenticated Shadow
+    surface with zero way to comply, which the frontend then rendered as an infinite spinner with
+    no error message at all (passport-wizard.tsx's loadedOnce effect never fires for a non-404
+    error). A gate nobody can satisfy isn't security, it's an outage — re-enroll this dependency
+    in is_mfa_grace_period_expired (see git history for the exact prior check, or mirror
+    auth.dependencies.require_mfa_enrolled) once a real candidate MFA enrollment flow ships."""
+
     return candidate
 
 
