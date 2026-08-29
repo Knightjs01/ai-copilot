@@ -393,6 +393,16 @@ export interface CandidateMeResponse {
   first_name: string;
   last_name: string | null;
   is_email_verified: boolean;
+  mfa_enabled: boolean;
+}
+
+export interface CandidateMfaSetupResponse {
+  secret: string;
+  provisioning_uri: string;
+}
+
+export interface CandidateMfaEnableResponse {
+  backup_codes: string[];
 }
 
 export interface CandidateTokenResponse {

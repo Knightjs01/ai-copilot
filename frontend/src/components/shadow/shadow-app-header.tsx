@@ -21,8 +21,8 @@ import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 
 // Mirrors app-header.tsx's structure -- search/palette trigger, avatar dropdown, theme toggle --
 // swapped to candidate auth and the Shadow command palette. No Breadcrumbs equivalent exists for
-// Shadow, so that slot is simply omitted rather than inventing one. "Settings" links to
-// /shadow/passport, the closest thing Shadow has to a candidate profile/settings surface today.
+// Shadow, so that slot is simply omitted rather than inventing one. "Settings" links to the real
+// /shadow/security page (candidate MFA enrollment).
 export function ShadowAppHeader({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const { theme, toggleTheme } = useShadowTheme();
   const { openPalette } = useShadowCommandPalette();
@@ -84,7 +84,7 @@ export function ShadowAppHeader({ onOpenMobileNav }: { onOpenMobileNav: () => vo
                 {candidate.first_name} {candidate.last_name}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => router.push("/shadow/passport")}>
+              <DropdownMenuItem onSelect={() => router.push("/shadow/security")}>
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />

@@ -29,6 +29,7 @@ interface CandidateAuthContextValue {
     lastName?: string | null
   ) => Promise<void>;
   logout: () => Promise<void>;
+  refreshCandidate: () => Promise<void>;
 }
 
 const CandidateAuthContext = React.createContext<CandidateAuthContextValue | null>(null);
@@ -114,8 +115,8 @@ export function CandidateAuthProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const value = React.useMemo(
-    () => ({ candidate, isLoading, login, verifyMfa, signup, logout }),
-    [candidate, isLoading, login, verifyMfa, signup, logout]
+    () => ({ candidate, isLoading, login, verifyMfa, signup, logout, refreshCandidate: loadMe }),
+    [candidate, isLoading, login, verifyMfa, signup, logout, loadMe]
   );
 
   return (
