@@ -14,9 +14,39 @@ _BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 # https://app.phantomhire.io/phantom-hire-logo-new.png) once one is mapped to that service.
 _LOGO_URL = "https://frontend-production-b1bf.up.railway.app/phantom-hire-logo-new.png"
 
-_SIGN_OFF = "\n\n— The Phantom Hire Team"
+_SIGN_OFF = "\n\n— Casper, Phantom Hire"
 
 _URL_PATTERN = re.compile(r"https?://\S+")
+
+# Mirrors the sender's own configured Gravatar signature card (gravatar.com/profile/
+# email-signature) exactly — name, title, location, avatar, profile link. Kept as a plain
+# constant rather than fetched from Gravatar at send time: this rarely changes, and a live
+# fetch would add a third-party network dependency to every outbound email for no real benefit.
+# Update these four values (and re-verify the avatar hash if the address ever changes) to keep
+# it in sync with the Gravatar profile.
+_SIGNATURE_NAME = "Casper"
+_SIGNATURE_TITLE = "Chief Mischief Officer, Phantom Hire"
+_SIGNATURE_LOCATION = "London"
+_SIGNATURE_PROFILE_URL = "https://gravatar.com/impossiblyteenage5cdeb598ae"
+_SIGNATURE_AVATAR_URL = (
+    "https://www.gravatar.com/avatar/"
+    "e02d5f4cdc3a72bfa9aae98d4f638c2faac011b28fbadc90331644c19770a5e7?s=96&d=404"
+)
+
+_SIGNATURE_HTML = (
+    '<table role="presentation" style="margin-top:20px;border-collapse:collapse;">'
+    "<tr>"
+    f'<td style="padding-right:14px;vertical-align:top;">'
+    f'<a href="{_SIGNATURE_PROFILE_URL}"><img src="{_SIGNATURE_AVATAR_URL}" alt="{_SIGNATURE_NAME}" '
+    'width="48" height="48" style="border-radius:50%;display:block;" /></a></td>'
+    '<td style="vertical-align:top;font-size:13px;line-height:1.5;">'
+    f'<div style="font-weight:600;color:#1a1a2e;">'
+    f'<a href="{_SIGNATURE_PROFILE_URL}" style="color:#1a1a2e;text-decoration:none;">{_SIGNATURE_NAME}</a>'
+    "</div>"
+    f'<div style="color:#5b5b78;">{_SIGNATURE_TITLE}</div>'
+    f'<div style="color:#8b8ba7;">{_SIGNATURE_LOCATION}</div>'
+    "</td></tr></table>"
+)
 
 
 class EmailSender(Protocol):
@@ -63,6 +93,7 @@ def _wrap_html(body: str) -> str:
         "sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1a1a2e;\">"
         f"<img src=\"{_LOGO_URL}\" alt=\"Phantom Hire\" style=\"height:28px;margin-bottom:28px;\" />"
         f"{_plain_text_to_html(body)}"
+        f"{_SIGNATURE_HTML}"
         "<hr style=\"border:none;border-top:1px solid #e5e5ef;margin:32px 0 16px;\" />"
         "<p style=\"margin:0;font-size:12px;color:#8b8ba7;\">"
         "Phantom Hire · This is an automated message — please don't reply directly to this email."
@@ -85,7 +116,7 @@ class BrevoEmailSender:
         *,
         api_key: str,
         sender_email: str,
-        sender_name: str = "Phantom Hire",
+        sender_name: str = "Casper @ Phantom Hire",
         proxy_url: str | None = None,
     ) -> None:
         self._api_key = api_key

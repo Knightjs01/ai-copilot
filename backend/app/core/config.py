@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     # app/modules/auth/email.py's BrevoEmailSender for how this is used once set.
     brevo_api_key: str = ""
     brevo_sender_email: str = ""
-    brevo_sender_name: str = "Phantom Hire"
+    brevo_sender_name: str = "Casper @ Phantom Hire"
 
     # Optional. Brevo's account-security "Authorized IPs" feature blocks API calls from IPs it
     # hasn't seen before -- fine for a static server, but Railway's outbound IP isn't fixed, so
