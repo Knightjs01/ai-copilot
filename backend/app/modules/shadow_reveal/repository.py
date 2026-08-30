@@ -97,6 +97,35 @@ class ShadowRevealRequestRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_company_id(self, company_id: uuid.UUID) -> list[ShadowRevealRequest]:
+        """Every reveal request/response at this company, across every candidate -- powers the
+        company-wide activity feed (candidate_activity module). Direct column, no join needed."""
+        result = await self._session.execute(
+            select(ShadowRevealRequest)
+            .where(ShadowRevealRequest.company_id == company_id)
+            .order_by(ShadowRevealRequest.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_by_company_and_candidate(
+        self, *, company_id: uuid.UUID, candidate_user_id: uuid.UUID
+    ) -> list[ShadowRevealRequest]:
+        """One candidate's reveal history at one company -- powers the per-candidate interaction
+        timeline. Same join as list_by_candidate_id, with the company filter added."""
+        result = await self._session.execute(
+            select(ShadowRevealRequest)
+            .join(
+                ShadowApplication,
+                ShadowRevealRequest.shadow_application_id == ShadowApplication.id,
+            )
+            .where(
+                ShadowRevealRequest.company_id == company_id,
+                ShadowApplication.candidate_user_id == candidate_user_id,
+            )
+            .order_by(ShadowRevealRequest.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def list_by_candidate_id(self, candidate_user_id: uuid.UUID) -> list[ShadowRevealRequest]:
         """Every reveal request/response across every application this candidate has ever
         submitted, newest first -- powers the candidate-wide Identity Activity view. Joins

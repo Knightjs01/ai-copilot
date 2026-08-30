@@ -132,6 +132,33 @@ class TalentPoolGrantRepository:
         )
         return result.scalars().first()
 
+    async def list_by_company_id(self, company_id: uuid.UUID) -> list[TalentPoolGrant]:
+        """Every grant at this company regardless of status (requested/granted/declined/
+        withdrawn) -- powers the company-wide activity feed (candidate_activity module). Unlike
+        list_granted_by_company_id below, deliberately not filtered to GRANTED only -- a full
+        history needs the requests that were declined or withdrawn too."""
+        result = await self._session.execute(
+            select(TalentPoolGrant)
+            .where(TalentPoolGrant.company_id == company_id)
+            .order_by(TalentPoolGrant.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_by_company_and_candidate(
+        self, *, company_id: uuid.UUID, candidate_user_id: uuid.UUID
+    ) -> list[TalentPoolGrant]:
+        """One candidate's full Talent Pool history at one company -- powers the per-candidate
+        interaction timeline. Both columns live directly on the row, no join needed."""
+        result = await self._session.execute(
+            select(TalentPoolGrant)
+            .where(
+                TalentPoolGrant.company_id == company_id,
+                TalentPoolGrant.candidate_user_id == candidate_user_id,
+            )
+            .order_by(TalentPoolGrant.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def list_granted_by_company_id(self, company_id: uuid.UUID) -> list[TalentPoolGrant]:
         result = await self._session.execute(
             select(TalentPoolGrant)

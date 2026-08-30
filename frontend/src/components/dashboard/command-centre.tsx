@@ -1,6 +1,8 @@
 "use client";
 
 import { ActionItemRow } from "@/components/dashboard/action-item-row";
+import { AiRecommendationCard } from "@/components/dashboard/ai-recommendation-card";
+import { RecentActivityCard } from "@/components/dashboard/recent-activity-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -98,6 +100,10 @@ export function CommandCentre() {
           )}
         </Card>
       </div>
+
+      <RecentActivityCard />
+
+      <AiRecommendationCard />
 
       <div>
         <h2 className="mb-3 text-sm font-semibold tracking-tight text-foreground">

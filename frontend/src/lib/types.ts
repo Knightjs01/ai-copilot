@@ -1453,3 +1453,48 @@ export interface PlatformAdminAuditLogEntry {
   extra_data: Record<string, unknown>;
   created_at: string;
 }
+
+// --- Candidate Activity (Phase 5) — see backend candidate_activity/schemas.py -----------------
+
+export type TimelineEventType =
+  | "application_submitted"
+  | "reveal_requested"
+  | "reveal_responded"
+  | "talent_pool_requested"
+  | "talent_pool_responded"
+  | "talent_pool_withdrawn"
+  | "passed"
+  | "introduction_requested"
+  | "introduction_responded"
+  | "conversation_started";
+
+// `description` is always a short, plain-language summary built server-side -- never raw
+// message content, even for the company's own conversations. `callsign` is populated only on
+// the company-wide feed (useRecentActivity); the per-candidate timeline caller already knows
+// who they're looking at.
+export interface TimelineEntry {
+  event_type: TimelineEventType;
+  description: string;
+  occurred_at: string;
+  callsign: string | null;
+}
+
+export interface RediscoveryCandidate {
+  callsign: string;
+  headline: string | null;
+  seniority: string | null;
+  changes: string[];
+  passed_reason: PassReason | null;
+  passed_shadow_job_id: string | null;
+  passed_for_job_title: string | null;
+  passed_at: string;
+}
+
+export interface AiRecommendation {
+  job_id: string;
+  job_title: string;
+  callsign: string;
+  match_tier: MatchTier;
+  match_score: number;
+  match_summary: string;
+}

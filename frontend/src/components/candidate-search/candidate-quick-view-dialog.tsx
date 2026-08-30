@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, MessageCircle, X } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CandidateTimeline } from "@/components/candidate-search/candidate-timeline";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DimensionBreakdownList } from "@/components/dimension-breakdown-list";
 import { MatchToneList } from "@/components/shadow/match-tone-list";
@@ -140,6 +141,10 @@ export function CandidateQuickViewDialog({
         </div>
 
         <div className="mt-4 flex max-h-[60vh] flex-col gap-5 overflow-y-auto pr-1">
+          {result.relationship_status !== "new" && (
+            <CandidateTimeline callsign={result.callsign} />
+          )}
+
           {result.summary && <p className="text-sm text-foreground">{result.summary}</p>}
 
           {result.skills.length > 0 && (

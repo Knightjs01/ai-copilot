@@ -63,6 +63,31 @@ class IntroductionRequestRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_company_id(self, company_id: uuid.UUID) -> list[IntroductionRequest]:
+        """Every introduction request at this company, across every job and candidate -- powers
+        the company-wide activity feed (candidate_activity module)."""
+        result = await self._session.execute(
+            select(IntroductionRequest)
+            .where(IntroductionRequest.company_id == company_id)
+            .order_by(IntroductionRequest.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_by_company_and_candidate(
+        self, *, company_id: uuid.UUID, candidate_user_id: uuid.UUID
+    ) -> list[IntroductionRequest]:
+        """One candidate's full introduction-request history at one company -- powers the
+        per-candidate interaction timeline."""
+        result = await self._session.execute(
+            select(IntroductionRequest)
+            .where(
+                IntroductionRequest.company_id == company_id,
+                IntroductionRequest.candidate_user_id == candidate_user_id,
+            )
+            .order_by(IntroductionRequest.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def list_by_candidate_id(
         self, candidate_user_id: uuid.UUID
     ) -> list[IntroductionRequest]:

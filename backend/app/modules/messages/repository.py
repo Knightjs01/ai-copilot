@@ -33,6 +33,31 @@ class MessageThreadRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_company_id(self, company_id: uuid.UUID) -> list[MessageThread]:
+        """Every conversation thread at this company, across every candidate -- powers the
+        company-wide activity feed (candidate_activity module)."""
+        result = await self._session.execute(
+            select(MessageThread)
+            .where(MessageThread.company_id == company_id)
+            .order_by(MessageThread.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_by_company_and_candidate(
+        self, *, company_id: uuid.UUID, candidate_user_id: uuid.UUID
+    ) -> list[MessageThread]:
+        """This candidate's conversation thread(s) at one company -- powers the per-candidate
+        interaction timeline. In practice at most one thread per (company, candidate) pair today
+        (one per application), but returned as a list since nothing enforces that at the DB
+        level."""
+        result = await self._session.execute(
+            select(MessageThread).where(
+                MessageThread.company_id == company_id,
+                MessageThread.candidate_user_id == candidate_user_id,
+            )
+        )
+        return list(result.scalars().all())
+
     async def list_by_candidate_user_id(self, candidate_user_id: uuid.UUID) -> list[MessageThread]:
         result = await self._session.execute(
             select(MessageThread).where(MessageThread.candidate_user_id == candidate_user_id)

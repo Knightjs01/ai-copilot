@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, FileText, Search, Sparkles, UsersRound } from "lucide-react";
+import { ArrowRight, FileText, RefreshCw, Search, Sparkles, UsersRound } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
@@ -31,6 +31,13 @@ const GROUPS: { heading: string; items: AiFeature[] }[] = [
         href: "/talent-pool",
         icon: UsersRound,
         permission: "talent_pool.view",
+      },
+      {
+        title: "Rediscovery",
+        description: "Candidates you passed on whose Passport has materially changed since.",
+        href: "/rediscovery",
+        icon: RefreshCw,
+        permission: "shadow_candidates.search",
       },
     ],
   },

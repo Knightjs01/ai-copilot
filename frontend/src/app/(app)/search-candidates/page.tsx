@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { Columns3, Search, Zap } from "lucide-react";
 
 import { BulkSaveToTalentPoolDialog } from "@/components/candidate-search/bulk-save-to-talent-pool-dialog";
@@ -24,8 +25,18 @@ import { useBulkRequestTalentPool } from "@/lib/queries/talent-pool";
 
 export default function SearchCandidatesPage() {
   const container = useThemeScopeContainer();
+  const searchParams = useSearchParams();
   const { data: jobs, isLoading: jobsLoading } = useMyShadowJobs();
   const [jobId, setJobId] = React.useState<string | undefined>(undefined);
+
+  // Pre-select the role when arriving from a link that already knows which job to search
+  // (e.g. the dashboard's AI Recommendation card) -- read once, on mount, per the plan's own
+  // scoping ("read via useSearchParams on mount, pre-selecting the role").
+  React.useEffect(() => {
+    const jobParam = searchParams.get("job");
+    if (jobParam) setJobId(jobParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [locationFilter, setLocationFilter] = React.useState("");
   const [seniorityFilter, setSeniorityFilter] = React.useState("");

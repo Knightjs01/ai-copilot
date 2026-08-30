@@ -4,6 +4,7 @@ from app.api.v1 import health
 from app.modules.analytics.api import router as analytics_router
 from app.modules.applicant_notes.api import router as applicant_notes_router
 from app.modules.auth.api import router as auth_router
+from app.modules.candidate_activity.api import router as candidate_activity_router
 from app.modules.candidate_auth.api import router as candidate_auth_router
 from app.modules.candidates.api import router as candidates_router
 from app.modules.commercial.api import admin_router as commercial_admin_router
@@ -68,6 +69,7 @@ api_router.include_router(shadow_jobs_project_router)
 api_router.include_router(shadow_reveal_router)
 api_router.include_router(talent_pool_router)
 api_router.include_router(shadow_introduction_router)
+api_router.include_router(candidate_activity_router)
 api_router.include_router(saved_shadow_jobs_router)
 api_router.include_router(passport_matching_router)
 api_router.include_router(messages_router)
