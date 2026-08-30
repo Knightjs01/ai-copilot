@@ -35,6 +35,7 @@ from app.modules.privacy_gateway.api import router as privacy_gateway_router
 from app.modules.project_deletion.api import router as project_deletion_router
 from app.modules.projects.api import router as projects_router
 from app.modules.saved_shadow_jobs.api import router as saved_shadow_jobs_router
+from app.modules.shadow_introduction.api import router as shadow_introduction_router
 from app.modules.shadow_jobs.api import project_router as shadow_jobs_project_router
 from app.modules.shadow_jobs.api import router as shadow_jobs_router
 from app.modules.shadow_reveal.api import router as shadow_reveal_router
@@ -66,6 +67,7 @@ api_router.include_router(shadow_jobs_router)
 api_router.include_router(shadow_jobs_project_router)
 api_router.include_router(shadow_reveal_router)
 api_router.include_router(talent_pool_router)
+api_router.include_router(shadow_introduction_router)
 api_router.include_router(saved_shadow_jobs_router)
 api_router.include_router(passport_matching_router)
 api_router.include_router(messages_router)

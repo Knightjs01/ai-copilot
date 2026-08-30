@@ -10,11 +10,23 @@ MatchTier = Literal["Excellent Match", "Strong Match", "Potential Match", "Weak 
 DimensionRatingValue = Literal["Strong", "Moderate", "Weak"]
 
 # Computed per (company, candidate) at search time -- never persisted as its own row, always
-# derived fresh from the real ShadowApplication/TalentPoolGrant/CandidatePass signals that already
-# exist, so it can never drift from the truth. Priority order when multiple signals exist:
-# currently_engaged > in_talent_pool > previously_passed > previously_applied > new.
+# derived fresh from the real ShadowApplication/TalentPoolGrant/CandidatePass/IntroductionRequest
+# signals that already exist, so it can never drift from the truth. Priority order when multiple
+# signals exist: currently_engaged > in_talent_pool > introduction_pending > previously_passed >
+# previously_applied > introduction_declined > new. A pending introduction is a live, unanswered
+# ask the recruiter must not duplicate, so it ranks just under an existing pool relationship; a
+# declined introduction is a real but softer signal than an outright applied/passed state, so it
+# sits just above the default. An *accepted* introduction needs no value of its own here -- it
+# auto-creates a real ShadowApplication (see shadow_introduction.service), which this same
+# priority chain already surfaces as previously_applied/currently_engaged with no extra code.
 RelationshipStatus = Literal[
-    "new", "previously_applied", "previously_passed", "in_talent_pool", "currently_engaged"
+    "new",
+    "previously_applied",
+    "previously_passed",
+    "in_talent_pool",
+    "currently_engaged",
+    "introduction_pending",
+    "introduction_declined",
 ]
 
 

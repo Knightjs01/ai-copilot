@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, Check, CheckCircle2, Plus, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, MessageCircle, Plus, X } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +58,7 @@ export function CandidateSearchResultCard({
   talentPoolAction,
   onOpenQuickView,
   onPass,
+  onRequestIntroduction,
 }: {
   result: CandidateSearchResult;
   contextLine?: ReactNode;
@@ -72,6 +73,8 @@ export function CandidateSearchResultCard({
   onOpenQuickView?: () => void;
   // Opens the Pass confirmation for this candidate — omitted where passing doesn't apply.
   onPass?: () => void;
+  // Opens the Request Introduction dialog — omitted where requesting doesn't apply.
+  onRequestIntroduction?: () => void;
 }) {
   const topStrength = result.strengths[0];
   const topGap = result.gaps[0];
@@ -161,6 +164,19 @@ export function CandidateSearchResultCard({
         )}
 
         <div className="flex flex-wrap items-center gap-2 pl-11">
+          {onRequestIntroduction && (
+            <button
+              type="button"
+              onClick={onRequestIntroduction}
+              disabled={result.relationship_status === "introduction_pending"}
+              className="flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-xs font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted-foreground"
+            >
+              <MessageCircle className="h-3 w-3" />
+              {result.relationship_status === "introduction_pending"
+                ? "Introduction requested"
+                : "Request introduction"}
+            </button>
+          )}
           {talentPoolAction && (
             <>
               {talentPoolAction.state === "idle" && (

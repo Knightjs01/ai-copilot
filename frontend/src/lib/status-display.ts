@@ -8,6 +8,7 @@ import type {
   DimensionRatingValue,
   EmploymentType,
   FitRating,
+  IntroductionRequestStatus,
   InterviewStatus,
   MatchTier,
   NoticePeriod,
@@ -164,11 +165,15 @@ export const RELATIONSHIP_STATUS_LABEL: Record<Exclude<RelationshipStatus, "new"
   previously_passed: "Previously passed",
   in_talent_pool: "In your Talent Pool",
   currently_engaged: "Currently engaged",
+  introduction_pending: "Introduction requested",
+  introduction_declined: "Declined introduction",
 };
 
 export const RELATIONSHIP_STATUS_VARIANT: Record<Exclude<RelationshipStatus, "new">, Variant> = {
   previously_applied: "info",
   previously_passed: "outline",
+  introduction_pending: "info",
+  introduction_declined: "outline",
   in_talent_pool: "success",
   currently_engaged: "warning",
 };
@@ -305,6 +310,18 @@ export const TALENT_POOL_STATUS_VARIANT: Record<TalentPoolGrantStatus, Variant> 
 export const TALENT_POOL_SCOPE_LABEL: Record<TalentPoolScope, string> = {
   project_only: "This role's team only",
   company_wide: "Anywhere at this company",
+};
+
+export const INTRODUCTION_STATUS_LABEL: Record<IntroductionRequestStatus, string> = {
+  pending: "Awaiting your response",
+  accepted: "Accepted",
+  declined: "Declined",
+};
+
+export const INTRODUCTION_STATUS_VARIANT: Record<IntroductionRequestStatus, Variant> = {
+  pending: "warning",
+  accepted: "success",
+  declined: "outline",
 };
 
 export const REMOTE_PREFERENCE_LABEL: Record<RemotePreference, string> = {

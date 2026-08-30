@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageCircle, X } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ export function CandidateQuickViewDialog({
   onNext,
   talentPoolAction,
   onPass,
+  onRequestIntroduction,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,6 +41,7 @@ export function CandidateQuickViewDialog({
   onNext: () => void;
   talentPoolAction?: QuickTalentPoolAction;
   onPass?: () => void;
+  onRequestIntroduction?: () => void;
 }) {
   const container = useThemeScopeContainer();
 
@@ -160,10 +162,24 @@ export function CandidateQuickViewDialog({
                 Pass
               </Button>
             )}
-            {talentPoolAction && (
+            {onRequestIntroduction && (
               <Button
                 type="button"
                 variant="brand"
+                size="sm"
+                onClick={onRequestIntroduction}
+                disabled={result.relationship_status === "introduction_pending"}
+              >
+                <MessageCircle className="mr-1 h-3.5 w-3.5" />
+                {result.relationship_status === "introduction_pending"
+                  ? "Introduction requested"
+                  : "Request introduction"}
+              </Button>
+            )}
+            {talentPoolAction && (
+              <Button
+                type="button"
+                variant="secondary"
                 size="sm"
                 onClick={talentPoolAction.onAdd}
                 disabled={talentPoolAction.state !== "idle"}

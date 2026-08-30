@@ -25,6 +25,7 @@ class Permissions:
     HIRING_MANAGER_ALIGNMENT_SUBMIT = "hiring_manager_alignment.submit"
     TALENT_POOL_REQUEST = "talent_pool.request"
     TALENT_POOL_VIEW = "talent_pool.view"
+    SHADOW_INTRODUCTION_REQUEST = "shadow_introduction.request"
 
 
 ALL_PERMISSIONS: dict[str, str] = {
@@ -54,6 +55,7 @@ ALL_PERMISSIONS: dict[str, str] = {
     Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT: "Submit hiring-manager top-requirements for a project",
     Permissions.TALENT_POOL_REQUEST: "Ask a Shadow applicant to be kept on file for future roles",
     Permissions.TALENT_POOL_VIEW: "View candidates who have granted future-role Talent Pool access",
+    Permissions.SHADOW_INTRODUCTION_REQUEST: "Ask a discoverable Shadow candidate to start a conversation",
 }
 
 
@@ -100,6 +102,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.HIRING_MANAGER_ALIGNMENT_SUBMIT,
         Permissions.TALENT_POOL_REQUEST,
         Permissions.TALENT_POOL_VIEW,
+        Permissions.SHADOW_INTRODUCTION_REQUEST,
     ],
     # Recruiter is the day-to-day operational role -- real create/update rights across both the
     # ATS pipeline and the Shadow marketplace, resource-scoped to assigned projects (like the old
@@ -121,6 +124,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         Permissions.SHADOW_CANDIDATES_SEARCH,
         Permissions.TALENT_POOL_REQUEST,
         Permissions.TALENT_POOL_VIEW,
+        Permissions.SHADOW_INTRODUCTION_REQUEST,
     ],
     # Resource-scoped to projects it's been added to (via ProjectMember, same mechanism Recruiter
     # uses) -- reviews candidates and submits hiring-manager alignment for its own project(s) only.

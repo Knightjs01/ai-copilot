@@ -918,6 +918,71 @@ class ShadowJobService:
             applied_at=application.created_at,
         )
 
+    async def create_application_from_introduction(
+        self, *, candidate: CandidateUser, job_id: uuid.UUID
+    ) -> ShadowApplicationRead:
+        """Powers accepting a Request Introduction (shadow_introduction module) -- a get-or-create
+        variant of apply(): if the candidate already has a real application for this job (e.g.
+        they separately applied while the introduction was pending), that existing row is reused
+        rather than erroring, since accepting an introduction should always succeed once the
+        candidate says yes. Otherwise this is apply()'s exact body (passport-approved gate,
+        callsign generation), audited under a distinct action so an introduction-created
+        application stays traceable while remaining structurally identical to a self-submitted
+        one. Purely additive -- apply() itself is untouched."""
+        job = await self._jobs.get_by_id(job_id)
+        if job is None or job.deleted_at is not None:
+            raise ShadowJobNotFoundError()
+
+        passport = await self._passports.get_by_candidate_user_id(candidate.id)
+        if passport is None:
+            raise PassportRequiredError()
+        if passport.current_version_id is None:
+            raise PassportNotApprovedError()
+
+        existing = await self._applications.get_by_job_and_candidate(
+            shadow_job_id=job.id, candidate_user_id=candidate.id
+        )
+        if existing is not None:
+            company = await self._session.get(Company, job.company_id)
+            return ShadowApplicationRead(
+                id=existing.id,
+                shadow_job_id=job.id,
+                job_title=job.title,
+                company_name=company.name if company else "Unknown company",
+                callsign=existing.callsign,
+                status=ShadowApplicationStatus(existing.status),
+                applied_at=existing.created_at,
+            )
+
+        callsign = await self._generate_callsign(job.id)
+        application = await self._applications.create(
+            company_id=job.company_id,
+            shadow_job_id=job.id,
+            candidate_user_id=candidate.id,
+            phantom_passport_id=passport.id,
+            passport_version_id=passport.current_version_id,
+            callsign=callsign,
+        )
+        await self._audit.record(
+            company_id=job.company_id,
+            actor_user_id=None,
+            action="shadow_application.introduction_accepted",
+            target_type="shadow_application",
+            target_id=application.id,
+            extra_data={"callsign": callsign, "shadow_job_id": str(job.id)},
+        )
+
+        company = await self._session.get(Company, job.company_id)
+        return ShadowApplicationRead(
+            id=application.id,
+            shadow_job_id=job.id,
+            job_title=job.title,
+            company_name=company.name if company else "Unknown company",
+            callsign=application.callsign,
+            status=ShadowApplicationStatus(application.status),
+            applied_at=application.created_at,
+        )
+
     async def _notify_candidate_of_pipeline_add(
         self, *, candidate_user_id: uuid.UUID, company_id: uuid.UUID, role_title: str
     ) -> None:

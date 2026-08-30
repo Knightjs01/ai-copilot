@@ -10,6 +10,7 @@ import {
 } from "@/components/candidate-search/candidate-search-result-card";
 import { CandidateQuickViewDialog } from "@/components/candidate-search/candidate-quick-view-dialog";
 import { PassCandidateDialog } from "@/components/candidate-search/pass-candidate-dialog";
+import { RequestIntroductionDialog } from "@/components/candidate-search/request-introduction-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,12 +35,14 @@ export default function SearchCandidatesPage() {
   const bulkRequest = useBulkRequestTalentPool();
   const [quickViewIndex, setQuickViewIndex] = React.useState<number | null>(null);
   const [passTarget, setPassTarget] = React.useState<string | null>(null);
+  const [introTarget, setIntroTarget] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setSelected(new Set());
     setQuickAddState({});
     setQuickViewIndex(null);
     setPassTarget(null);
+    setIntroTarget(null);
   }, [jobId]);
 
   const toggleSelected = (callsign: string) => {
@@ -156,6 +159,7 @@ export default function SearchCandidatesPage() {
               }}
               onOpenQuickView={() => setQuickViewIndex(index)}
               onPass={() => setPassTarget(result.callsign)}
+              onRequestIntroduction={() => setIntroTarget(result.callsign)}
             />
           ))}
         </div>
@@ -205,7 +209,21 @@ export default function SearchCandidatesPage() {
           }
           onPass={
             quickViewIndex !== null
-              ? () => setPassTarget(results[quickViewIndex]!.callsign)
+              ? () => {
+                  // Closes Quick View before opening the Pass dialog -- two sibling Radix Dialog
+                  // roots open at once causes each one's dismissable-layer outside-click
+                  // detection to misfire and close both.
+                  setPassTarget(results[quickViewIndex]!.callsign);
+                  setQuickViewIndex(null);
+                }
+              : undefined
+          }
+          onRequestIntroduction={
+            quickViewIndex !== null
+              ? () => {
+                  setIntroTarget(results[quickViewIndex]!.callsign);
+                  setQuickViewIndex(null);
+                }
               : undefined
           }
         />
@@ -223,6 +241,18 @@ export default function SearchCandidatesPage() {
             setQuickViewIndex(null);
             setPassTarget(null);
           }}
+        />
+      )}
+
+      {jobId && introTarget && (
+        <RequestIntroductionDialog
+          open={!!introTarget}
+          onOpenChange={(open) => {
+            if (!open) setIntroTarget(null);
+          }}
+          jobId={jobId}
+          callsign={introTarget}
+          onDone={() => setIntroTarget(null)}
         />
       )}
     </div>

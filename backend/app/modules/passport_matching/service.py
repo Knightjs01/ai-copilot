@@ -51,6 +51,8 @@ from app.modules.phantom_passport.repository import (
     PassportVersionRepository,
     PhantomPassportRepository,
 )
+from app.modules.shadow_introduction.models import IntroductionRequestStatus
+from app.modules.shadow_introduction.repository import IntroductionRequestRepository
 from app.modules.shadow_jobs.models import ShadowJob, ShadowJobStatus
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 from app.modules.talent_pool.models import TalentPoolGrant, TalentPoolScope
@@ -209,6 +211,7 @@ class PassportMatchingService:
         self._talent_pool_grants = TalentPoolGrantRepository(session)
         self._candidate_users = CandidateUserRepository(session)
         self._passes = CandidatePassRepository(session)
+        self._introductions = IntroductionRequestRepository(session)
         self._audit = AuditService(session)
         self._llm_client = llm_client
         self._email_sender = email_sender
@@ -433,18 +436,31 @@ class PassportMatchingService:
         """One candidate_user_id -> RelationshipStatus map for every real signal this company
         already has, computed once per search rather than once per candidate (avoids N+1 queries
         across up to 24 results). Priority: currently_engaged > in_talent_pool >
-        previously_passed > previously_applied > new (the "new" default is never written here,
-        just the absence of a key). `passes` is passed in rather than fetched here since the
-        caller also needs the raw list to build its own exclusion set."""
+        introduction_pending > previously_passed > previously_applied > introduction_declined >
+        new (the "new" default is never written here, just the absence of a key). Loops below run
+        in ascending priority order so each later loop's write correctly wins for a candidate that
+        matches more than one signal. `passes` is passed in rather than fetched here since the
+        caller also needs the raw list to build its own exclusion set. An *accepted* introduction
+        needs no loop of its own -- accepting one creates a real ShadowApplication (see
+        shadow_introduction.service), which the applications loops below already pick up."""
         applications = await self._applications.list_by_company_id(company_id)
         grants = await self._talent_pool_grants.list_granted_by_company_id(company_id)
+        introductions = await self._introductions.list_by_company_and_job(
+            company_id=company_id, shadow_job_id=shadow_job_id
+        )
 
         statuses: dict[uuid.UUID, RelationshipStatus] = {}
+        for introduction in introductions:
+            if introduction.status == IntroductionRequestStatus.DECLINED.value:
+                statuses[introduction.candidate_user_id] = "introduction_declined"
         for application in applications:
             statuses[application.candidate_user_id] = "previously_applied"
         for pass_row in passes:
             if pass_row.shadow_job_id is None or pass_row.shadow_job_id == shadow_job_id:
                 statuses[pass_row.candidate_user_id] = "previously_passed"
+        for introduction in introductions:
+            if introduction.status == IntroductionRequestStatus.PENDING.value:
+                statuses[introduction.candidate_user_id] = "introduction_pending"
         for grant in grants:
             statuses[grant.candidate_user_id] = "in_talent_pool"
         for application in applications:

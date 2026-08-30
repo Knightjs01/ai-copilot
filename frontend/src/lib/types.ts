@@ -939,14 +939,17 @@ export type PassReason =
   | "other";
 
 // This company's real, computed relationship with this candidate -- priority order
-// currently_engaged > in_talent_pool > previously_passed > previously_applied > new. See backend
+// currently_engaged > in_talent_pool > introduction_pending > previously_passed >
+// previously_applied > introduction_declined > new. See backend
 // passport_matching/schemas.py::RelationshipStatus.
 export type RelationshipStatus =
   | "new"
   | "previously_applied"
   | "previously_passed"
   | "in_talent_pool"
-  | "currently_engaged";
+  | "currently_engaged"
+  | "introduction_pending"
+  | "introduction_declined";
 
 // One discoverable candidate ranked against a company's job — see backend
 // passport_matching/schemas.py::CandidateSearchResult. No PII field, same discipline as
@@ -973,6 +976,35 @@ export interface CandidateSearchResult {
   gaps: string[];
   dimension_breakdown: DimensionRating[];
   relationship_status: RelationshipStatus;
+}
+
+export type IntroductionRequestStatus = "pending" | "accepted" | "declined";
+
+// Company-side view of one Request Introduction it sent. See backend
+// shadow_introduction/schemas.py::IntroductionRequestRead.
+export interface IntroductionRequestRead {
+  id: string;
+  callsign: string;
+  shadow_job_id: string;
+  message: string | null;
+  status: IntroductionRequestStatus;
+  requested_at: string;
+  responded_at: string | null;
+  resulting_application_id: string | null;
+}
+
+// The candidate's own view of a Request Introduction -- real company name/job title, since this
+// product's anonymity protects the candidate's identity from the recruiter, not the other way
+// around. See backend shadow_introduction/schemas.py::CandidateIntroductionRequestRead.
+export interface CandidateIntroductionRequestRead {
+  id: string;
+  company_name: string;
+  job_title: string;
+  message: string | null;
+  status: IntroductionRequestStatus;
+  requested_at: string;
+  responded_at: string | null;
+  resulting_application_id: string | null;
 }
 
 // A Talent Pool candidate ranked against a NEW role -- same shape as CandidateSearchResult, plus

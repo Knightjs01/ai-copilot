@@ -15,6 +15,7 @@ import {
   Home,
   IdCard,
   LogOut,
+  MessageCircle,
   MessageSquare,
   Sparkles,
   X,
@@ -54,6 +55,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
 // anonymity model (candidates are only ever a callsign until a Reveal Request is approved).
 const PRIVATE_TOOL_ITEMS: NavItem[] = [
   { label: "My Passport", href: "/shadow/passport", icon: IdCard },
+  { label: "Introductions", href: "/shadow/introductions", icon: MessageCircle },
   { label: "Companies", href: "/shadow/companies", icon: Building2 },
   { label: "Saved Jobs", href: "/shadow/saved-jobs", icon: Bookmark },
   { label: "Alerts", href: "/shadow/saved-jobs#alerts", icon: Bell },

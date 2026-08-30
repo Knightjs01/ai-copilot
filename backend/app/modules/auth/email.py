@@ -271,6 +271,36 @@ def build_talent_pool_request_email(
     return subject, body
 
 
+def build_introduction_request_email(
+    *, company_name: str, role_title: str, requests_url: str
+) -> tuple[str, str]:
+    subject = f"{company_name} would like to introduce themselves"
+    body = (
+        f"{company_name} came across your profile (in connection with {role_title}) and would "
+        f"like to start a conversation. Your identity stays private unless you choose to share "
+        f"it later.\n\nReview the request and decide whether to accept:\n{requests_url}{_SIGN_OFF}"
+    )
+    return subject, body
+
+
+def build_introduction_response_email(
+    *, callsign: str, approved: bool, applicant_url: str
+) -> tuple[str, str]:
+    if approved:
+        subject = f"{callsign} accepted your introduction request"
+        body = (
+            f"{callsign} has accepted your introduction request and is now in your pipeline for "
+            f"this role.\n\nOpen the conversation here:\n{applicant_url}{_SIGN_OFF}"
+        )
+    else:
+        subject = f"{callsign} declined your introduction request"
+        body = (
+            f"{callsign} has declined your introduction request.\n\nView your other candidates "
+            f"here:\n{applicant_url}{_SIGN_OFF}"
+        )
+    return subject, body
+
+
 def build_interview_scheduled_email(
     *, company_name: str, scheduled_at_display: str, interviews_url: str
 ) -> tuple[str, str]:
