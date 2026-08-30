@@ -80,10 +80,11 @@ function VerifiedContinueButton() {
     try {
       const me = await candidateApiClient.get<CandidateMeResponse>("/candidate-auth/me");
       if (me.is_email_verified) {
-        // ShadowAppShell gates /shadow on its own cached candidate.is_email_verified -- refresh
-        // that shared context too, or it'll immediately bounce back here on the stale value.
+        // ShadowAppShell gates /shadow/home on its own cached candidate.is_email_verified --
+        // refresh that shared context too, or it'll immediately bounce back here on the stale
+        // value.
         await refreshCandidate();
-        router.push("/shadow");
+        router.push("/shadow/home");
       } else {
         setCheckError(
           "Your email hasn't been verified yet. Check your inbox for the link, or request a new one above."
@@ -140,7 +141,7 @@ function VerifyEmailBody() {
           Your email address is confirmed. You can now browse and apply on Shadow.
         </p>
         <Button asChild variant="brand" size="lg" className="w-full">
-          <Link href="/shadow">Take me to Shadow</Link>
+          <Link href="/shadow/home">Take me to Shadow</Link>
         </Button>
       </div>
     );
