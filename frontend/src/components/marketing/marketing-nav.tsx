@@ -35,6 +35,7 @@ const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: "/ats", label: "Phantom ATS" },
       { href: "/ai", label: "Phantom AI" },
+      { href: "/talent-partners", label: "Talent Partners" },
       { href: "/talent-memory", label: "Talent Memory" },
       { href: "/intelligence", label: "Phantom Intelligence" },
       { href: "/hiring-teams", label: "For Hiring Teams" },
