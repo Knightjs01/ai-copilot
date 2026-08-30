@@ -2,8 +2,9 @@
 // feature copy, comparison rows, CTAs) lives here directly. Prices and active-role limits are
 // NOT hardcoded here -- they're fetched from the real `commercial_plans` table (see
 // getCommercialPlans below) so a future price/limit change never needs a second place updated.
-// FALLBACK_PLAN_NUMBERS exists only for when that fetch fails; keep it in sync with the seed
-// data in backend/alembic/versions/0062_commercial_plans.py if those ever diverge.
+// FALLBACK_PLAN_NUMBERS exists only for when that fetch fails; keep it in sync with the real
+// current values in commercial_plans (seeded in 0062_commercial_plans.py, last updated by
+// 0066_commercial_plan_price_update.py) if those ever diverge.
 
 export type BillingPeriod = "monthly" | "annual";
 
@@ -20,7 +21,7 @@ export interface CompanyPlan {
   /** From the backend. null = no fixed cap configured (Scale's default -- capacity is
    *  negotiated per company via an admin override, see commercial/service.py). */
   activeRoleLimit: number | null;
-  /** Scale's price is a floor, not a fixed fee -- shown as "From £999/month". */
+  /** Scale's price is a floor, not a fixed fee -- shown as "From £899/month". */
   priceIsFrom?: boolean;
   mostPopular?: boolean;
   /** The highlights shown on the plan card itself (an "active roles" bullet is injected at
@@ -118,9 +119,9 @@ const FALLBACK_PLAN_NUMBERS: Record<
   CompanyPlanId,
   { monthly: number | null; annual: number | null; activeRoleLimit: number | null }
 > = {
-  core: { monthly: 299, annual: 2990, activeRoleLimit: 5 },
+  core: { monthly: 349, annual: 3490, activeRoleLimit: 5 },
   growth: { monthly: 599, annual: 5990, activeRoleLimit: 10 },
-  scale: { monthly: 999, annual: 9990, activeRoleLimit: null },
+  scale: { monthly: 899, annual: 8990, activeRoleLimit: null },
 };
 
 interface PublicCommercialPlan {
