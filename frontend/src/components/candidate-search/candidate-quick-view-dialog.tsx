@@ -45,6 +45,60 @@ export function CandidateQuickViewDialog({
 }) {
   const container = useThemeScopeContainer();
 
+  React.useEffect(() => {
+    if (!open || !result) return;
+    const activeResult = result;
+
+    function isTypingTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isTypingTarget(document.activeElement) || isTypingTarget(event.target)) return;
+
+      switch (event.key) {
+        case "j":
+        case "ArrowRight":
+          if (hasNext) {
+            event.preventDefault();
+            onNext();
+          }
+          break;
+        case "k":
+        case "ArrowLeft":
+          if (hasPrevious) {
+            event.preventDefault();
+            onPrevious();
+          }
+          break;
+        case "s":
+          if (talentPoolAction?.state === "idle") {
+            event.preventDefault();
+            talentPoolAction.onAdd();
+          }
+          break;
+        case "p":
+          if (onPass) {
+            event.preventDefault();
+            onPass();
+          }
+          break;
+        case "i":
+          if (onRequestIntroduction && activeResult.relationship_status !== "introduction_pending") {
+            event.preventDefault();
+            onRequestIntroduction();
+          }
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, result, hasNext, hasPrevious, onNext, onPrevious, talentPoolAction, onPass, onRequestIntroduction]);
+
   if (!result) return null;
 
   return (
@@ -196,7 +250,30 @@ export function CandidateQuickViewDialog({
             )}
           </div>
         </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Kbd>J</Kbd>/<Kbd>K</Kbd> browse
+          </span>
+          <span className="flex items-center gap-1">
+            <Kbd>S</Kbd> save
+          </span>
+          <span className="flex items-center gap-1">
+            <Kbd>P</Kbd> pass
+          </span>
+          <span className="flex items-center gap-1">
+            <Kbd>I</Kbd> request intro
+          </span>
+        </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded border border-border bg-secondary px-1 py-0.5 font-mono text-[10px] font-semibold text-foreground">
+      {children}
+    </kbd>
   );
 }

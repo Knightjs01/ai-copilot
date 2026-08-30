@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
+import { Columns3, Search, Zap } from "lucide-react";
 
 import { BulkSaveToTalentPoolDialog } from "@/components/candidate-search/bulk-save-to-talent-pool-dialog";
 import {
   CandidateSearchResultCard,
   type QuickTalentPoolState,
 } from "@/components/candidate-search/candidate-search-result-card";
+import { CandidateCompareDialog } from "@/components/candidate-search/candidate-compare-dialog";
 import { CandidateQuickViewDialog } from "@/components/candidate-search/candidate-quick-view-dialog";
 import { PassCandidateDialog } from "@/components/candidate-search/pass-candidate-dialog";
 import { RequestIntroductionDialog } from "@/components/candidate-search/request-introduction-dialog";
@@ -36,6 +37,7 @@ export default function SearchCandidatesPage() {
   const [quickViewIndex, setQuickViewIndex] = React.useState<number | null>(null);
   const [passTarget, setPassTarget] = React.useState<string | null>(null);
   const [introTarget, setIntroTarget] = React.useState<string | null>(null);
+  const [compareOpen, setCompareOpen] = React.useState(false);
 
   React.useEffect(() => {
     setSelected(new Set());
@@ -43,6 +45,7 @@ export default function SearchCandidatesPage() {
     setQuickViewIndex(null);
     setPassTarget(null);
     setIntroTarget(null);
+    setCompareOpen(false);
   }, [jobId]);
 
   const toggleSelected = (callsign: string) => {
@@ -88,19 +91,27 @@ export default function SearchCandidatesPage() {
         </p>
       </div>
 
-      <div className="max-w-sm">
-        <Select value={jobId} onValueChange={setJobId} disabled={jobsLoading}>
-          <SelectTrigger>
-            <SelectValue placeholder="Choose a role…" />
-          </SelectTrigger>
-          <SelectContent container={container}>
-            {jobs?.map((job) => (
-              <SelectItem key={job.id} value={job.id}>
-                {job.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="max-w-sm flex-1">
+          <Select value={jobId} onValueChange={setJobId} disabled={jobsLoading}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a role…" />
+            </SelectTrigger>
+            <SelectContent container={container}>
+              {jobs?.map((job) => (
+                <SelectItem key={job.id} value={job.id}>
+                  {job.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {jobId && !searching && results && results.length > 0 && (
+          <Button variant="secondary" size="sm" onClick={() => setQuickViewIndex(0)}>
+            <Zap className="mr-1.5 h-3.5 w-3.5" />
+            Shortlist Mode
+          </Button>
+        )}
       </div>
 
       {!jobId && (
@@ -140,6 +151,12 @@ export default function SearchCandidatesPage() {
                 <Button variant="secondary" size="sm" onClick={() => setSelected(new Set())}>
                   Clear
                 </Button>
+                {selected.size >= 2 && (
+                  <Button variant="secondary" size="sm" onClick={() => setCompareOpen(true)}>
+                    <Columns3 className="mr-1.5 h-3.5 w-3.5" />
+                    Compare ({Math.min(selected.size, 4)})
+                  </Button>
+                )}
                 <Button variant="brand" size="sm" onClick={() => setBulkDialogOpen(true)}>
                   Save to Talent Pool
                 </Button>
@@ -253,6 +270,31 @@ export default function SearchCandidatesPage() {
           jobId={jobId}
           callsign={introTarget}
           onDone={() => setIntroTarget(null)}
+        />
+      )}
+
+      {results && (
+        <CandidateCompareDialog
+          open={compareOpen}
+          onOpenChange={setCompareOpen}
+          results={results.filter((r) => selected.has(r.callsign)).slice(0, 4)}
+          totalSelected={selected.size}
+          talentPoolActionFor={(callsign) => ({
+            state: quickAddState[callsign]?.state ?? "idle",
+            skipReason: quickAddState[callsign]?.skipReason,
+            onAdd: () => void handleQuickAdd(callsign),
+          })}
+          onPass={(callsign) => {
+            // Same close-other-dialog-first discipline as Quick View -- two sibling Radix
+            // Dialog roots open at once breaks each one's outside-click dismissal.
+            setPassTarget(callsign);
+            setCompareOpen(false);
+          }}
+          onRequestIntroduction={(callsign) => {
+            setIntroTarget(callsign);
+            setCompareOpen(false);
+          }}
+          onRemove={toggleSelected}
         />
       )}
     </div>
