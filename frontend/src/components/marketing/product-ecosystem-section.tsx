@@ -4,7 +4,6 @@ import {
   BrainCircuit,
   Eye,
   Globe,
-  IdCard,
   LayoutGrid,
   Lock,
   ShieldCheck,
@@ -17,10 +16,10 @@ import { cn } from "@/lib/utils";
 
 const PRODUCTS = [
   {
-    icon: IdCard,
+    icon: ShieldCheck,
     name: "Phantom Passport",
     tagline: "The identity layer.",
-    body: "A reusable, verified, anonymous professional profile that puts candidates in control. Share once. Use everywhere.",
+    body: "A reusable, verified, anonymous profile. Build once, apply everywhere.",
     href: "/passport",
     // The flagship, candidate-facing product -- given a distinct gold/dark treatment below so it
     // reads as the core feature of the ecosystem, not just one of five equal tiles.
@@ -114,7 +113,7 @@ export function ProductEcosystemSection() {
               <div
                 key={product.name}
                 className={cn(
-                  "relative flex flex-col gap-3 rounded-2xl p-6",
+                  "relative flex flex-col gap-2.5 rounded-2xl p-5",
                   product.featured
                     ? "bg-gradient-to-br from-foreground to-brand text-brand-foreground shadow-xl shadow-brand/25"
                     : "border border-border bg-background"
@@ -158,16 +157,9 @@ export function ProductEcosystemSection() {
                   </p>
                 </div>
 
-                {product.featured && (
-                  <div className="flex items-center gap-2 border-t border-white/10 pt-3">
-                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-gold" />
-                    <div className="h-px flex-1 bg-white/10" />
-                  </div>
-                )}
-
                 <p
                   className={cn(
-                    "flex-1 text-sm leading-relaxed",
+                    "text-sm leading-relaxed",
                     product.featured ? "text-brand-foreground/80" : "text-muted-foreground"
                   )}
                 >
@@ -184,7 +176,7 @@ export function ProductEcosystemSection() {
                 <Link
                   href={product.href}
                   className={cn(
-                    "mt-2 inline-flex items-center gap-1.5 text-sm font-medium",
+                    "inline-flex items-center gap-1.5 text-sm font-medium",
                     product.featured
                       ? "text-gold hover:text-gold/80"
                       : "text-brand hover:text-brand/80"
