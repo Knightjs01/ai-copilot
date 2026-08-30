@@ -87,24 +87,59 @@ class PhantomPassportRepository:
         await self._session.flush()
         return passport
 
-    async def list_discoverable_candidates(self, *, limit: int = 50) -> list[PhantomPassport]:
+    async def list_discoverable_candidates(
+        self,
+        *,
+        limit: int = 50,
+        location: str | None = None,
+        seniority: str | None = None,
+        min_years_experience: int | None = None,
+        skills: list[str] | None = None,
+    ) -> list[PhantomPassport]:
         """The candidate pool for company-side search (passport_matching.service.
         search_candidates_for_job). visibility != PRIVATE, career_intent != NOT_LOOKING (checked
         regardless of visibility -- see PassportVisibility's docstring), and an approved version
         must exist (nothing to score without one). No real pagination yet -- see the module's
-        Phase 5 plan for why a flat limit is an honest, documented simplification for now."""
+        Phase 5 plan for why a flat limit is an honest, documented simplification for now.
+
+        location/seniority/min_years_experience/skills are optional pre-scoring filters (Phase 4)
+        -- applied here, before search_candidates_for_job's per-candidate LLM scoring loop, so a
+        narrower filter also means fewer LLM calls, not just a smaller result set. location and
+        seniority are free-text columns with no enum/normalization guarantee, so they're matched
+        case-insensitively as a substring, not an exact match, to avoid silently missing real
+        data. skills has the same normalization problem in a JSONB array, so "candidate has every
+        requested skill" is checked in Python after the SQL fetch rather than fighting JSONB
+        containment semantics against unknown casing."""
+        conditions = [
+            PhantomPassport.visibility != "private",
+            PhantomPassport.career_intent != "not_looking",
+            PhantomPassport.current_version_id.is_not(None),
+            PhantomPassport.deleted_at.is_(None),
+        ]
+        if location:
+            conditions.append(PhantomPassport.location.ilike(f"%{location}%"))
+        if seniority:
+            conditions.append(PhantomPassport.seniority.ilike(f"%{seniority}%"))
+        if min_years_experience is not None:
+            conditions.append(PhantomPassport.years_experience >= min_years_experience)
+
         result = await self._session.execute(
             select(PhantomPassport)
-            .where(
-                PhantomPassport.visibility != "private",
-                PhantomPassport.career_intent != "not_looking",
-                PhantomPassport.current_version_id.is_not(None),
-                PhantomPassport.deleted_at.is_(None),
-            )
+            .where(*conditions)
             .order_by(PhantomPassport.updated_at.desc())
             .limit(limit)
         )
-        return list(result.scalars().all())
+        candidates = list(result.scalars().all())
+
+        if skills:
+            required = {s.strip().lower() for s in skills if s.strip()}
+            candidates = [
+                c
+                for c in candidates
+                if required.issubset({str(s).strip().lower() for s in c.skills})
+            ]
+
+        return candidates
 
     async def set_current_version(
         self, passport: PhantomPassport, *, version_id: uuid.UUID

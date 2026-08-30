@@ -70,6 +70,37 @@ export function useCompanyTalentPool() {
   });
 }
 
+// Sets (or clears, with pool_name: null) the organizational pool label on one or more of the
+// caller's own granted rows. See TalentPoolGrant.pool_name's backend docstring -- a pool is just
+// "rows sharing this string," not a separate entity, so this is the only write operation needed.
+export function useAssignTalentPool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ grantIds, poolName }: { grantIds: string[]; poolName: string | null }) =>
+      apiClient.post<void>("/talent-pool/mine/pools/assign", {
+        grant_ids: grantIds,
+        pool_name: poolName,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["talent-pool", "mine"] });
+    },
+  });
+}
+
+export function useRenameTalentPool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
+      apiClient.post<{ updated: number }>("/talent-pool/mine/pools/rename", {
+        old_name: oldName,
+        new_name: newName,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["talent-pool", "mine"] });
+    },
+  });
+}
+
 // --- Candidate side -------------------------------------------------------------------------
 
 export function useMyTalentPoolRequests() {

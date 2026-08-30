@@ -230,6 +230,7 @@ class TalentPoolService:
                     source_role_title=grant.source_role_title,
                     scope=TalentPoolScope(grant.scope),
                     granted_at=grant.responded_at,
+                    pool_name=grant.pool_name,
                 )
             )
         return items
@@ -262,9 +263,50 @@ class TalentPoolService:
                     source_role_title=grant.source_role_title,
                     scope=TalentPoolScope(grant.scope),
                     granted_at=grant.responded_at,
+                    pool_name=grant.pool_name,
                 )
             )
         return items
+
+    # --- Company side: organize the pool (Phase 4) ------------------------------------------
+
+    async def assign_pool(
+        self, *, actor: User, grant_ids: list[uuid.UUID], pool_name: str | None
+    ) -> None:
+        """Sets pool_name on one or more of the caller's own GRANTED rows -- pool_name=None
+        removes them from any pool. Never touches the candidate's consent/status."""
+        grants = await self._grants.get_many_by_ids_and_company(
+            grant_ids=grant_ids, company_id=actor.company_id
+        )
+        if len(grants) != len(set(grant_ids)):
+            raise TalentPoolRequestNotFoundError()
+        for grant in grants:
+            if grant.status != TalentPoolGrantStatus.GRANTED.value:
+                raise TalentPoolGrantNotActiveError()
+            grant.pool_name = pool_name
+        await self._session.flush()
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="talent_pool.pool_assigned",
+            target_type="talent_pool_grant",
+            target_id=grants[0].id,
+            extra_data={"pool_name": pool_name, "grant_ids": [str(g.id) for g in grants]},
+        )
+
+    async def rename_pool(self, *, actor: User, old_name: str, new_name: str) -> int:
+        count = await self._grants.rename_pool(
+            company_id=actor.company_id, old_name=old_name, new_name=new_name
+        )
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="talent_pool.pool_renamed",
+            target_type="talent_pool_grant",
+            target_id=None,
+            extra_data={"old_name": old_name, "new_name": new_name, "count": count},
+        )
+        return count
 
     # --- Candidate side: view and respond to requests --------------------------------------
 

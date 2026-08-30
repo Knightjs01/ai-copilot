@@ -18,11 +18,13 @@ from app.modules.candidate_auth.dependencies import require_candidate_mfa_enroll
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.talent_pool.schemas import (
     CandidateTalentPoolRequestRead,
+    TalentPoolAssignPoolRequest,
     TalentPoolBulkRequestCreate,
     TalentPoolBulkRequestResult,
     TalentPoolDecision,
     TalentPoolGrantRead,
     TalentPoolPoolListItem,
+    TalentPoolRenamePoolRequest,
     TalentPoolRequestCreate,
 )
 from app.modules.talent_pool.service import TalentPoolService
@@ -72,6 +74,31 @@ async def list_company_talent_pool(
     session: AsyncSession = Depends(get_tenant_db),
 ) -> list[TalentPoolPoolListItem]:
     return await TalentPoolService(session).list_company_talent_pool(company_id=actor.company_id)
+
+
+@router.post("/mine/pools/assign", status_code=status.HTTP_204_NO_CONTENT)
+async def assign_talent_pool(
+    body: TalentPoolAssignPoolRequest,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.TALENT_POOL_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> None:
+    await TalentPoolService(session).assign_pool(
+        actor=actor, grant_ids=body.grant_ids, pool_name=body.pool_name
+    )
+
+
+@router.post("/mine/pools/rename")
+async def rename_talent_pool(
+    body: TalentPoolRenamePoolRequest,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.TALENT_POOL_VIEW)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> dict[str, int]:
+    count = await TalentPoolService(session).rename_pool(
+        actor=actor, old_name=body.old_name, new_name=body.new_name
+    )
+    return {"updated": count}
 
 
 @router.get("/mine/projects/{project_id}/eligible", response_model=list[TalentPoolPoolListItem])

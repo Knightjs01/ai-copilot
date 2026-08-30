@@ -72,3 +72,8 @@ class TalentPoolGrant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Stored only, +12 months from grant — nothing enforces this yet (Phase 1 has no retention
     # policy engine), it's the honest first field of one.
     review_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Company-only organizational label over an already-GRANTED row (Phase 4) -- never surfaced
+    # to the candidate, never touched by the request/respond consent flow. No separate "pool"
+    # entity: a pool is just "every granted row sharing this string", mirroring
+    # SavedShadowJob.collection_name's exact pattern rather than a new table + CRUD lifecycle.
+    pool_name: Mapped[str | None] = mapped_column(String(100), nullable=True)

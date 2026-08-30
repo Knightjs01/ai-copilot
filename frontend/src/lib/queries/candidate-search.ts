@@ -23,14 +23,47 @@ export function useApplicantMatch(jobId: string | undefined, applicationId: stri
   });
 }
 
+// Optional pre-scoring filters (Phase 4) -- applied server-side in list_discoverable_candidates,
+// before the per-candidate LLM scoring loop, not a post-hoc client-side narrowing. Every field is
+// optional and defaults to "no filter" so an empty object behaves exactly like no filters at all.
+export interface CandidateSearchFilters {
+  location?: string;
+  seniority?: string;
+  minYearsExperience?: number;
+  skills?: string[];
+}
+
+function buildSearchQueryString(filters: CandidateSearchFilters): string {
+  const params = new URLSearchParams();
+  if (filters.location) params.set("location", filters.location);
+  if (filters.seniority) params.set("seniority", filters.seniority);
+  if (filters.minYearsExperience != null) {
+    params.set("min_years_experience", String(filters.minYearsExperience));
+  }
+  for (const skill of filters.skills ?? []) {
+    params.append("skills", skill);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 // Company side (company auth, apiClient) — job-anchored AI-matched search over discoverable
 // Shadow candidates. See lib/queries/passport-matching.ts for the reverse axis (candidate
-// searching across jobs).
-export function useCandidateSearch(jobId: string | undefined, options?: { enabled?: boolean }) {
+// searching across jobs). `filters` is included in the query key so each distinct filter
+// combination caches separately -- clearing a filter re-fetches, it doesn't silently reuse a
+// narrower cached result.
+export function useCandidateSearch(
+  jobId: string | undefined,
+  filters: CandidateSearchFilters = {},
+  options?: { enabled?: boolean }
+) {
   const { enabled = true } = options ?? {};
   return useQuery({
-    queryKey: ["matches", "candidates", jobId],
-    queryFn: () => apiClient.get<CandidateSearchResult[]>(`/matches/mine/${jobId}/candidates`),
+    queryKey: ["matches", "candidates", jobId, filters],
+    queryFn: () =>
+      apiClient.get<CandidateSearchResult[]>(
+        `/matches/mine/${jobId}/candidates${buildSearchQueryString(filters)}`
+      ),
     enabled: enabled && !!jobId,
   });
 }

@@ -10,6 +10,7 @@ import {
 } from "@/components/candidate-search/candidate-search-result-card";
 import { CandidateCompareDialog } from "@/components/candidate-search/candidate-compare-dialog";
 import { CandidateQuickViewDialog } from "@/components/candidate-search/candidate-quick-view-dialog";
+import { CandidateSearchToolbar } from "@/components/candidate-search/candidate-search-toolbar";
 import { PassCandidateDialog } from "@/components/candidate-search/pass-candidate-dialog";
 import { RequestIntroductionDialog } from "@/components/candidate-search/request-introduction-dialog";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
-import { useCandidateSearch } from "@/lib/queries/candidate-search";
+import { useCandidateSearch, type CandidateSearchFilters } from "@/lib/queries/candidate-search";
 import { useMyShadowJobs } from "@/lib/queries/shadow-jobs";
 import { useBulkRequestTalentPool } from "@/lib/queries/talent-pool";
 
@@ -25,9 +26,34 @@ export default function SearchCandidatesPage() {
   const container = useThemeScopeContainer();
   const { data: jobs, isLoading: jobsLoading } = useMyShadowJobs();
   const [jobId, setJobId] = React.useState<string | undefined>(undefined);
-  const { data: results, isLoading: searching } = useCandidateSearch(jobId, {
+
+  const [locationFilter, setLocationFilter] = React.useState("");
+  const [seniorityFilter, setSeniorityFilter] = React.useState("");
+  const [minYearsFilter, setMinYearsFilter] = React.useState("");
+  const [skillsFilter, setSkillsFilter] = React.useState<string[]>([]);
+  const [previouslyEngagedOnly, setPreviouslyEngagedOnly] = React.useState(false);
+
+  const filters: CandidateSearchFilters = React.useMemo(
+    () => ({
+      location: locationFilter || undefined,
+      seniority: seniorityFilter || undefined,
+      minYearsExperience: minYearsFilter ? Number(minYearsFilter) : undefined,
+      skills: skillsFilter.length > 0 ? skillsFilter : undefined,
+    }),
+    [locationFilter, seniorityFilter, minYearsFilter, skillsFilter]
+  );
+
+  const { data: results, isLoading: searching } = useCandidateSearch(jobId, filters, {
     enabled: !!jobId,
   });
+  // Previously Engaged is a pure client-side filter -- relationship_status is already on every
+  // fetched result, so this never triggers a new request (see useCandidateSearch's own comment).
+  const displayedResults = React.useMemo(
+    () =>
+      results?.filter((r) => !previouslyEngagedOnly || r.relationship_status !== "new") ?? results,
+    [results, previouslyEngagedOnly]
+  );
+
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false);
   const [quickAddState, setQuickAddState] = React.useState<
@@ -46,6 +72,11 @@ export default function SearchCandidatesPage() {
     setPassTarget(null);
     setIntroTarget(null);
     setCompareOpen(false);
+    setLocationFilter("");
+    setSeniorityFilter("");
+    setMinYearsFilter("");
+    setSkillsFilter([]);
+    setPreviouslyEngagedOnly(false);
   }, [jobId]);
 
   const toggleSelected = (callsign: string) => {
@@ -106,13 +137,29 @@ export default function SearchCandidatesPage() {
             </SelectContent>
           </Select>
         </div>
-        {jobId && !searching && results && results.length > 0 && (
+        {jobId && !searching && displayedResults && displayedResults.length > 0 && (
           <Button variant="secondary" size="sm" onClick={() => setQuickViewIndex(0)}>
             <Zap className="mr-1.5 h-3.5 w-3.5" />
             Shortlist Mode
           </Button>
         )}
       </div>
+
+      {jobId && (
+        <CandidateSearchToolbar
+          location={locationFilter}
+          onLocationChange={setLocationFilter}
+          seniority={seniorityFilter}
+          onSeniorityChange={setSeniorityFilter}
+          minYearsExperience={minYearsFilter}
+          onMinYearsExperienceChange={setMinYearsFilter}
+          skills={skillsFilter}
+          onSkillsChange={setSkillsFilter}
+          previouslyEngagedOnly={previouslyEngagedOnly}
+          onPreviouslyEngagedOnlyChange={setPreviouslyEngagedOnly}
+          resultCount={!searching ? displayedResults?.length : undefined}
+        />
+      )}
 
       {!jobId && (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
@@ -130,17 +177,17 @@ export default function SearchCandidatesPage() {
         </div>
       )}
 
-      {jobId && !searching && results?.length === 0 && (
+      {jobId && !searching && displayedResults?.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
             <p className="text-sm text-muted-foreground">
-              No discoverable candidates match this role yet.
+              No discoverable candidates match this role and these filters yet.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {jobId && !searching && results && results.length > 0 && (
+      {jobId && !searching && displayedResults && displayedResults.length > 0 && (
         <div className="flex flex-col gap-3">
           {selected.size > 0 && (
             <div className="sticky top-16 z-10 flex items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-2.5">
@@ -163,7 +210,7 @@ export default function SearchCandidatesPage() {
               </div>
             </div>
           )}
-          {results.map((result, index) => (
+          {displayedResults.map((result, index) => (
             <CandidateSearchResultCard
               key={result.callsign}
               result={result}
@@ -204,23 +251,26 @@ export default function SearchCandidatesPage() {
         />
       )}
 
-      {results && (
+      {displayedResults && (
         <CandidateQuickViewDialog
           open={quickViewIndex !== null}
           onOpenChange={(open) => {
             if (!open) setQuickViewIndex(null);
           }}
-          result={quickViewIndex !== null ? (results[quickViewIndex] ?? null) : null}
+          result={quickViewIndex !== null ? (displayedResults[quickViewIndex] ?? null) : null}
           hasPrevious={quickViewIndex !== null && quickViewIndex > 0}
-          hasNext={quickViewIndex !== null && quickViewIndex < results.length - 1}
+          hasNext={quickViewIndex !== null && quickViewIndex < displayedResults.length - 1}
           onPrevious={() => setQuickViewIndex((i) => (i !== null ? i - 1 : i))}
           onNext={() => setQuickViewIndex((i) => (i !== null ? i + 1 : i))}
           talentPoolAction={
             quickViewIndex !== null
               ? {
-                  state: quickAddState[results[quickViewIndex]?.callsign ?? ""]?.state ?? "idle",
-                  skipReason: quickAddState[results[quickViewIndex]?.callsign ?? ""]?.skipReason,
-                  onAdd: () => void handleQuickAdd(results[quickViewIndex]!.callsign),
+                  state:
+                    quickAddState[displayedResults[quickViewIndex]?.callsign ?? ""]?.state ??
+                    "idle",
+                  skipReason:
+                    quickAddState[displayedResults[quickViewIndex]?.callsign ?? ""]?.skipReason,
+                  onAdd: () => void handleQuickAdd(displayedResults[quickViewIndex]!.callsign),
                 }
               : undefined
           }
@@ -230,7 +280,7 @@ export default function SearchCandidatesPage() {
                   // Closes Quick View before opening the Pass dialog -- two sibling Radix Dialog
                   // roots open at once causes each one's dismissable-layer outside-click
                   // detection to misfire and close both.
-                  setPassTarget(results[quickViewIndex]!.callsign);
+                  setPassTarget(displayedResults[quickViewIndex]!.callsign);
                   setQuickViewIndex(null);
                 }
               : undefined
@@ -238,7 +288,7 @@ export default function SearchCandidatesPage() {
           onRequestIntroduction={
             quickViewIndex !== null
               ? () => {
-                  setIntroTarget(results[quickViewIndex]!.callsign);
+                  setIntroTarget(displayedResults[quickViewIndex]!.callsign);
                   setQuickViewIndex(null);
                 }
               : undefined
@@ -273,11 +323,11 @@ export default function SearchCandidatesPage() {
         />
       )}
 
-      {results && (
+      {displayedResults && (
         <CandidateCompareDialog
           open={compareOpen}
           onOpenChange={setCompareOpen}
-          results={results.filter((r) => selected.has(r.callsign)).slice(0, 4)}
+          results={displayedResults.filter((r) => selected.has(r.callsign)).slice(0, 4)}
           totalSelected={selected.size}
           talentPoolActionFor={(callsign) => ({
             state: quickAddState[callsign]?.state ?? "idle",

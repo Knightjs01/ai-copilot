@@ -1312,6 +1312,9 @@ export interface TalentPoolPoolListItem {
   source_role_title: string;
   scope: TalentPoolScope;
   granted_at: string;
+  // Company-only organizational label (Phase 4) -- null means ungrouped. See backend
+  // TalentPoolGrant.pool_name's docstring for why this isn't a separate entity.
+  pool_name: string | null;
 }
 
 // Bulk Talent Pool request from Search Candidates results -- see backend

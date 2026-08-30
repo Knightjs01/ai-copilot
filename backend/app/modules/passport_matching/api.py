@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -108,13 +108,22 @@ async def get_applicant_match(
 @router.get("/mine/{job_id}/candidates", response_model=list[CandidateSearchResult])
 async def search_candidates(
     job_id: uuid.UUID,
+    location: str | None = Query(None),
+    seniority: str | None = Query(None),
+    min_years_experience: int | None = Query(None),
+    skills: list[str] = Query([]),
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_CANDIDATES_SEARCH)),
     session: AsyncSession = Depends(get_tenant_db),
     llm_client: PassportMatchingLLMClient = Depends(get_passport_matching_llm_client),
 ) -> list[CandidateSearchResult]:
     return await PassportMatchingService(session, llm_client=llm_client).search_candidates_for_job(
-        actor=actor, job_id=job_id
+        actor=actor,
+        job_id=job_id,
+        location=location,
+        seniority=seniority,
+        min_years_experience=min_years_experience,
+        skills=skills or None,
     )
 
 

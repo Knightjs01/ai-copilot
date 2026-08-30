@@ -36,6 +36,19 @@ class TalentPoolPoolListItem(BaseModel):
     source_role_title: str
     scope: TalentPoolScope
     granted_at: datetime
+    # Company-only organizational label (Phase 4) -- null means ungrouped. See
+    # TalentPoolGrant.pool_name's own docstring for why this isn't a separate entity.
+    pool_name: str | None = None
+
+
+class TalentPoolAssignPoolRequest(BaseModel):
+    grant_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
+    pool_name: str | None = Field(default=None, max_length=100)
+
+
+class TalentPoolRenamePoolRequest(BaseModel):
+    old_name: str = Field(min_length=1, max_length=100)
+    new_name: str = Field(min_length=1, max_length=100)
 
 
 class CandidateTalentPoolRequestRead(BaseModel):

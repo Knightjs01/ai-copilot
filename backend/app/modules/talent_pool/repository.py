@@ -181,3 +181,34 @@ class TalentPoolGrantRepository:
         grant.withdrawn_at = datetime.now(timezone.utc)
         await self._session.flush()
         return grant
+
+    async def get_many_by_ids_and_company(
+        self, *, grant_ids: list[uuid.UUID], company_id: uuid.UUID
+    ) -> list[TalentPoolGrant]:
+        """Ownership-scoped lookup for the pool-assign/rename actions (Phase 4) -- callers must
+        verify len(result) == len(grant_ids) themselves if they need every requested id to have
+        actually resolved to a grant this company owns."""
+        result = await self._session.execute(
+            select(TalentPoolGrant).where(
+                TalentPoolGrant.id.in_(grant_ids), TalentPoolGrant.company_id == company_id
+            )
+        )
+        return list(result.scalars().all())
+
+    async def rename_pool(self, *, company_id: uuid.UUID, old_name: str, new_name: str) -> int:
+        """Bulk-renames every granted row in one pool -- a pool is just "rows sharing this
+        string" (see TalentPoolGrant.pool_name's docstring), so renaming it is renaming every
+        row, mirroring how SavedShadowJob.collection_name has no dedicated rename endpoint
+        either. Returns the number of rows updated."""
+        result = await self._session.execute(
+            select(TalentPoolGrant).where(
+                TalentPoolGrant.company_id == company_id,
+                TalentPoolGrant.status == TalentPoolGrantStatus.GRANTED.value,
+                TalentPoolGrant.pool_name == old_name,
+            )
+        )
+        grants = list(result.scalars().all())
+        for grant in grants:
+            grant.pool_name = new_name
+        await self._session.flush()
+        return len(grants)

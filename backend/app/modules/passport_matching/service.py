@@ -496,13 +496,28 @@ class PassportMatchingService:
         )
 
     async def search_candidates_for_job(
-        self, *, actor: User, job_id: uuid.UUID
+        self,
+        *,
+        actor: User,
+        job_id: uuid.UUID,
+        location: str | None = None,
+        seniority: str | None = None,
+        min_years_experience: int | None = None,
+        skills: list[str] | None = None,
     ) -> list[CandidateSearchResult]:
         job = await self._jobs.get_by_id(job_id)
         if job is None or job.company_id != actor.company_id or job.deleted_at is not None:
             raise ShadowJobNotFoundError()
 
-        candidates = await self._passports.list_discoverable_candidates()
+        # Filters are applied pre-scoring (Phase 4) -- narrowing the pool here means fewer
+        # candidates reach the per-candidate LLM call below, not just a smaller response.
+        # Scoring/ranking itself (the .sort() at the end of this method) is untouched.
+        candidates = await self._passports.list_discoverable_candidates(
+            location=location,
+            seniority=seniority,
+            min_years_experience=min_years_experience,
+            skills=skills,
+        )
         if not candidates:
             return []
 
