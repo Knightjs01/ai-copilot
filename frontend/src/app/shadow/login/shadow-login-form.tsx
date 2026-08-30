@@ -42,7 +42,7 @@ export function ShadowLoginForm() {
         setChallengeToken(result.challengeToken);
         return;
       }
-      router.push("/shadow/passport");
+      router.push("/shadow/home");
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Couldn't sign in. Try again.");
     }
@@ -55,7 +55,7 @@ export function ShadowLoginForm() {
     setIsVerifyingMfa(true);
     try {
       await verifyMfa(challengeToken, mfaCode);
-      router.push("/shadow/passport");
+      router.push("/shadow/home");
     } catch {
       setFormError("That code didn't match. Check your authenticator app and try again.");
     } finally {
