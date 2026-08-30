@@ -24,6 +24,7 @@ from app.modules.passport_matching.llm_client import PassportMatchingLLMClient
 from app.modules.passport_matching.schemas import (
     BatchMatchRequest,
     BoardFilters,
+    CandidatePassRequest,
     CandidateSearchResult,
     PassportJobMatchRead,
     SearchQueryRequest,
@@ -114,6 +115,19 @@ async def search_candidates(
 ) -> list[CandidateSearchResult]:
     return await PassportMatchingService(session, llm_client=llm_client).search_candidates_for_job(
         actor=actor, job_id=job_id
+    )
+
+
+@router.post("/mine/candidates/{callsign}/pass", status_code=204)
+async def pass_candidate(
+    callsign: str,
+    body: CandidatePassRequest,
+    actor: User = Depends(require_mfa_enrolled),
+    _: CurrentUser = Depends(require_permission(Permissions.SHADOW_CANDIDATES_SEARCH)),
+    session: AsyncSession = Depends(get_tenant_db),
+) -> None:
+    await PassportMatchingService(session).pass_candidate(
+        actor=actor, callsign=callsign, shadow_job_id=body.job_id, reason=body.reason
     )
 
 

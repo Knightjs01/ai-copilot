@@ -14,8 +14,10 @@ import type {
   OverallRecommendation,
   PassportVisibility,
   PlatformAdminRoleName,
+  PassReason,
   PrescreenOutcome,
   ProjectStatus,
+  RelationshipStatus,
   RemotePreference,
   RoleName,
   ShadowApplicationStatus,
@@ -152,6 +154,37 @@ export const MATCH_TIER_VARIANT: Record<MatchTier, Variant> = {
   "Strong Match": "info",
   "Potential Match": "warning",
   "Weak Match": "danger",
+};
+
+// This company's real relationship with a discoverable candidate -- see backend
+// passport_matching/schemas.py::RelationshipStatus. "new" renders as no badge at all (the vast
+// majority of search results), so it has no entry here — callers check for it and skip the badge.
+export const RELATIONSHIP_STATUS_LABEL: Record<Exclude<RelationshipStatus, "new">, string> = {
+  previously_applied: "Previously applied",
+  previously_passed: "Previously passed",
+  in_talent_pool: "In your Talent Pool",
+  currently_engaged: "Currently engaged",
+};
+
+export const RELATIONSHIP_STATUS_VARIANT: Record<Exclude<RelationshipStatus, "new">, Variant> = {
+  previously_applied: "info",
+  previously_passed: "outline",
+  in_talent_pool: "success",
+  currently_engaged: "warning",
+};
+
+export const PASS_REASON_LABEL: Record<PassReason, string> = {
+  insufficient_experience: "Insufficient experience",
+  too_senior: "Too senior",
+  too_junior: "Too junior",
+  wrong_sector: "Wrong sector",
+  wrong_location: "Wrong location",
+  compensation_mismatch: "Compensation mismatch",
+  skills_mismatch: "Skills mismatch",
+  not_relevant: "Not relevant",
+  already_engaged: "Already engaged elsewhere",
+  role_filled: "Role filled",
+  other: "Other",
 };
 
 export const DIMENSION_RATING_VARIANT: Record<DimensionRatingValue, Variant> = {

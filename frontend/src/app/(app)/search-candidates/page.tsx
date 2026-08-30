@@ -8,6 +8,8 @@ import {
   CandidateSearchResultCard,
   type QuickTalentPoolState,
 } from "@/components/candidate-search/candidate-search-result-card";
+import { CandidateQuickViewDialog } from "@/components/candidate-search/candidate-quick-view-dialog";
+import { PassCandidateDialog } from "@/components/candidate-search/pass-candidate-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,10 +32,14 @@ export default function SearchCandidatesPage() {
     Record<string, { state: QuickTalentPoolState; skipReason?: string }>
   >({});
   const bulkRequest = useBulkRequestTalentPool();
+  const [quickViewIndex, setQuickViewIndex] = React.useState<number | null>(null);
+  const [passTarget, setPassTarget] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setSelected(new Set());
     setQuickAddState({});
+    setQuickViewIndex(null);
+    setPassTarget(null);
   }, [jobId]);
 
   const toggleSelected = (callsign: string) => {
@@ -137,7 +143,7 @@ export default function SearchCandidatesPage() {
               </div>
             </div>
           )}
-          {results.map((result) => (
+          {results.map((result, index) => (
             <CandidateSearchResultCard
               key={result.callsign}
               result={result}
@@ -148,6 +154,8 @@ export default function SearchCandidatesPage() {
                 skipReason: quickAddState[result.callsign]?.skipReason,
                 onAdd: () => void handleQuickAdd(result.callsign),
               }}
+              onOpenQuickView={() => setQuickViewIndex(index)}
+              onPass={() => setPassTarget(result.callsign)}
             />
           ))}
         </div>
@@ -171,6 +179,49 @@ export default function SearchCandidatesPage() {
               }
               return next;
             });
+          }}
+        />
+      )}
+
+      {results && (
+        <CandidateQuickViewDialog
+          open={quickViewIndex !== null}
+          onOpenChange={(open) => {
+            if (!open) setQuickViewIndex(null);
+          }}
+          result={quickViewIndex !== null ? (results[quickViewIndex] ?? null) : null}
+          hasPrevious={quickViewIndex !== null && quickViewIndex > 0}
+          hasNext={quickViewIndex !== null && quickViewIndex < results.length - 1}
+          onPrevious={() => setQuickViewIndex((i) => (i !== null ? i - 1 : i))}
+          onNext={() => setQuickViewIndex((i) => (i !== null ? i + 1 : i))}
+          talentPoolAction={
+            quickViewIndex !== null
+              ? {
+                  state: quickAddState[results[quickViewIndex]?.callsign ?? ""]?.state ?? "idle",
+                  skipReason: quickAddState[results[quickViewIndex]?.callsign ?? ""]?.skipReason,
+                  onAdd: () => void handleQuickAdd(results[quickViewIndex]!.callsign),
+                }
+              : undefined
+          }
+          onPass={
+            quickViewIndex !== null
+              ? () => setPassTarget(results[quickViewIndex]!.callsign)
+              : undefined
+          }
+        />
+      )}
+
+      {jobId && passTarget && (
+        <PassCandidateDialog
+          open={!!passTarget}
+          onOpenChange={(open) => {
+            if (!open) setPassTarget(null);
+          }}
+          jobId={jobId}
+          callsign={passTarget}
+          onDone={() => {
+            setQuickViewIndex(null);
+            setPassTarget(null);
           }}
         />
       )}

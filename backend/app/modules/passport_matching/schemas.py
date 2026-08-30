@@ -9,6 +9,14 @@ from app.modules.talent_pool.models import TalentPoolScope
 MatchTier = Literal["Excellent Match", "Strong Match", "Potential Match", "Weak Match"]
 DimensionRatingValue = Literal["Strong", "Moderate", "Weak"]
 
+# Computed per (company, candidate) at search time -- never persisted as its own row, always
+# derived fresh from the real ShadowApplication/TalentPoolGrant/CandidatePass signals that already
+# exist, so it can never drift from the truth. Priority order when multiple signals exist:
+# currently_engaged > in_talent_pool > previously_passed > previously_applied > new.
+RelationshipStatus = Literal[
+    "new", "previously_applied", "previously_passed", "in_talent_pool", "currently_engaged"
+]
+
 
 class DimensionRating(BaseModel):
     """One row of the real per-dimension match breakdown -- always grounded in an evidence
@@ -85,6 +93,7 @@ class CandidateSearchResult(BaseModel):
     strengths: list[str]
     gaps: list[str]
     dimension_breakdown: list[DimensionRating]
+    relationship_status: RelationshipStatus
 
 
 class TalentPoolMatchResult(CandidateSearchResult):
@@ -95,6 +104,28 @@ class TalentPoolMatchResult(CandidateSearchResult):
     source_role_title: str
     scope: TalentPoolScope
     granted_at: datetime
+
+
+PassReason = Literal[
+    "insufficient_experience",
+    "too_senior",
+    "too_junior",
+    "wrong_sector",
+    "wrong_location",
+    "compensation_mismatch",
+    "skills_mismatch",
+    "not_relevant",
+    "already_engaged",
+    "role_filled",
+    "other",
+]
+
+
+class CandidatePassRequest(BaseModel):
+    # Scoped to this one job when set; a null job_id means "not right for us generally," excluded
+    # from every future search for this company, not just this role.
+    job_id: uuid.UUID | None = None
+    reason: PassReason | None = None
 
 
 class TalentPoolOpportunity(BaseModel):

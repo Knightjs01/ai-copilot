@@ -57,3 +57,30 @@ class PassportJobMatch(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     candidate_notified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class CandidatePass(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A recruiter's "not right for this" (or "not right for us at all") decision on an anonymous
+    candidate found via search. No SoftDeleteMixin -- append-only, same audit-trail reasoning as
+    TalentPoolGrant/ShadowRevealRequest; a candidate isn't un-passed by deleting the row, only by
+    a fresh search excluding it via the exclusion query staying job-scoped when job_id is set.
+
+    job_id NULL means "not relevant to this company generally" (excluded from every future
+    search); job_id set means "not relevant to this one role" (excluded only from that job's
+    results, still surfaced for other roles). Keyed on candidate_user_id, not passport_id, for the
+    same reason TalentPoolGrant is -- a passport can be edited into a new version, and the
+    relationship this records is with the person, not one snapshot of their profile."""
+
+    __tablename__ = "candidate_passes"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id"), index=True
+    )
+    candidate_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("candidate_users.id"), index=True
+    )
+    shadow_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("shadow_jobs.id"), nullable=True
+    )
+    reason: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))

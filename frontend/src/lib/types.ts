@@ -924,6 +924,30 @@ export interface JobIntelligence {
   view_time_benchmark: ViewTimeBenchmark;
 }
 
+// Why a recruiter passed on a candidate -- see backend passport_matching/schemas.py::PassReason.
+export type PassReason =
+  | "insufficient_experience"
+  | "too_senior"
+  | "too_junior"
+  | "wrong_sector"
+  | "wrong_location"
+  | "compensation_mismatch"
+  | "skills_mismatch"
+  | "not_relevant"
+  | "already_engaged"
+  | "role_filled"
+  | "other";
+
+// This company's real, computed relationship with this candidate -- priority order
+// currently_engaged > in_talent_pool > previously_passed > previously_applied > new. See backend
+// passport_matching/schemas.py::RelationshipStatus.
+export type RelationshipStatus =
+  | "new"
+  | "previously_applied"
+  | "previously_passed"
+  | "in_talent_pool"
+  | "currently_engaged";
+
 // One discoverable candidate ranked against a company's job — see backend
 // passport_matching/schemas.py::CandidateSearchResult. No PII field, same discipline as
 // ShadowProfile. `match_summary` (not `summary`) to avoid colliding with the passport's own bio.
@@ -948,6 +972,7 @@ export interface CandidateSearchResult {
   strengths: string[];
   gaps: string[];
   dimension_breakdown: DimensionRating[];
+  relationship_status: RelationshipStatus;
 }
 
 // A Talent Pool candidate ranked against a NEW role -- same shape as CandidateSearchResult, plus

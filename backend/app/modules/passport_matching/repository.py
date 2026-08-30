@@ -2,10 +2,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.passport_matching.models import PassportJobMatch
+from app.modules.passport_matching.models import CandidatePass, PassportJobMatch
 
 
 class PassportJobMatchRepository:
@@ -112,3 +112,51 @@ class PassportJobMatchRepository:
         await self._session.execute(
             delete(PassportJobMatch).where(PassportJobMatch.shadow_job_id == shadow_job_id)
         )
+
+
+class CandidatePassRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(
+        self,
+        *,
+        company_id: uuid.UUID,
+        candidate_user_id: uuid.UUID,
+        shadow_job_id: uuid.UUID | None,
+        reason: str | None,
+        actor_user_id: uuid.UUID,
+    ) -> CandidatePass:
+        pass_row = CandidatePass(
+            company_id=company_id,
+            candidate_user_id=candidate_user_id,
+            shadow_job_id=shadow_job_id,
+            reason=reason,
+            actor_user_id=actor_user_id,
+        )
+        self._session.add(pass_row)
+        await self._session.flush()
+        return pass_row
+
+    async def list_by_company_id(self, company_id: uuid.UUID) -> list[CandidatePass]:
+        result = await self._session.execute(
+            select(CandidatePass).where(CandidatePass.company_id == company_id)
+        )
+        return list(result.scalars().all())
+
+    async def is_passed_for_job(
+        self, *, company_id: uuid.UUID, candidate_user_id: uuid.UUID, shadow_job_id: uuid.UUID
+    ) -> bool:
+        """True if this company passed on this candidate generally (job_id NULL) or for this
+        specific job -- used to exclude them from search_candidates_for_job's result set."""
+        result = await self._session.execute(
+            select(CandidatePass.id).where(
+                CandidatePass.company_id == company_id,
+                CandidatePass.candidate_user_id == candidate_user_id,
+                or_(
+                    CandidatePass.shadow_job_id.is_(None),
+                    CandidatePass.shadow_job_id == shadow_job_id,
+                ),
+            )
+        )
+        return result.scalar_one_or_none() is not None

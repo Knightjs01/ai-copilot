@@ -1,9 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
-import type { CandidateSearchResult, ShadowJobMatch, TalentPoolMatchResult } from "@/lib/types";
+import type {
+  CandidateSearchResult,
+  PassReason,
+  ShadowJobMatch,
+  TalentPoolMatchResult,
+} from "@/lib/types";
 
 // Company side, one applicant already on this page — not a search, just the real cached (or
 // freshly computed) match between this one applicant's frozen Passport snapshot and the job
@@ -27,6 +32,23 @@ export function useCandidateSearch(jobId: string | undefined, options?: { enable
     queryKey: ["matches", "candidates", jobId],
     queryFn: () => apiClient.get<CandidateSearchResult[]>(`/matches/mine/${jobId}/candidates`),
     enabled: enabled && !!jobId,
+  });
+}
+
+// Excludes this candidate from future searches for this job (job_id set) or every job at this
+// company (job_id null). Invalidates the search results for the job just passed on so the card
+// disappears immediately.
+export function usePassCandidate(jobId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ callsign, reason }: { callsign: string; reason?: PassReason }) =>
+      apiClient.post<void>(`/matches/mine/candidates/${callsign}/pass`, {
+        job_id: jobId ?? null,
+        reason: reason ?? null,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["matches", "candidates", jobId] });
+    },
   });
 }
 

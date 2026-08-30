@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.modules.audit.service import AuditService
 from app.modules.auth.email import EmailSender, build_talent_pool_match_email
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
@@ -30,13 +31,18 @@ from app.modules.passport_matching.llm_client import (
     PassportMatchDraft,
     PassportMatchingLLMClient,
 )
-from app.modules.passport_matching.models import PassportJobMatch
-from app.modules.passport_matching.repository import PassportJobMatchRepository
+from app.modules.passport_matching.models import CandidatePass, PassportJobMatch
+from app.modules.passport_matching.repository import (
+    CandidatePassRepository,
+    PassportJobMatchRepository,
+)
 from app.modules.passport_matching.schemas import (
     BoardFilters,
     CandidateSearchCareerEntry,
     CandidateSearchResult,
     PassportJobMatchRead,
+    PassReason,
+    RelationshipStatus,
     TalentPoolMatchResult,
     TalentPoolOpportunity,
 )
@@ -202,6 +208,8 @@ class PassportMatchingService:
         self._alignments = HiringManagerAlignmentRepository(session)
         self._talent_pool_grants = TalentPoolGrantRepository(session)
         self._candidate_users = CandidateUserRepository(session)
+        self._passes = CandidatePassRepository(session)
+        self._audit = AuditService(session)
         self._llm_client = llm_client
         self._email_sender = email_sender
 
@@ -413,6 +421,64 @@ class PassportMatchingService:
 
     # --- Company side (candidate search) --------------------------------------------------------
 
+    _ACTIVE_PIPELINE_STAGES = {"screening", "interviewing", "offer"}
+
+    async def _compute_relationship_statuses(
+        self,
+        *,
+        company_id: uuid.UUID,
+        shadow_job_id: uuid.UUID,
+        passes: list[CandidatePass],
+    ) -> dict[uuid.UUID, RelationshipStatus]:
+        """One candidate_user_id -> RelationshipStatus map for every real signal this company
+        already has, computed once per search rather than once per candidate (avoids N+1 queries
+        across up to 24 results). Priority: currently_engaged > in_talent_pool >
+        previously_passed > previously_applied > new (the "new" default is never written here,
+        just the absence of a key). `passes` is passed in rather than fetched here since the
+        caller also needs the raw list to build its own exclusion set."""
+        applications = await self._applications.list_by_company_id(company_id)
+        grants = await self._talent_pool_grants.list_granted_by_company_id(company_id)
+
+        statuses: dict[uuid.UUID, RelationshipStatus] = {}
+        for application in applications:
+            statuses[application.candidate_user_id] = "previously_applied"
+        for pass_row in passes:
+            if pass_row.shadow_job_id is None or pass_row.shadow_job_id == shadow_job_id:
+                statuses[pass_row.candidate_user_id] = "previously_passed"
+        for grant in grants:
+            statuses[grant.candidate_user_id] = "in_talent_pool"
+        for application in applications:
+            if application.pipeline_stage in self._ACTIVE_PIPELINE_STAGES:
+                statuses[application.candidate_user_id] = "currently_engaged"
+        return statuses
+
+    async def pass_candidate(
+        self,
+        *,
+        actor: User,
+        callsign: str,
+        shadow_job_id: uuid.UUID | None,
+        reason: PassReason | None,
+    ) -> None:
+        passport = await self._passports.get_by_callsign(callsign)
+        if passport is None:
+            raise ShadowJobNotFoundError()
+        pass_row = await self._passes.create(
+            company_id=actor.company_id,
+            candidate_user_id=passport.candidate_user_id,
+            shadow_job_id=shadow_job_id,
+            reason=reason,
+            actor_user_id=actor.id,
+        )
+        await self._audit.record(
+            company_id=actor.company_id,
+            actor_user_id=actor.id,
+            action="shadow_candidate.passed",
+            target_type="candidate_pass",
+            target_id=pass_row.id,
+            extra_data={"reason": reason, "shadow_job_id": str(shadow_job_id) if shadow_job_id else None},
+        )
+
     async def search_candidates_for_job(
         self, *, actor: User, job_id: uuid.UUID
     ) -> list[CandidateSearchResult]:
@@ -423,6 +489,20 @@ class PassportMatchingService:
         candidates = await self._passports.list_discoverable_candidates()
         if not candidates:
             return []
+
+        passes = await self._passes.list_by_company_id(actor.company_id)
+        excluded_candidate_ids = {
+            p.candidate_user_id
+            for p in passes
+            if p.shadow_job_id is None or p.shadow_job_id == job_id
+        }
+        candidates = [c for c in candidates if c.candidate_user_id not in excluded_candidate_ids]
+        if not candidates:
+            return []
+
+        relationship_statuses = await self._compute_relationship_statuses(
+            company_id=actor.company_id, shadow_job_id=job_id, passes=passes
+        )
 
         # Resolved once per job (not per candidate) -- this method runs on app_runtime
         # (get_tenant_db), the one passport_matching call path actually permitted to read these
@@ -504,6 +584,9 @@ class PassportMatchingService:
                     strengths=match.strengths,
                     gaps=match.gaps,
                     dimension_breakdown=match.dimension_breakdown,
+                    relationship_status=relationship_statuses.get(
+                        passport.candidate_user_id, "new"
+                    ),
                 )
             )
 
@@ -610,6 +693,7 @@ class PassportMatchingService:
                     strengths=match.strengths,
                     gaps=match.gaps,
                     dimension_breakdown=match.dimension_breakdown,
+                    relationship_status="in_talent_pool",
                     source_role_title=grant.source_role_title,
                     scope=TalentPoolScope(grant.scope),
                     granted_at=grant.responded_at or grant.created_at,
