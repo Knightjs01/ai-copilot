@@ -19,7 +19,7 @@ const PRODUCTS = [
     icon: ShieldCheck,
     name: "Phantom Passport",
     tagline: "The identity layer.",
-    body: "A reusable, verified, anonymous profile. Build once, apply everywhere.",
+    body: "A verified, anonymous candidate profile. Built once, used to apply everywhere.",
     href: "/passport",
     // The flagship, candidate-facing product -- given a distinct gold/dark treatment below so it
     // reads as the core feature of the ecosystem, not just one of five equal tiles.
@@ -150,7 +150,7 @@ export function ProductEcosystemSection() {
                   <p
                     className={cn(
                       "text-sm font-medium",
-                      product.featured ? "text-gold" : "text-brand"
+                      product.featured ? "text-brand-foreground" : "text-brand"
                     )}
                   >
                     {product.tagline}
@@ -167,7 +167,7 @@ export function ProductEcosystemSection() {
                 </p>
 
                 {product.featured && (
-                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gold/40 px-3 py-1 text-xs font-medium text-gold">
+                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gold/40 px-3 py-1 text-xs font-medium text-brand-foreground">
                     <ShieldCheck className="h-3 w-3" />
                     Verified. Private. Portable.
                   </span>
@@ -176,7 +176,7 @@ export function ProductEcosystemSection() {
                 <Link
                   href={product.href}
                   className={cn(
-                    "inline-flex items-center gap-1.5 text-sm font-medium",
+                    "mt-auto inline-flex items-center gap-1.5 text-sm font-medium",
                     product.featured
                       ? "text-gold hover:text-gold/80"
                       : "text-brand hover:text-brand/80"
