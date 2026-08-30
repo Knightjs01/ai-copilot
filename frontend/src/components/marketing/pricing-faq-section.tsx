@@ -36,7 +36,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Is Scale's active-role limit fixed?",
     answer:
-      "No. Scale supports 10+ active roles and is configured around your team's actual hiring volume, not a fixed number. Talk to us and we'll set it up for you.",
+      "No. Scale supports 11+ active roles and is configured around your team's actual hiring volume, not a fixed number. Talk to us and we'll set it up for you.",
   },
 ];
 
