@@ -89,6 +89,21 @@ class PhantomPassportService:
             raise PassportNotFoundError()
         return await self._to_read_model(passport)
 
+    async def update_visibility(
+        self, *, candidate: CandidateUser, visibility: str
+    ) -> PassportRead:
+        """Narrow, single-field update -- deliberately not routed through save_passport/
+        PassportUpdate, which requires resending the candidate's full skills/industries/
+        career_entries/personal_info. A sidebar-level quick toggle round-tripping that entire
+        object on every flip is a real risk of silently corrupting other fields if the payload is
+        ever assembled slightly wrong; this endpoint touches only .visibility."""
+
+        passport = await self._passports.get_by_candidate_user_id(candidate.id)
+        if passport is None:
+            raise PassportNotFoundError()
+        await self._passports.set_visibility(passport, visibility=visibility)
+        return await self._to_read_model(passport)
+
     async def get_verification_by_callsign(self, callsign: str) -> PassportVerificationRead | None:
         """Public verification lookup -- a callsign only ever exists post-approval (see
         approve_passport), so there's no separate "not approved" branch to handle here."""

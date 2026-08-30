@@ -3,15 +3,18 @@
 import * as React from "react";
 import Link from "next/link";
 import {
+  Award,
   Bookmark,
   Briefcase,
   Building2,
   ChevronRight,
+  FileText,
   IdCard,
   Lock,
   Shield,
   Sparkles,
   UserCog,
+  type LucideIcon,
 } from "lucide-react";
 
 import { CompanyBoardCard } from "@/components/shadow/company-board-card";
@@ -22,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PassportProgressRing } from "@/components/candidate/passport-wizard/passport-progress-ring";
 import { Spinner } from "@/components/ui/spinner";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
+import { companyAvatar } from "@/lib/company-avatar";
 import { useCompanyBoard } from "@/lib/queries/company";
 import { useBatchJobMatches } from "@/lib/queries/passport-matching";
 import { useSavedJobs } from "@/lib/queries/saved-jobs";
@@ -29,6 +33,14 @@ import { useMyApplications, useShadowBoard } from "@/lib/queries/shadow-jobs";
 import { useMyPassport } from "@/lib/queries/phantom-passport";
 import { MATCH_TIER_VARIANT } from "@/lib/status-display";
 import type { PhantomPassport, ShadowJobBoardListing } from "@/lib/types";
+
+const NEW_JOB_WINDOW_DAYS = 7;
+
+function isRecentlyPublished(publishedAt: string | null): boolean {
+  if (!publishedAt) return false;
+  const days = (Date.now() - new Date(publishedAt).getTime()) / (1000 * 60 * 60 * 24);
+  return days <= NEW_JOB_WINDOW_DAYS;
+}
 
 const TERMINAL_STATUSES = new Set(["declined", "withdrawn"]);
 const HOME_MATCH_PREVIEW = 24;
@@ -60,6 +72,7 @@ const VALUE_PROPS = [
 interface SuggestedStep {
   label: string;
   description: string;
+  icon: LucideIcon;
 }
 
 // Every suggestion is derived from a real Passport field the backend already tracks as part of
@@ -70,16 +83,24 @@ function deriveSuggestedSteps(passport: PhantomPassport | null | undefined): Sug
   if (!passport) return [];
   const steps: SuggestedStep[] = [];
   if (passport.career_entries.length === 0) {
-    steps.push({ label: "Add work experience", description: "Show your career history." });
+    steps.push({
+      label: "Add work experience",
+      description: "Show your career history.",
+      icon: Briefcase,
+    });
   }
   if (passport.skills.length < MIN_SKILLS_TARGET) {
-    steps.push({ label: "Add key skills", description: "Highlight your expertise." });
+    steps.push({ label: "Add key skills", description: "Highlight your expertise.", icon: Sparkles });
   }
   if (!passport.career_entries.some((entry) => entry.achievements.length > 0)) {
-    steps.push({ label: "Add achievements", description: "Showcase your impact." });
+    steps.push({ label: "Add achievements", description: "Showcase your impact.", icon: Award });
   }
   if (!passport.summary) {
-    steps.push({ label: "Write a summary", description: "Give recruiters a quick overview." });
+    steps.push({
+      label: "Write a summary",
+      description: "Give recruiters a quick overview.",
+      icon: FileText,
+    });
   }
   return steps;
 }
@@ -199,8 +220,8 @@ export default function ShadowHomePage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {VALUE_PROPS.map((prop) => (
             <div key={prop.title} className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-brand to-electric text-white">
-                <prop.icon className="h-4 w-4" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
+                <prop.icon className="h-4.5 w-4.5" />
               </div>
               <p className="text-sm font-semibold text-foreground">{prop.title}</p>
               <p className="text-xs leading-relaxed text-muted-foreground">{prop.body}</p>
@@ -229,6 +250,8 @@ export default function ShadowHomePage() {
                   showSeniority={false}
                   showRequirements={false}
                   showCompanyLink={false}
+                  showCompanyAvatar
+                  isNew={isRecentlyPublished(job.published_at)}
                 />
               ))}
             </div>
@@ -314,9 +337,12 @@ export default function ShadowHomePage() {
                 <Link
                   key={step.label}
                   href="/shadow/passport"
-                  className="flex items-center justify-between gap-3 rounded-lg px-1 py-2 transition-colors hover:bg-secondary/50"
+                  className="flex items-center gap-3 rounded-lg px-1 py-2 transition-colors hover:bg-secondary/50"
                 >
-                  <div className="flex flex-col">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <step.icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex flex-1 flex-col">
                     <span className="text-sm font-medium text-foreground">{step.label}</span>
                     <span className="text-xs text-muted-foreground">{step.description}</span>
                   </div>
@@ -337,19 +363,31 @@ export default function ShadowHomePage() {
                 </Link>
               </div>
               <div className="flex flex-col gap-2.5">
-                {savedJobs.slice(0, SAVED_JOBS_SHOWN).map((saved) => (
-                  <Link
-                    key={saved.id}
-                    href={`/shadow/jobs/${saved.job.id}`}
-                    className="flex items-center justify-between gap-2 text-sm"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium text-foreground">{saved.job.title}</span>
-                      <span className="text-xs text-muted-foreground">{saved.job.company_name}</span>
-                    </div>
-                    <Bookmark className="h-3.5 w-3.5 shrink-0 fill-brand text-brand" />
-                  </Link>
-                ))}
+                {savedJobs.slice(0, SAVED_JOBS_SHOWN).map((saved) => {
+                  const avatar = companyAvatar(saved.job.company_name);
+                  return (
+                    <Link
+                      key={saved.id}
+                      href={`/shadow/jobs/${saved.job.id}`}
+                      className="flex items-center justify-between gap-2 text-sm"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${avatar.colorClassName}`}
+                        >
+                          {avatar.initial}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{saved.job.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {saved.job.company_name}
+                          </span>
+                        </div>
+                      </div>
+                      <Bookmark className="h-3.5 w-3.5 shrink-0 fill-brand text-brand" />
+                    </Link>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

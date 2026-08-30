@@ -24,6 +24,7 @@ from app.modules.phantom_passport.schemas import (
     SkillsSuggestionResponse,
     SummaryImprovementRequest,
     SummaryImprovementResponse,
+    VisibilityUpdate,
 )
 from app.modules.phantom_passport.service import PhantomPassportService
 
@@ -61,6 +62,17 @@ async def save_my_passport(
     session: AsyncSession = Depends(get_db),
 ) -> PassportRead:
     return await PhantomPassportService(session).save_passport(candidate=candidate, body=body)
+
+
+@router.patch("/me/visibility", response_model=PassportRead)
+async def update_my_passport_visibility(
+    body: VisibilityUpdate,
+    candidate: CandidateUser = Depends(get_current_candidate),
+    session: AsyncSession = Depends(get_db),
+) -> PassportRead:
+    return await PhantomPassportService(session).update_visibility(
+        candidate=candidate, visibility=body.visibility
+    )
 
 
 @router.post("/parse-cv", response_model=CvParseResult)

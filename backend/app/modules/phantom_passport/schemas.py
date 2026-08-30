@@ -62,6 +62,10 @@ class PassportUpdate(BaseModel):
     career_entries: list[CareerEntryInput] = Field(default_factory=list, max_length=50)
 
 
+class VisibilityUpdate(BaseModel):
+    visibility: str = Field(max_length=20)
+
+
 class PassportRead(BaseModel):
     id: uuid.UUID
     headline: str | None

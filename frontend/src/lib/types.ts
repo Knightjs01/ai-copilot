@@ -857,6 +857,7 @@ export interface CompanyBoardCard {
   slug: string;
   tagline: string | null;
   logo_url: string | null;
+  cover_image_url: string | null;
   industry: string[];
   employee_count: number | null;
   headquarters: string | null;

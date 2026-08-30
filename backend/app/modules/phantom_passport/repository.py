@@ -132,6 +132,13 @@ class PhantomPassportRepository:
         await self._session.flush()
         return passport
 
+    async def set_visibility(
+        self, passport: PhantomPassport, *, visibility: str
+    ) -> PhantomPassport:
+        passport.visibility = visibility
+        await self._session.flush()
+        return passport
+
 
 class PassportPersonalInfoRepository:
     def __init__(self, session: AsyncSession) -> None:

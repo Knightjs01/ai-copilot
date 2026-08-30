@@ -3,6 +3,7 @@ import { Bookmark, BookmarkCheck, BookmarkX, Briefcase, MapPin } from "lucide-re
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { companyAvatar } from "@/lib/company-avatar";
 import { formatSalary } from "@/lib/format";
 import { EMPLOYMENT_TYPE_LABEL, MATCH_TIER_VARIANT, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
 import type { ShadowJobBoardListing, ShadowJobMatch } from "@/lib/types";
@@ -14,6 +15,10 @@ const MAX_REQUIREMENT_TAGS = 2;
 // needs via props rather than a single rigid "variant" enum, since the three real usages differ
 // in more than one dimension at once (For You omits seniority + requirements + the company link
 // but keeps the meta row; Saved Jobs omits the whole meta row too).
+//
+// showCompanyAvatar/isNew are additive, opt-in, and default off -- Discover/For You/Saved Jobs
+// never pass them and render exactly as before. Only Home's "Recommended for you" grid uses them,
+// deriving isNew itself from the real job.published_at rather than this component guessing.
 export function ShadowJobCard({
   job,
   match,
@@ -22,6 +27,8 @@ export function ShadowJobCard({
   showSeniority = true,
   showRequirements = true,
   showCompanyLink = true,
+  showCompanyAvatar = false,
+  isNew = false,
   saveAction,
   unsaveAction,
 }: {
@@ -32,12 +39,15 @@ export function ShadowJobCard({
   showSeniority?: boolean;
   showRequirements?: boolean;
   showCompanyLink?: boolean;
+  showCompanyAvatar?: boolean;
+  isNew?: boolean;
   saveAction?: { saved: boolean; onToggle: () => void; pending?: boolean };
   unsaveAction?: { onUnsave: () => void; pending?: boolean };
 }) {
   const salary = formatSalary(job.salary_min, job.salary_max);
   const extraRequirements = job.requirements.length - MAX_REQUIREMENT_TAGS;
   const hasCornerAction = !!saveAction || !!unsaveAction;
+  const avatar = showCompanyAvatar ? companyAvatar(job.company_name) : null;
 
   return (
     <Card className="relative transition-colors hover:border-muted-foreground/40">
@@ -74,9 +84,21 @@ export function ShadowJobCard({
           className={`flex flex-col gap-2.5 ${hasCornerAction ? "pr-8" : ""}`}
         >
           <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-0.5">
-              <h2 className="text-base font-semibold text-foreground">{job.title}</h2>
-              <p className="text-sm text-muted-foreground">{job.company_name}</p>
+            <div className="flex items-start gap-2.5">
+              {avatar && (
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${avatar.colorClassName}`}
+                >
+                  {avatar.initial}
+                </div>
+              )}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-semibold text-foreground">{job.title}</h2>
+                  {isNew && <Badge variant="info">New</Badge>}
+                </div>
+                <p className="text-sm text-muted-foreground">{job.company_name}</p>
+              </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               {match && (

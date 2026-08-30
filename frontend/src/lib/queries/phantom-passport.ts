@@ -49,6 +49,21 @@ export function useSavePassport() {
   });
 }
 
+// Narrow, single-field update -- see backend's PhantomPassportService.update_visibility for why
+// this is its own endpoint rather than round-tripping the full PassportUpdateInput.
+export function useUpdatePassportVisibility() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (visibility: PhantomPassport["visibility"]) =>
+      candidateApiClient.patch<PhantomPassport>("/phantom-passport/me/visibility", {
+        visibility,
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["phantom-passport", "me"], data);
+    },
+  });
+}
+
 export function useParseCv() {
   const queryClient = useQueryClient();
   return useMutation({

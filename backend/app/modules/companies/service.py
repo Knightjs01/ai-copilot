@@ -449,6 +449,9 @@ class CompanyService:
                 slug=c.slug,
                 tagline=c.tagline,
                 logo_url=self._media_url(c.slug, "logo", c.logo_storage_key),
+                cover_image_url=self._media_url(
+                    c.slug, "cover-image", c.cover_image_storage_key
+                ),
                 industry=c.industry,
                 employee_count=c.employee_count,
                 headquarters=c.headquarters,

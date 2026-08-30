@@ -138,7 +138,7 @@ export default function SavedJobsPage() {
         </div>
       ))}
 
-      <div className="flex flex-col gap-3 border-t border-border pt-6">
+      <div id="alerts" className="flex scroll-mt-6 flex-col gap-3 border-t border-border pt-6">
         <div className="flex flex-col gap-1">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Job alerts

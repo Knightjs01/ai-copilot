@@ -106,6 +106,7 @@ class CompanyBoardCard(BaseModel):
     slug: str
     tagline: str | None
     logo_url: str | None
+    cover_image_url: str | None
     industry: list[Any]
     employee_count: int | None
     headquarters: str | None
