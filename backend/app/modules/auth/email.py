@@ -17,12 +17,17 @@ _GHOST_MARK_URL = "https://app.phantomhire.io/phantom-ghost-mark-email.png"
 # Signature-only assets -- cropped directly from the approved "Final Phantom Hire Signature.png"
 # design file (not redrawn) so the rendered card is pixel-faithful to it, then served from the
 # frontend's own static assets like every other signature image. See _SIGNATURE_HTML below.
-_SIGNATURE_AVATAR_URL = "https://app.phantomhire.io/phantom-signature-avatar.png"
-_SIGNATURE_SHIP_URL = "https://app.phantomhire.io/phantom-signature-ship.png"
-_SIGNATURE_GHOST_MARK_URL = "https://app.phantomhire.io/phantom-signature-ghost-mark.png"
-_SIGNATURE_CHECK_URL = "https://app.phantomhire.io/phantom-signature-verified-check.png"
-_SIGNATURE_PIN_URL = "https://app.phantomhire.io/phantom-signature-pin.png"
-_SIGNATURE_SPARKLE_URL = "https://app.phantomhire.io/phantom-signature-sparkle.png"
+# "-v2" filenames (not a reused name): the original opaque-background crops were replaced with
+# transparent ones at the same URLs, but several mail providers (Gmail's inbound image proxy in
+# particular) cache remote images by URL for a long time regardless of what the file now contains
+# -- confirmed live, a real device kept showing the old opaque squares after the swap. A new
+# filename is the only reliable way to force every cache to fetch the new file.
+_SIGNATURE_AVATAR_URL = "https://app.phantomhire.io/phantom-signature-avatar-v2.png"
+_SIGNATURE_SHIP_URL = "https://app.phantomhire.io/phantom-signature-ship-v2.png"
+_SIGNATURE_GHOST_MARK_URL = "https://app.phantomhire.io/phantom-signature-ghost-mark-v2.png"
+_SIGNATURE_CHECK_URL = "https://app.phantomhire.io/phantom-signature-verified-check-v2.png"
+_SIGNATURE_PIN_URL = "https://app.phantomhire.io/phantom-signature-pin-v2.png"
+_SIGNATURE_SPARKLE_URL = "https://app.phantomhire.io/phantom-signature-sparkle-v2.png"
 
 # Plain-text fallback only (textContent) -- the styled HTML version lives in _SIGNOFF_HTML below.
 # Appended once, centrally, by BrevoEmailSender.send() -- individual build_*_email functions never
@@ -69,8 +74,9 @@ _SIG_SOFT = "#c9c9dc"
 _SIG_DIVIDER = "#2f2354"
 
 _SIGNATURE_HTML = (
-    f'<table role="presentation" style="margin-top:4px;border-collapse:separate;width:100%;'
-    f'max-width:520px;border:1.5px solid {_SIG_BORDER};border-radius:16px;background:{_SIG_BG};">'
+    f'<table role="presentation" class="phantom-sig-card" style="margin-top:4px;'
+    f'border-collapse:separate;width:100%;max-width:520px;border:1.5px solid {_SIG_BORDER};'
+    f'border-radius:16px;background:{_SIG_BG};">'
     '<tr><td style="padding:20px 22px;">'
     # --- header: avatar, name + verified badge, role, location, small ghost mark -------------
     '<table role="presentation" style="border-collapse:collapse;width:100%;"><tr>'
@@ -98,15 +104,18 @@ _SIGNATURE_HTML = (
     'style="display:inline-block;" /></a></td>'
     "</tr></table>"
     # --- divider ------------------------------------------------------------------------------
-    f'<div style="margin:16px 0;border-top:1px solid {_SIG_DIVIDER};"></div>'
+    f'<div class="phantom-sig-divider" style="margin:16px 0;border-top:1px solid {_SIG_DIVIDER};">'
+    "</div>"
     # --- footer: ship icon + two taglines, separated by a vertical then horizontal divider ----
     '<table role="presentation" style="border-collapse:collapse;width:100%;"><tr>'
     '<td style="width:46px;vertical-align:top;">'
     f'<a href="{_SIGNATURE_SITE_URL}"><img src="{_SIGNATURE_SHIP_URL}" alt="" width="46" height="46" '
     'style="display:block;border-radius:50%;" /></a></td>'
-    f'<td style="width:15px;padding:0 14px;border-left:1px solid {_SIG_DIVIDER};"></td>'
+    f'<td class="phantom-sig-divider" style="width:15px;padding:0 14px;'
+    f'border-left:1px solid {_SIG_DIVIDER};"></td>'
     '<td style="vertical-align:top;font-size:13px;line-height:1.5;">'
-    f'<div style="padding-bottom:10px;border-bottom:1px solid {_SIG_DIVIDER};">'
+    f'<div class="phantom-sig-divider" style="padding-bottom:10px;'
+    f'border-bottom:1px solid {_SIG_DIVIDER};">'
     f'<img src="{_SIGNATURE_SPARKLE_URL}" alt="" width="12" style="vertical-align:middle;margin-right:7px;" />'
     f'<a href="{_SIGNATURE_SITE_URL}" style="text-decoration:none;">'
     f'<span style="color:{_SIG_WHITE};font-weight:700;">{_SIGNATURE_TAGLINE_LEAD}</span> '
@@ -161,21 +170,33 @@ def _plain_text_to_html(body: str) -> str:
 
 
 def _wrap_html(body: str) -> str:
-    # A full document (not just a body fragment) so the color-scheme meta tags below actually
-    # have a <head> to live in -- without them, Android Gmail's automatic "dark mode" content
-    # rewriting was overriding the signature card's authored near-black background with its own
-    # gray, which then clashed with every small icon image cropped to blend with that near-black
-    # (visible mismatched squares around the ghost mark/ship icon -- reported directly by the
-    # user on a real device). The icons themselves were separately fixed to use true transparency
-    # instead of a baked-in matching background, so they float correctly regardless of what
-    # background color a client ends up rendering behind them -- this meta-tag addition is the
-    # second, defense-in-depth layer, telling standards-compliant clients not to re-color this
-    # email at all, since it's deliberately light-mode-authored apart from the one dark card.
+    # A full document (not just a body fragment) so there's a <head> for the tags below to live
+    # in. Two real Android-Gmail-specific problems, both confirmed live on a real device even
+    # after the color-scheme meta tags alone were shipped:
+    #
+    # 1. Gmail's auto dark-mode content rewriting is a separate, proprietary pass from the CSS
+    #    Color Adjustment spec -- the standard `color-scheme`/`supported-color-schemes` meta tags
+    #    (which Apple Mail/Outlook.com do respect) don't stop it. What the wider email-dev
+    #    community has found does stop it is the presence of an actual `@media
+    #    (prefers-color-scheme: dark)` block: Gmail treats that as "this sender already handles
+    #    dark mode" and skips its own auto-conversion of the message entirely. The block below
+    #    reasserts the signature card's exact colors (a real, correct dark-mode declaration, not
+    #    just a decoy) via the phantom-sig-card/phantom-sig-divider classes on the elements that
+    #    were visibly getting recolored.
+    # 2. Several mail providers cache remote images by URL for a long time regardless of what the
+    #    file now contains -- swapping an icon's PNG content at the same URL wasn't enough to
+    #    unstick an already-cached copy. See the "-v2" filename comment on the signature asset
+    #    URL constants above.
     return (
         "<!doctype html><html><head><meta charset=\"utf-8\" />"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />"
         "<meta name=\"color-scheme\" content=\"light\" />"
         "<meta name=\"supported-color-schemes\" content=\"light\" />"
+        "<style>@media (prefers-color-scheme: dark) {"
+        f".phantom-sig-card {{ background:{_SIG_BG} !important; border-color:{_SIG_BORDER} "
+        "!important; }"
+        f".phantom-sig-divider {{ border-color:{_SIG_DIVIDER} !important; }}"
+        "}</style>"
         "</head><body style=\"margin:0;background:#ffffff;\">"
         "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,"
         "sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1a1a2e;\">"
