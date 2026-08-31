@@ -12,18 +12,23 @@ import {
   CheckCircle2,
   ChevronDown,
   MapPin,
+  Send,
   Share2,
   X,
 } from "lucide-react";
 
+import { ApplyDisclosureDialog } from "@/components/candidate/apply-disclosure-dialog";
 import { MatchDetailPanel } from "@/components/shadow/match-detail-panel";
 import { MatchScoreRing } from "@/components/shadow/match-score-ring";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { API_URL } from "@/lib/api-client";
+import { API_URL, ApiError } from "@/lib/api-client";
 import { companyAvatar } from "@/lib/company-avatar";
 import { formatSalary } from "@/lib/format";
+import { useApplyToShadowJob } from "@/lib/queries/shadow-jobs";
 import { EMPLOYMENT_TYPE_LABEL, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
+import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import type { ShadowJobBoardListing, ShadowJobMatch } from "@/lib/types";
 
 const MAX_HIGHLIGHTS = 3;
@@ -91,10 +96,34 @@ function CompanyLogo({
 
 export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: JobMatchCardProps) {
   const [expanded, setExpanded] = React.useState(false);
+  const [applied, setApplied] = React.useState(false);
+  const [applyError, setApplyError] = React.useState<string | null>(null);
+  const [disclosureOpen, setDisclosureOpen] = React.useState(false);
+  const themeScopeContainer = useThemeScopeContainer();
+  const applyMutation = useApplyToShadowJob(job.id);
   const salary = formatSalary(job.salary_min, job.salary_max);
   const postedAgo = job.published_at
     ? formatDistanceToNow(new Date(job.published_at), { addSuffix: true })
     : null;
+
+  const handleConfirmApply = async () => {
+    try {
+      await applyMutation.mutateAsync();
+      setDisclosureOpen(false);
+      setApplied(true);
+    } catch (err) {
+      setDisclosureOpen(false);
+      if (err instanceof ApiError && err.status === 400) {
+        // Covers both "no Passport yet" and "Passport not approved" -- the backend's own detail
+        // message already says which, no need to guess client-side.
+        setApplyError(err.detail);
+      } else if (err instanceof ApiError && err.status === 409) {
+        setApplyError("You've already applied to this role.");
+      } else {
+        setApplyError("Couldn't submit your application. Try again.");
+      }
+    }
+  };
 
   if (variant === "compact") {
     return (
@@ -237,37 +266,49 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
           )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-            <button
+            <Button
               type="button"
+              variant="brand"
+              size="sm"
               onClick={saveAction.onToggle}
               disabled={saveAction.pending}
-              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
             >
               {saveAction.saved ? (
-                <BookmarkCheck className="h-3.5 w-3.5 text-brand" />
+                <BookmarkCheck className="h-3.5 w-3.5" />
               ) : (
                 <Bookmark className="h-3.5 w-3.5" />
               )}
               {saveAction.saved ? "Saved" : "Save"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="success"
+              size="sm"
+              onClick={() => setDisclosureOpen(true)}
+              disabled={applied || applyMutation.isPending}
+            >
+              {applied ? (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              {applied ? "Applied" : applyMutation.isPending ? "Applying…" : "Apply"}
+            </Button>
+            {onDismiss && (
+              <Button type="button" variant="danger" size="sm" onClick={onDismiss}>
+                <X className="h-3.5 w-3.5" />
+                Not interested
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => void shareJob(job.id, job.title, job.company_name)}
-              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
             >
               <Share2 className="h-3.5 w-3.5" />
               Share
-            </button>
-            {onDismiss && (
-              <button
-                type="button"
-                onClick={onDismiss}
-                className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary"
-              >
-                <X className="h-3.5 w-3.5" />
-                Not interested
-              </button>
-            )}
+            </Button>
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
@@ -277,6 +318,8 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
               <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
             </button>
           </div>
+
+          {applyError && <p className="text-xs font-medium text-danger">{applyError}</p>}
         </CardContent>
       </Card>
       {expanded && (
@@ -284,6 +327,13 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
           <MatchDetailPanel match={match} />
         </div>
       )}
+      <ApplyDisclosureDialog
+        open={disclosureOpen}
+        onOpenChange={setDisclosureOpen}
+        onConfirm={handleConfirmApply}
+        isSubmitting={applyMutation.isPending}
+        container={themeScopeContainer}
+      />
     </div>
   );
 }

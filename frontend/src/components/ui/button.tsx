@@ -15,6 +15,7 @@ const buttonVariants = cva(
           "bg-card text-foreground border border-border shadow-sm hover:bg-secondary",
         ghost: "text-foreground hover:bg-secondary",
         danger: "bg-danger text-danger-foreground hover:bg-danger/90",
+        success: "bg-success text-success-foreground hover:bg-success/90",
         brand: "bg-brand text-brand-foreground hover:bg-brand/90",
         link: "text-foreground underline-offset-4 hover:underline p-0 h-auto rounded-none",
       },
