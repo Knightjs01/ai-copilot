@@ -14,20 +14,19 @@ _BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 _LOGO_URL = "https://app.phantomhire.io/phantom-hire-logo-new.png"
 _GHOST_MARK_URL = "https://app.phantomhire.io/phantom-ghost-mark-email.png"
 
-# Signature-only assets -- cropped directly from the approved "Final Phantom Hire Signature.png"
-# design file (not redrawn) so the rendered card is pixel-faithful to it, then served from the
-# frontend's own static assets like every other signature image. See _SIGNATURE_HTML below.
-# "-v2" filenames (not a reused name): the original opaque-background crops were replaced with
-# transparent ones at the same URLs, but several mail providers (Gmail's inbound image proxy in
-# particular) cache remote images by URL for a long time regardless of what the file now contains
-# -- confirmed live, a real device kept showing the old opaque squares after the swap. A new
-# filename is the only reliable way to force every cache to fetch the new file.
-_SIGNATURE_AVATAR_URL = "https://app.phantomhire.io/phantom-signature-avatar-v2.png"
-_SIGNATURE_SHIP_URL = "https://app.phantomhire.io/phantom-signature-ship-v2.png"
-_SIGNATURE_GHOST_MARK_URL = "https://app.phantomhire.io/phantom-signature-ghost-mark-v2.png"
-_SIGNATURE_CHECK_URL = "https://app.phantomhire.io/phantom-signature-verified-check-v2.png"
-_SIGNATURE_PIN_URL = "https://app.phantomhire.io/phantom-signature-pin-v2.png"
-_SIGNATURE_SPARKLE_URL = "https://app.phantomhire.io/phantom-signature-sparkle-v2.png"
+# Signature card, as one flat image -- not reconstructed as live HTML/CSS. That was tried first
+# (a table-based card with separately-cropped icon images) and broke on a real device: mail
+# clients' own automatic dark-mode content rewriting recolors CSS backgrounds/borders it decides
+# it owns, independently of the icon images sitting on top of them, so the card and its icons
+# could end up mismatched (or, once the icons were fixed, the card background just wouldn't
+# reliably render the authored near-black at all -- confirmed on a second live test after also
+# adding an @media (prefers-color-scheme: dark) override, the usual fix for that, which Gmail
+# still ignored). A raster image has no CSS for any client to rewrite, so this is the reliable
+# version: one image, one link. The trade-off, accepted directly by the user after seeing the
+# HTML version's real failures: no separate link per line, and the text inside isn't selectable
+# or screen-readable -- alt text on the image covers the accessibility gap instead.
+_SIGNATURE_CARD_URL = "https://app.phantomhire.io/phantom-signature-card-v1.jpg"
+_SIGNATURE_CARD_ALT = "Casper - Head of Mischief, Phantom Hire (London) - Verified"
 
 # Plain-text fallback only (textContent) -- the styled HTML version lives in _SIGNOFF_HTML below.
 # Appended once, centrally, by BrevoEmailSender.send() -- individual build_*_email functions never
@@ -43,91 +42,13 @@ _SIGNOFF_HTML = (
     "</div>"
 )
 
-# Matches the approved dark/gold "Final Phantom Hire Signature.png" design exactly -- name,
-# verified badge, role, location, tagline -- rather than the earlier light/cream card. Kept as
-# plain constants rather than generated at send time: this rarely changes, and there's no live
-# data source to fetch it from. The avatar/ship/ghost-mark/icon images are direct crops of that
-# design file (see the URL constants above), not redrawn, so the rendered card is pixel-faithful
-# to the approved artwork.
-_SIGNATURE_NAME = "Casper"
-_SIGNATURE_TITLE = "Head of Mischief,"
-_SIGNATURE_COMPANY = "Phantom Hire"
-_SIGNATURE_LOCATION = "London"
-_SIGNATURE_TAGLINE_LEAD = "Don't miss the Ghost Ship,"
-_SIGNATURE_TAGLINE_LINK = "join Phantom Hire today"
-_SIGNATURE_TAGLINE_2_LEAD = "The"
-_SIGNATURE_TAGLINE_2_HIGHLIGHT = "Anonymous,"
-_SIGNATURE_TAGLINE_2_TAIL = "Private Talent Marketplace"
 _SIGNATURE_SITE_URL = "https://app.phantomhire.io"
 
-# Palette sampled directly from the approved design file -- near-black card, soft gold
-# verification, near-white body text. Border deliberately muted to gray rather than the sampled
-# violet: a full-saturation purple outline competed visually with the purple text accents inside
-# the card, making the whole thing harder to scan at a glance (flagged directly by the user after
-# seeing it live).
-_SIG_BG = "#00030f"
-_SIG_BORDER = "#3a3a44"
-_SIG_PURPLE = "#8a58f0"
-_SIG_GOLD = "#e3c687"
-_SIG_WHITE = "#ffffff"
-_SIG_SOFT = "#c9c9dc"
-_SIG_DIVIDER = "#2f2354"
-
 _SIGNATURE_HTML = (
-    f'<table role="presentation" class="phantom-sig-card" style="margin-top:4px;'
-    f'border-collapse:separate;width:100%;max-width:520px;border:1.5px solid {_SIG_BORDER};'
-    f'border-radius:16px;background:{_SIG_BG};">'
-    '<tr><td style="padding:20px 22px;">'
-    # --- header: avatar, name + verified badge, role, location, small ghost mark -------------
-    '<table role="presentation" style="border-collapse:collapse;width:100%;"><tr>'
-    '<td style="width:58px;padding-right:14px;vertical-align:top;">'
-    f'<a href="{_SIGNATURE_SITE_URL}">'
-    f'<img src="{_SIGNATURE_AVATAR_URL}" alt="{_SIGNATURE_NAME}" width="52" height="52" '
-    'style="display:block;border-radius:50%;" /></a></td>'
-    '<td style="vertical-align:top;font-size:13px;line-height:1.6;">'
-    f'<span style="color:{_SIG_WHITE};font-weight:700;font-size:17px;">{_SIGNATURE_NAME}</span> '
-    f'<span style="display:inline-block;vertical-align:middle;border:1px solid {_SIG_GOLD};'
-    'border-radius:20px;padding:2px 10px 2px 6px;">'
-    f'<img src="{_SIGNATURE_CHECK_URL}" alt="" width="11" '
-    'style="vertical-align:middle;margin-right:4px;" />'
-    f'<span style="color:{_SIG_GOLD};font-size:9px;font-weight:700;letter-spacing:0.06em;'
-    f'vertical-align:middle;">VERIFIED</span></span>'
-    f'<div style="margin-top:5px;">'
-    f'<span style="color:{_SIG_PURPLE};font-weight:700;">{_SIGNATURE_TITLE}</span> '
-    f'<span style="color:{_SIG_WHITE};">{_SIGNATURE_COMPANY}</span></div>'
-    f'<div style="margin-top:4px;color:{_SIG_SOFT};">'
-    f'<img src="{_SIGNATURE_PIN_URL}" alt="" width="9" style="vertical-align:middle;margin-right:5px;" />'
-    f"{_SIGNATURE_LOCATION}</div>"
-    "</td>"
-    '<td style="width:26px;vertical-align:top;text-align:right;">'
-    f'<a href="{_SIGNATURE_SITE_URL}"><img src="{_SIGNATURE_GHOST_MARK_URL}" alt="" width="22" '
-    'style="display:inline-block;" /></a></td>'
-    "</tr></table>"
-    # --- divider ------------------------------------------------------------------------------
-    f'<div class="phantom-sig-divider" style="margin:16px 0;border-top:1px solid {_SIG_DIVIDER};">'
-    "</div>"
-    # --- footer: ship icon + two taglines, separated by a vertical then horizontal divider ----
-    '<table role="presentation" style="border-collapse:collapse;width:100%;"><tr>'
-    '<td style="width:46px;vertical-align:top;">'
-    f'<a href="{_SIGNATURE_SITE_URL}"><img src="{_SIGNATURE_SHIP_URL}" alt="" width="46" height="46" '
-    'style="display:block;border-radius:50%;" /></a></td>'
-    f'<td class="phantom-sig-divider" style="width:15px;padding:0 14px;'
-    f'border-left:1px solid {_SIG_DIVIDER};"></td>'
-    '<td style="vertical-align:top;font-size:13px;line-height:1.5;">'
-    f'<div class="phantom-sig-divider" style="padding-bottom:10px;'
-    f'border-bottom:1px solid {_SIG_DIVIDER};">'
-    f'<img src="{_SIGNATURE_SPARKLE_URL}" alt="" width="12" style="vertical-align:middle;margin-right:7px;" />'
-    f'<a href="{_SIGNATURE_SITE_URL}" style="text-decoration:none;">'
-    f'<span style="color:{_SIG_WHITE};font-weight:700;">{_SIGNATURE_TAGLINE_LEAD}</span> '
-    f'<span style="color:{_SIG_PURPLE};font-weight:700;">{_SIGNATURE_TAGLINE_LINK}</span></a></div>'
-    '<div style="padding-top:10px;">'
-    f'<img src="{_SIGNATURE_SPARKLE_URL}" alt="" width="12" style="vertical-align:middle;margin-right:7px;" />'
-    f'<span style="color:{_SIG_WHITE};">{_SIGNATURE_TAGLINE_2_LEAD} '
-    f'<span style="color:{_SIG_PURPLE};font-weight:600;">{_SIGNATURE_TAGLINE_2_HIGHLIGHT}</span> '
-    f"{_SIGNATURE_TAGLINE_2_TAIL}</span></div>"
-    "</td>"
-    "</tr></table>"
-    "</td></tr></table>"
+    f'<a href="{_SIGNATURE_SITE_URL}" style="display:block;max-width:480px;margin-top:4px;">'
+    f'<img src="{_SIGNATURE_CARD_URL}" alt="{_SIGNATURE_CARD_ALT}" width="480" '
+    'style="display:block;width:100%;max-width:480px;height:auto;border:0;" />'
+    "</a>"
 )
 
 
@@ -170,33 +91,19 @@ def _plain_text_to_html(body: str) -> str:
 
 
 def _wrap_html(body: str) -> str:
-    # A full document (not just a body fragment) so there's a <head> for the tags below to live
-    # in. Two real Android-Gmail-specific problems, both confirmed live on a real device even
-    # after the color-scheme meta tags alone were shipped:
-    #
-    # 1. Gmail's auto dark-mode content rewriting is a separate, proprietary pass from the CSS
-    #    Color Adjustment spec -- the standard `color-scheme`/`supported-color-schemes` meta tags
-    #    (which Apple Mail/Outlook.com do respect) don't stop it. What the wider email-dev
-    #    community has found does stop it is the presence of an actual `@media
-    #    (prefers-color-scheme: dark)` block: Gmail treats that as "this sender already handles
-    #    dark mode" and skips its own auto-conversion of the message entirely. The block below
-    #    reasserts the signature card's exact colors (a real, correct dark-mode declaration, not
-    #    just a decoy) via the phantom-sig-card/phantom-sig-divider classes on the elements that
-    #    were visibly getting recolored.
-    # 2. Several mail providers cache remote images by URL for a long time regardless of what the
-    #    file now contains -- swapping an icon's PNG content at the same URL wasn't enough to
-    #    unstick an already-cached copy. See the "-v2" filename comment on the signature asset
-    #    URL constants above.
+    # A full document (not just a body fragment) so there's a real <head> for the color-scheme
+    # meta tags -- without them, Android Gmail's automatic dark-mode content rewriting was
+    # recoloring parts of this email that have no explicit background set (relying on the client's
+    # default white). The signature card itself is a flat image (see _SIGNATURE_HTML) rather than
+    # a live HTML/CSS reconstruction specifically because that auto-recoloring pass proved
+    # impossible to reliably suppress for CSS-styled content -- even a real @media
+    # (prefers-color-scheme: dark) override (the standard fix, confirmed live) didn't stop it. A
+    # raster image has no CSS for any client to rewrite, so it renders identically everywhere.
     return (
         "<!doctype html><html><head><meta charset=\"utf-8\" />"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />"
         "<meta name=\"color-scheme\" content=\"light\" />"
         "<meta name=\"supported-color-schemes\" content=\"light\" />"
-        "<style>@media (prefers-color-scheme: dark) {"
-        f".phantom-sig-card {{ background:{_SIG_BG} !important; border-color:{_SIG_BORDER} "
-        "!important; }"
-        f".phantom-sig-divider {{ border-color:{_SIG_DIVIDER} !important; }}"
-        "}</style>"
         "</head><body style=\"margin:0;background:#ffffff;\">"
         "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,"
         "sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1a1a2e;\">"
