@@ -20,10 +20,12 @@ import type {
   SummaryImprovementResponse,
 } from "@/lib/types";
 
-export function useMyPassport() {
+export function useMyPassport(options?: { enabled?: boolean }) {
+  const { enabled = true } = options ?? {};
   return useQuery({
     queryKey: ["phantom-passport", "me"],
     queryFn: () => fetchOrNull(() => candidateApiClient.get<PhantomPassport>("/phantom-passport/me")),
+    enabled,
   });
 }
 

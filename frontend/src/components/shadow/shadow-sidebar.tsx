@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 import { useMyMessageThreads } from "@/lib/queries/messages";
 import { useMyPassport, useUpdatePassportVisibility } from "@/lib/queries/phantom-passport";
+import { useMyIntroductionRequests } from "@/lib/queries/shadow-introductions";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -35,28 +36,31 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-// Same route/icon/order list as the mobile nav bar and command palette this replaces — no new IA
-// decision here, just promoted from a bottom bar into a sidebar.
+// Companies (a browse surface) sits with Discover/For You; Introductions (inbound communication)
+// sits right before Messages, since both carry an unread-style badge (see NavLinks below).
+// Originally this list only had the routes promoted from the old mobile nav bar/command palette;
+// Introductions and Companies were moved in from Private Tools since they're everyday surfaces a
+// candidate needs quick access to, not passport-adjacent settings.
 const MAIN_NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/shadow/home", icon: Home },
   { label: "Discover", href: "/shadow", icon: Compass },
   { label: "For You", href: "/shadow/for-you", icon: Sparkles },
+  { label: "Companies", href: "/shadow/companies", icon: Building2 },
   { label: "Applications", href: "/shadow/applications", icon: Briefcase },
+  { label: "Introductions", href: "/shadow/introductions", icon: MessageCircle },
   { label: "Messages", href: "/shadow/messages", icon: MessageSquare },
   { label: "Interviews", href: "/shadow/interviews", icon: CalendarClock },
 ];
 
-// "Private Tools" — Passport and its related surfaces. Companies is real (Phase 1.5's
-// GET /companies/board, now with its own page); Alerts is a real, already-built feature
-// (job_alerts) that previously only lived inside Saved Jobs with no nav entry of its own — this
-// links straight to that same page's #alerts section rather than duplicating a second page for
-// it. Deliberately no "People" item here or anywhere else in this sidebar: Shadow has no concept
-// of a browsable, named candidate directory, and building one would contradict the whole
-// anonymity model (candidates are only ever a callsign until a Reveal Request is approved).
+// "Private Tools" — Passport and its directly related surfaces only. Alerts is a real,
+// already-built feature (job_alerts) that previously only lived inside Saved Jobs with no nav
+// entry of its own — this links straight to that same page's #alerts section rather than
+// duplicating a second page for it. Deliberately no "People" item here or anywhere else in this
+// sidebar: Shadow has no concept of a browsable, named candidate directory, and building one
+// would contradict the whole anonymity model (candidates are only ever a callsign until a Reveal
+// Request is approved).
 const PRIVATE_TOOL_ITEMS: NavItem[] = [
   { label: "My Passport", href: "/shadow/passport", icon: IdCard },
-  { label: "Introductions", href: "/shadow/introductions", icon: MessageCircle },
-  { label: "Companies", href: "/shadow/companies", icon: Building2 },
   { label: "Saved Jobs", href: "/shadow/saved-jobs", icon: Bookmark },
   { label: "Alerts", href: "/shadow/saved-jobs#alerts", icon: Bell },
 ];
@@ -128,6 +132,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { candidate } = useCandidateAuth();
   const { data: threads } = useMyMessageThreads({ enabled: !!candidate });
   const unreadCount = threads?.reduce((sum, t) => sum + t.unread_count, 0) ?? 0;
+  const { data: introRequests } = useMyIntroductionRequests();
+  const pendingIntroCount = introRequests?.filter((r) => r.status === "pending").length ?? 0;
 
   const isActive = (href: string) => {
     const path = href.split("#")[0]!;
@@ -142,7 +148,13 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             key={item.href}
             item={item}
             isActive={isActive(item.href)}
-            badge={item.href === "/shadow/messages" ? unreadCount : undefined}
+            badge={
+              item.href === "/shadow/messages"
+                ? unreadCount
+                : item.href === "/shadow/introductions"
+                  ? pendingIntroCount
+                  : undefined
+            }
             onNavigate={onNavigate}
           />
         ))}

@@ -94,7 +94,13 @@ export default function ShadowForYouPage() {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">For you</h1>
         <p className="text-sm text-muted-foreground">
-          Open roles ranked by how well they match your Phantom Passport.
+          The same open roles as Discover, ranked by how well they match your Phantom Passport.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Prefer to browse everything yourself?{" "}
+          <Link href="/shadow" className="font-medium text-brand hover:underline">
+            See Discover.
+          </Link>
         </p>
       </div>
 
@@ -110,7 +116,12 @@ export default function ShadowForYouPage() {
                 {passport ? "Your Passport isn't approved yet" : "You haven't built a Passport yet"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                Build and approve your Phantom Passport to unlock AI-matched roles.
+                Build and approve your Phantom Passport to unlock AI-matched roles. In the
+                meantime, browse every open role on{" "}
+                <Link href="/shadow" className="font-medium text-brand hover:underline">
+                  Discover
+                </Link>
+                .
               </p>
             </div>
             <Button asChild variant="brand">

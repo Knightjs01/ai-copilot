@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Briefcase, SearchX } from "lucide-react";
 
 import { ShadowAppShell } from "@/components/shadow/shadow-app-shell";
@@ -11,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 import { useCreateJobAlert } from "@/lib/queries/job-alerts";
 import { useBatchJobMatches, useNlJobSearch } from "@/lib/queries/passport-matching";
+import { useMyPassport } from "@/lib/queries/phantom-passport";
 import { useSaveJob, useSavedJobs, useUnsaveJob } from "@/lib/queries/saved-jobs";
 import { useShadowBoard } from "@/lib/queries/shadow-jobs";
 import { useThemeScopeContainer } from "@/lib/theme-scope-context";
@@ -25,6 +27,8 @@ export default function ShadowBoardPage() {
   const [location, setLocation] = React.useState("");
   const themeScopeContainer = useThemeScopeContainer();
   const { candidate } = useCandidateAuth();
+  const { data: passport } = useMyPassport({ enabled: !!candidate });
+  const passportApproved = passport?.current_version_number != null;
 
   const { data: jobs, isLoading } = useShadowBoard({
     remote_preference: remotePreference === "all" ? undefined : remotePreference,
@@ -109,8 +113,33 @@ export default function ShadowBoardPage() {
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground">
             Apply with your Phantom Passport. Companies see your skills and experience, not your
-            name, until you choose to reveal it.
+            name, until you choose to reveal it. Every open role is listed here, unranked — filter
+            or search to narrow it down.
           </p>
+          {!candidate ? (
+            <p className="text-sm text-muted-foreground">
+              Want these roles ranked by fit?{" "}
+              <Link href="/shadow/login" className="font-medium text-brand hover:underline">
+                Log in and build a Phantom Passport
+              </Link>{" "}
+              to see them on For You.
+            </p>
+          ) : !passportApproved ? (
+            <p className="text-sm text-muted-foreground">
+              <Link href="/shadow/passport" className="font-medium text-brand hover:underline">
+                Finish your Phantom Passport
+              </Link>{" "}
+              to unlock a ranked shortlist of these same roles.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              See these same roles{" "}
+              <Link href="/shadow/for-you" className="font-medium text-brand hover:underline">
+                ranked by fit for you on For You
+              </Link>
+              .
+            </p>
+          )}
         </div>
 
         <div className="mb-6">

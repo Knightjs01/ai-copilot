@@ -34,11 +34,14 @@ export function useCompanyIntroductionRequests(jobId: string | undefined) {
 
 // --- Candidate side ---------------------------------------------------------------------------
 
+const POLL_INTERVAL_MS = 20000;
+
 export function useMyIntroductionRequests() {
   return useQuery({
     queryKey: ["introductions", "my-requests"],
     queryFn: () =>
       candidateApiClient.get<CandidateIntroductionRequestRead[]>("/introductions/my-requests"),
+    refetchInterval: POLL_INTERVAL_MS,
   });
 }
 
