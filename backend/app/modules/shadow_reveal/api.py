@@ -17,7 +17,7 @@ from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
-from app.modules.shadow_reveal.dependencies import require_shadow_job_access
+from app.modules.shadow_jobs.dependencies import require_shadow_job_access
 from app.modules.shadow_reveal.schemas import (
     CandidateRevealHistoryItem,
     CandidateRevealRequestRead,

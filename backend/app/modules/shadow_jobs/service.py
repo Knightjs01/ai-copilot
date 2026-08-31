@@ -137,9 +137,21 @@ class ShadowJobService:
         return job
 
     async def list_jobs_for_company(
-        self, *, company_id: uuid.UUID, limit: int = 50, offset: int = 0
+        self,
+        *,
+        company_id: uuid.UUID,
+        limit: int = 50,
+        offset: int = 0,
+        accessible_project_ids: list[uuid.UUID] | None = None,
+        actor_id: uuid.UUID | None = None,
     ) -> list[ShadowJob]:
-        return await self._jobs.list_by_company(company_id, limit=limit, offset=offset)
+        return await self._jobs.list_by_company(
+            company_id,
+            limit=limit,
+            offset=offset,
+            accessible_project_ids=accessible_project_ids,
+            actor_id=actor_id,
+        )
 
     async def update_job(
         self, *, actor: User, job_id: uuid.UUID, body: ShadowJobUpdate
@@ -362,11 +374,18 @@ class ShadowJobService:
             target_id=application.id,
         )
 
-    async def list_applicants_for_company(self, *, actor: User) -> list[ShadowProfileCompanyWide]:
+    async def list_applicants_for_company(
+        self, *, actor: User, accessible_project_ids: list[uuid.UUID] | None = None
+    ) -> list[ShadowProfileCompanyWide]:
         """Every applicant across every one of this company's Shadow Jobs, not scoped to one job
         -- powers the centralised cross-project Candidates/Pipeline view. Mirrors list_applicants'
         bulk-lookup shape exactly, just seeded from a company-wide application list and joining
-        job title/project per row since the job isn't already known from the URL."""
+        job title/project per row since the job isn't already known from the URL.
+
+        accessible_project_ids (None for Owner/Admin, a Member's accessible project ids
+        otherwise) applies the same resource-level scoping list_jobs_for_company does -- an
+        applicant is only included if their job is linked to one of those projects, or is a
+        project-less job the actor themselves created."""
         applications = await self._applications.list_by_company_id(actor.company_id)
         application_ids = [a.id for a in applications]
         unread_counts = await self._unread_counts_for_applications(application_ids)
@@ -386,6 +405,11 @@ class ShadowJobService:
         for a in applications:
             job = jobs.get(a.shadow_job_id)
             if job is None:
+                continue
+            if accessible_project_ids is not None and not (
+                job.project_id in accessible_project_ids
+                or (job.project_id is None and job.created_by_id == actor.id)
+            ):
                 continue
             profile = await self._to_shadow_profile(
                 a,

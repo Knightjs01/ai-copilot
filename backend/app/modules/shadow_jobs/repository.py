@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.shadow_jobs.models import ShadowApplication, ShadowJob, ShadowJobStatus
@@ -63,11 +63,30 @@ class ShadowJobRepository:
         await self._session.execute(delete(ShadowJob).where(ShadowJob.id == job_id))
 
     async def list_by_company(
-        self, company_id: uuid.UUID, *, limit: int = 50, offset: int = 0
+        self,
+        company_id: uuid.UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        accessible_project_ids: list[uuid.UUID] | None = None,
+        actor_id: uuid.UUID | None = None,
     ) -> list[ShadowJob]:
+        """accessible_project_ids restricts the result to jobs linked to one of those projects,
+        plus project-less jobs actor_id itself created -- the API layer supplies both for a
+        Member-role actor (their accessible project ids) and leaves both None for Owner/Admin,
+        mirroring projects.api.list_projects' resource-level scoping."""
+
+        conditions = [ShadowJob.company_id == company_id, ShadowJob.deleted_at.is_(None)]
+        if accessible_project_ids is not None:
+            conditions.append(
+                or_(
+                    ShadowJob.project_id.in_(accessible_project_ids),
+                    and_(ShadowJob.project_id.is_(None), ShadowJob.created_by_id == actor_id),
+                )
+            )
         result = await self._session.execute(
             select(ShadowJob)
-            .where(ShadowJob.company_id == company_id, ShadowJob.deleted_at.is_(None))
+            .where(*conditions)
             .order_by(ShadowJob.created_at.desc())
             .limit(limit)
             .offset(offset)

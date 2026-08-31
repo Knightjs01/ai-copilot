@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.modules.audit.schemas import AuditEntryRead
+from app.modules.auth.authorization import actor_has_org_wide_access
 from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_model,
@@ -22,6 +23,9 @@ from app.modules.candidate_auth.dependencies import (
 )
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.dependencies import require_verified_domain
+from app.modules.projects.dependencies import require_project_access
+from app.modules.projects.repository import ProjectMemberRepository
+from app.modules.shadow_jobs.dependencies import require_shadow_job_access
 from app.modules.shadow_jobs.exceptions import ShadowJobNotFoundError
 from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.repository import ShadowJobRepository
@@ -80,9 +84,22 @@ async def list_my_company_jobs(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[ShadowJobRead]:
+    # Owner/Admin see every company job; a Member only sees jobs linked to a project they've
+    # been added to, or a project-less job they created themselves -- resource-level scoping,
+    # not just the role check above. Mirrors projects.api.list_projects exactly.
+    accessible_project_ids: list[uuid.UUID] | None = None
+    if not await actor_has_org_wide_access(session, actor.id):
+        accessible_project_ids = await ProjectMemberRepository(session).list_project_ids_for_user(
+            actor.id
+        )
+
     service = ShadowJobService(session)
     jobs = await service.list_jobs_for_company(
-        company_id=actor.company_id, limit=limit, offset=offset
+        company_id=actor.company_id,
+        limit=limit,
+        offset=offset,
+        accessible_project_ids=accessible_project_ids,
+        actor_id=actor.id,
     )
     return [await _to_job_read(service, job) for job in jobs]
 
@@ -92,6 +109,7 @@ async def get_my_company_job(
     job_id: uuid.UUID,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
     service = ShadowJobService(session)
@@ -105,6 +123,7 @@ async def update_job(
     body: ShadowJobUpdate,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
     service = ShadowJobService(session)
@@ -117,6 +136,7 @@ async def publish_job(
     job_id: uuid.UUID,
     actor: User = Depends(require_verified_domain),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
     # Submits into the platform-admin review queue -- it does not go live yet (see
@@ -131,6 +151,7 @@ async def close_job(
     job_id: uuid.UUID,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
     service = ShadowJobService(session)
@@ -143,6 +164,7 @@ async def list_applicants(
     job_id: uuid.UUID,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> list[ShadowProfile]:
     return await ShadowJobService(session).list_applicants(
@@ -156,6 +178,7 @@ async def get_applicant(
     application_id: uuid.UUID,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowProfile:
     return await ShadowJobService(session).get_applicant(
@@ -171,6 +194,7 @@ async def list_applicant_activity(
     application_id: uuid.UUID,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> list[AuditEntryRead]:
     return await ShadowJobService(session).list_applicant_activity(
@@ -184,7 +208,15 @@ async def list_all_applicants_for_company(
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> list[ShadowProfileCompanyWide]:
-    return await ShadowJobService(session).list_applicants_for_company(actor=actor)
+    # Same resource-level scoping as list_my_company_jobs -- see its comment.
+    accessible_project_ids: list[uuid.UUID] | None = None
+    if not await actor_has_org_wide_access(session, actor.id):
+        accessible_project_ids = await ProjectMemberRepository(session).list_project_ids_for_user(
+            actor.id
+        )
+    return await ShadowJobService(session).list_applicants_for_company(
+        actor=actor, accessible_project_ids=accessible_project_ids
+    )
 
 
 @router.post(
@@ -197,6 +229,7 @@ async def add_applicant_from_talent_pool(
     body: AddFromTalentPoolRequest,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> ShadowApplicationRead:
@@ -212,6 +245,7 @@ async def update_applicant_pipeline_stage(
     body: ShadowApplicantPipelineUpdate,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowProfile:
     return await ShadowJobService(session).update_applicant_pipeline_stage(
@@ -228,6 +262,7 @@ async def mark_applicant_viewed(
     application_id: uuid.UUID,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowProfile:
     return await ShadowJobService(session).mark_applicant_viewed(
@@ -327,6 +362,7 @@ async def get_project_shadow_job(
     project_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_VIEW)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
     service = ShadowJobService(session)
@@ -342,6 +378,7 @@ async def publish_project_to_shadow(
     body: ShadowJobCreate,
     actor: User = Depends(require_verified_domain),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_CREATE)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ShadowJobRead:
     # Submits into the platform-admin review queue -- see publish_job's comment above.

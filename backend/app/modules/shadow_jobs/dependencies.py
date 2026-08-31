@@ -16,10 +16,11 @@ async def require_shadow_job_access(
     session: AsyncSession = Depends(get_tenant_db),
 ) -> None:
     """Resource-level check on top of require_permission's role check -- mirrors
-    candidates.dependencies.require_candidate_access. Owner/Admin keep company-wide access; a
-    Member must either be a ProjectMember of the job's linked ATS project, or -- for a Shadow-only
-    job with no linked project (ShadowJob.project_id is nullable) -- must have created the job
-    themselves, since there's no project to check membership against."""
+    projects.dependencies.require_project_access / candidates.dependencies.require_candidate_access.
+    Owner/TA Admin keep company-wide access; a Member must either be a ProjectMember of the job's
+    linked ATS project, or -- for a Shadow-only job with no linked project (ShadowJob.project_id
+    is nullable) -- must have created the job themselves, since there's no project to check
+    membership against."""
 
     if await actor_has_org_wide_access(session, actor.id):
         return
