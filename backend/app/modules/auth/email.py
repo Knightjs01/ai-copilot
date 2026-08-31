@@ -14,6 +14,16 @@ _BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 _LOGO_URL = "https://app.phantomhire.io/phantom-hire-logo-new.png"
 _GHOST_MARK_URL = "https://app.phantomhire.io/phantom-ghost-mark-email.png"
 
+# Signature-only assets -- cropped directly from the approved "Final Phantom Hire Signature.png"
+# design file (not redrawn) so the rendered card is pixel-faithful to it, then served from the
+# frontend's own static assets like every other signature image. See _SIGNATURE_HTML below.
+_SIGNATURE_AVATAR_URL = "https://app.phantomhire.io/phantom-signature-avatar.png"
+_SIGNATURE_SHIP_URL = "https://app.phantomhire.io/phantom-signature-ship.png"
+_SIGNATURE_GHOST_MARK_URL = "https://app.phantomhire.io/phantom-signature-ghost-mark.png"
+_SIGNATURE_CHECK_URL = "https://app.phantomhire.io/phantom-signature-verified-check.png"
+_SIGNATURE_PIN_URL = "https://app.phantomhire.io/phantom-signature-pin.png"
+_SIGNATURE_SPARKLE_URL = "https://app.phantomhire.io/phantom-signature-sparkle.png"
+
 # Plain-text fallback only (textContent) -- the styled HTML version lives in _SIGNOFF_HTML below.
 # Appended once, centrally, by BrevoEmailSender.send() -- individual build_*_email functions never
 # include it themselves, so there's exactly one place that composes the closing + signature.
@@ -28,53 +38,83 @@ _SIGNOFF_HTML = (
     "</div>"
 )
 
-# Mirrors the sender's own configured Gravatar signature card (gravatar.com/profile/
-# email-signature) -- name, title, location, avatar, profile link -- styled as a Passport-style
-# "Verified" card, the same gold treatment as the product's own flagship visual (the real Phantom
-# Passport ID card), so Casper's signature reads as part of the same product. Kept as plain
-# constants rather than fetched from Gravatar at send time: this rarely changes, and a live fetch
-# would add a third-party network dependency to every outbound email for no real benefit. Update
-# these values (and re-verify the avatar hash if the address ever changes) to keep it in sync with
-# the Gravatar profile.
+# Matches the approved dark/gold "Final Phantom Hire Signature.png" design exactly -- name,
+# verified badge, role, location, tagline -- rather than the earlier light/cream card. Kept as
+# plain constants rather than generated at send time: this rarely changes, and there's no live
+# data source to fetch it from. The avatar/ship/ghost-mark/icon images are direct crops of that
+# design file (see the URL constants above), not redrawn, so the rendered card is pixel-faithful
+# to the approved artwork.
 _SIGNATURE_NAME = "Casper"
-_SIGNATURE_TITLE = "Chief Mischief Officer, Phantom Hire"
+_SIGNATURE_TITLE = "Head of Mischief,"
+_SIGNATURE_COMPANY = "Phantom Hire"
 _SIGNATURE_LOCATION = "London"
-_SIGNATURE_TAGLINE = "Don't miss the Ghost Ship, Join Phantom today"
-_SIGNATURE_PROFILE_URL = "https://gravatar.com/impossiblyteenage5cdeb598ae"
+_SIGNATURE_TAGLINE_LEAD = "Don't miss the Ghost Ship,"
+_SIGNATURE_TAGLINE_LINK = "join Phantom Hire today"
+_SIGNATURE_TAGLINE_2_LEAD = "The"
+_SIGNATURE_TAGLINE_2_HIGHLIGHT = "Anonymous,"
+_SIGNATURE_TAGLINE_2_TAIL = "Private Talent Marketplace"
 _SIGNATURE_SITE_URL = "https://app.phantomhire.io"
-_SIGNATURE_AVATAR_URL = (
-    "https://www.gravatar.com/avatar/"
-    "e02d5f4cdc3a72bfa9aae98d4f638c2faac011b28fbadc90331644c19770a5e7?s=96&d=404"
-)
+
+# Palette sampled directly from the approved design file -- near-black card, violet border/accent,
+# soft gold verification, near-white body text.
+_SIG_BG = "#00030f"
+_SIG_BORDER = "#7a3fe0"
+_SIG_PURPLE = "#8a58f0"
+_SIG_GOLD = "#e3c687"
+_SIG_WHITE = "#ffffff"
+_SIG_SOFT = "#c9c9dc"
+_SIG_DIVIDER = "#2f2354"
 
 _SIGNATURE_HTML = (
-    '<table role="presentation" style="margin-top:4px;border-collapse:separate;width:100%;'
-    'border:1px solid #ecdfc5;border-radius:14px;background:#fbf3e4;">'
-    '<tr><td style="padding:18px 20px;">'
+    f'<table role="presentation" style="margin-top:4px;border-collapse:separate;width:100%;'
+    f'max-width:520px;border:1.5px solid {_SIG_BORDER};border-radius:16px;background:{_SIG_BG};">'
+    '<tr><td style="padding:20px 22px;">'
+    # --- header: avatar, name + verified badge, role, location, small ghost mark -------------
     '<table role="presentation" style="border-collapse:collapse;width:100%;"><tr>'
-    '<td style="width:52px;padding-right:14px;vertical-align:top;">'
-    f'<a href="{_SIGNATURE_PROFILE_URL}">'
-    f'<img src="{_SIGNATURE_AVATAR_URL}" alt="{_SIGNATURE_NAME}" width="48" height="48" '
-    'style="border-radius:50%;display:block;border:2px solid #c99a4d;" /></a></td>'
-    '<td style="vertical-align:top;font-size:13px;line-height:1.5;">'
-    f'<a href="{_SIGNATURE_PROFILE_URL}" style="color:#1a1a2e;text-decoration:none;font-weight:700;'
-    'font-size:14.5px;">'
-    f"{_SIGNATURE_NAME}</a>"
-    ' <span style="font-size:9px;font-weight:700;letter-spacing:0.05em;color:#93651f;'
-    'background:#f2e2bd;border-radius:4px;padding:2px 5px 1px;text-transform:uppercase;">Verified'
-    "</span>"
-    f'<div style="color:#5b5b78;margin-top:1px;">{_SIGNATURE_TITLE}</div>'
-    f'<div style="color:#8b8ba7;">{_SIGNATURE_LOCATION}</div>'
+    '<td style="width:58px;padding-right:14px;vertical-align:top;">'
+    f'<a href="{_SIGNATURE_SITE_URL}">'
+    f'<img src="{_SIGNATURE_AVATAR_URL}" alt="{_SIGNATURE_NAME}" width="52" height="52" '
+    'style="display:block;border-radius:50%;" /></a></td>'
+    '<td style="vertical-align:top;font-size:13px;line-height:1.6;">'
+    f'<span style="color:{_SIG_WHITE};font-weight:700;font-size:17px;">{_SIGNATURE_NAME}</span> '
+    f'<span style="display:inline-block;vertical-align:middle;border:1px solid {_SIG_GOLD};'
+    'border-radius:20px;padding:2px 10px 2px 6px;">'
+    f'<img src="{_SIGNATURE_CHECK_URL}" alt="" width="11" '
+    'style="vertical-align:middle;margin-right:4px;" />'
+    f'<span style="color:{_SIG_GOLD};font-size:9px;font-weight:700;letter-spacing:0.06em;'
+    f'vertical-align:middle;">VERIFIED</span></span>'
+    f'<div style="margin-top:5px;">'
+    f'<span style="color:{_SIG_PURPLE};font-weight:700;">{_SIGNATURE_TITLE}</span> '
+    f'<span style="color:{_SIG_WHITE};">{_SIGNATURE_COMPANY}</span></div>'
+    f'<div style="margin-top:4px;color:{_SIG_SOFT};">'
+    f'<img src="{_SIGNATURE_PIN_URL}" alt="" width="9" style="vertical-align:middle;margin-right:5px;" />'
+    f"{_SIGNATURE_LOCATION}</div>"
     "</td>"
-    '<td style="width:22px;vertical-align:top;text-align:right;">'
-    f'<a href="{_SIGNATURE_SITE_URL}"><img src="{_GHOST_MARK_URL}" alt="" width="19" '
-    'style="display:inline-block;opacity:0.92;" /></a></td>'
+    '<td style="width:26px;vertical-align:top;text-align:right;">'
+    f'<a href="{_SIGNATURE_SITE_URL}"><img src="{_SIGNATURE_GHOST_MARK_URL}" alt="" width="22" '
+    'style="display:inline-block;" /></a></td>'
     "</tr></table>"
-    '<div style="margin-top:14px;padding-top:13px;border-top:1px dashed #e2cfa0;font-size:12.5px;'
-    'color:#6a4fc4;font-weight:600;">'
-    f'<a href="{_SIGNATURE_SITE_URL}" style="color:#6a4fc4;text-decoration:none;">'
-    f"{_SIGNATURE_TAGLINE}</a>"
-    "</div>"
+    # --- divider ------------------------------------------------------------------------------
+    f'<div style="margin:16px 0;border-top:1px solid {_SIG_DIVIDER};"></div>'
+    # --- footer: ship icon + two taglines, separated by a vertical then horizontal divider ----
+    '<table role="presentation" style="border-collapse:collapse;width:100%;"><tr>'
+    '<td style="width:46px;vertical-align:top;">'
+    f'<a href="{_SIGNATURE_SITE_URL}"><img src="{_SIGNATURE_SHIP_URL}" alt="" width="46" height="46" '
+    'style="display:block;border-radius:50%;" /></a></td>'
+    f'<td style="width:15px;padding:0 14px;border-left:1px solid {_SIG_DIVIDER};"></td>'
+    '<td style="vertical-align:top;font-size:13px;line-height:1.5;">'
+    f'<div style="padding-bottom:10px;border-bottom:1px solid {_SIG_DIVIDER};">'
+    f'<img src="{_SIGNATURE_SPARKLE_URL}" alt="" width="12" style="vertical-align:middle;margin-right:7px;" />'
+    f'<a href="{_SIGNATURE_SITE_URL}" style="text-decoration:none;">'
+    f'<span style="color:{_SIG_WHITE};font-weight:700;">{_SIGNATURE_TAGLINE_LEAD}</span> '
+    f'<span style="color:{_SIG_PURPLE};font-weight:700;">{_SIGNATURE_TAGLINE_LINK}</span></a></div>'
+    '<div style="padding-top:10px;">'
+    f'<img src="{_SIGNATURE_SPARKLE_URL}" alt="" width="12" style="vertical-align:middle;margin-right:7px;" />'
+    f'<span style="color:{_SIG_WHITE};">{_SIGNATURE_TAGLINE_2_LEAD} '
+    f'<span style="color:{_SIG_PURPLE};font-weight:600;">{_SIGNATURE_TAGLINE_2_HIGHLIGHT}</span> '
+    f"{_SIGNATURE_TAGLINE_2_TAIL}</span></div>"
+    "</td>"
+    "</tr></table>"
     "</td></tr></table>"
 )
 
