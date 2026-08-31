@@ -19,7 +19,7 @@ import {
 
 import { CompanyBoardCard } from "@/components/shadow/company-board-card";
 import { EmptyState } from "@/components/shadow/empty-state";
-import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
+import { JobMatchCard } from "@/components/shadow/job-match-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,19 +29,10 @@ import { useCandidateAuth } from "@/lib/candidate-auth-context";
 import { companyAvatar } from "@/lib/company-avatar";
 import { useCompanyBoard } from "@/lib/queries/company";
 import { useBatchJobMatches } from "@/lib/queries/passport-matching";
-import { useSavedJobs } from "@/lib/queries/saved-jobs";
+import { useSavedJobs, useSaveJob, useUnsaveJob } from "@/lib/queries/saved-jobs";
 import { useMyApplications, useShadowBoard } from "@/lib/queries/shadow-jobs";
 import { useMyPassport } from "@/lib/queries/phantom-passport";
-import { MATCH_TIER_VARIANT } from "@/lib/status-display";
 import type { PhantomPassport, ShadowJobBoardListing } from "@/lib/types";
-
-const NEW_JOB_WINDOW_DAYS = 7;
-
-function isRecentlyPublished(publishedAt: string | null): boolean {
-  if (!publishedAt) return false;
-  const days = (Date.now() - new Date(publishedAt).getTime()) / (1000 * 60 * 60 * 24);
-  return days <= NEW_JOB_WINDOW_DAYS;
-}
 
 const TERMINAL_STATUSES = new Set(["declined", "withdrawn"]);
 const HOME_MATCH_PREVIEW = 24;
@@ -116,6 +107,12 @@ export default function ShadowHomePage() {
   const { data: applications, isLoading: isLoadingApplications } = useMyApplications();
   const { data: savedJobs, isLoading: isLoadingSaved } = useSavedJobs();
   const { data: companies } = useCompanyBoard(4);
+  const saveJob = useSaveJob();
+  const unsaveJob = useUnsaveJob();
+  const savedJobIds = React.useMemo(
+    () => new Set((savedJobs ?? []).map((s) => s.job.id)),
+    [savedJobs]
+  );
 
   const isLoading = isLoadingPassport || isLoadingApplications || isLoadingSaved;
 
@@ -246,16 +243,19 @@ export default function ShadowHomePage() {
             {topMatches.length > 0 ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {topMatches.map(({ job, match }) => (
-                  <ShadowJobCard
+                  <JobMatchCard
                     key={job.id}
                     job={job}
                     match={match}
-                    description={match.summary}
-                    showSeniority={false}
-                    showRequirements={false}
-                    showCompanyLink={false}
-                    showCompanyAvatar
-                    isNew={isRecentlyPublished(job.published_at)}
+                    variant="compact"
+                    saveAction={{
+                      saved: savedJobIds.has(job.id),
+                      pending: saveJob.isPending || unsaveJob.isPending,
+                      onToggle: () =>
+                        savedJobIds.has(job.id)
+                          ? unsaveJob.mutate(job.id)
+                          : saveJob.mutate({ shadowJobId: job.id }),
+                    }}
                   />
                 ))}
               </div>

@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.companies.models import Company
-from app.modules.companies.service import is_profile_publicly_visible
+from app.modules.companies.service import CompanyService, is_profile_publicly_visible
 from app.modules.saved_shadow_jobs.exceptions import (
     JobAlreadySavedError,
     SavedJobNotFoundError,
@@ -95,6 +95,12 @@ class SavedShadowJobService:
             company_name=company.name if company else "Unknown company",
             company_slug=(
                 company.slug if company and is_profile_publicly_visible(company) else None
+            ),
+            is_verified_employer=company.is_verified_employer if company else False,
+            logo_url=(
+                CompanyService._media_url(company.slug, "logo", company.logo_storage_key)
+                if company
+                else None
             ),
             title=job.title,
             department=job.department,

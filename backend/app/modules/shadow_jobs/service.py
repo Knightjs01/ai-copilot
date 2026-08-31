@@ -15,7 +15,7 @@ from app.modules.auth.email import EmailSender, build_added_to_pipeline_email
 from app.modules.auth.models import User
 from app.modules.candidate_auth.models import CandidateUser
 from app.modules.companies.models import Company
-from app.modules.companies.service import is_profile_publicly_visible
+from app.modules.companies.service import CompanyService, is_profile_publicly_visible
 from app.modules.interviews.repository import InterviewRepository
 from app.modules.messages.models import Message
 from app.modules.messages.repository import MessageRepository, MessageThreadRepository
@@ -801,6 +801,12 @@ class ShadowJobService:
             company_name=company.name if company else "Unknown company",
             company_slug=(
                 company.slug if company and is_profile_publicly_visible(company) else None
+            ),
+            is_verified_employer=company.is_verified_employer if company else False,
+            logo_url=(
+                CompanyService._media_url(company.slug, "logo", company.logo_storage_key)
+                if company
+                else None
             ),
             title=job.title,
             department=job.department,

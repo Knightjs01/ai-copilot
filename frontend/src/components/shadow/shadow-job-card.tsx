@@ -1,8 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Bookmark, BookmarkCheck, BookmarkX, Briefcase, MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { API_URL } from "@/lib/api-client";
 import { companyAvatar } from "@/lib/company-avatar";
 import { formatSalary } from "@/lib/format";
 import { EMPLOYMENT_TYPE_LABEL, MATCH_TIER_VARIANT, REMOTE_PREFERENCE_LABEL } from "@/lib/status-display";
@@ -16,9 +18,13 @@ const MAX_REQUIREMENT_TAGS = 2;
 // in more than one dimension at once (For You omits seniority + requirements + the company link
 // but keeps the meta row; Saved Jobs omits the whole meta row too).
 //
-// showCompanyAvatar/isNew are additive, opt-in, and default off -- Discover/For You/Saved Jobs
-// never pass them and render exactly as before. Only Home's "Recommended for you" grid uses them,
-// deriving isNew itself from the real job.published_at rather than this component guessing.
+// isNew is additive, opt-in, and defaults off -- Discover/For You/Saved Jobs never pass it and
+// render exactly as before. Only Home's "Recommended for you" grid uses it, deriving isNew itself
+// from the real job.published_at rather than this component guessing.
+//
+// The company logo/avatar block always renders (real job.logo_url when a company has uploaded
+// one, falling back to a deterministic colored-initial avatar otherwise) -- employers are always
+// fully visible on Shadow, so this isn't gated behind an opt-in prop the way isNew is.
 export function ShadowJobCard({
   job,
   match,
@@ -27,7 +33,6 @@ export function ShadowJobCard({
   showSeniority = true,
   showRequirements = true,
   showCompanyLink = true,
-  showCompanyAvatar = false,
   isNew = false,
   saveAction,
   unsaveAction,
@@ -39,7 +44,6 @@ export function ShadowJobCard({
   showSeniority?: boolean;
   showRequirements?: boolean;
   showCompanyLink?: boolean;
-  showCompanyAvatar?: boolean;
   isNew?: boolean;
   saveAction?: { saved: boolean; onToggle: () => void; pending?: boolean };
   unsaveAction?: { onUnsave: () => void; pending?: boolean };
@@ -47,7 +51,7 @@ export function ShadowJobCard({
   const salary = formatSalary(job.salary_min, job.salary_max);
   const extraRequirements = job.requirements.length - MAX_REQUIREMENT_TAGS;
   const hasCornerAction = !!saveAction || !!unsaveAction;
-  const avatar = showCompanyAvatar ? companyAvatar(job.company_name) : null;
+  const avatar = companyAvatar(job.company_name);
 
   return (
     <Card className="relative transition-colors hover:border-muted-foreground/40">
@@ -85,7 +89,17 @@ export function ShadowJobCard({
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-2.5">
-              {avatar && (
+              {job.logo_url ? (
+                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border bg-card">
+                  <Image
+                    src={`${API_URL}${job.logo_url}`}
+                    alt=""
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+              ) : (
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${avatar.colorClassName}`}
                 >

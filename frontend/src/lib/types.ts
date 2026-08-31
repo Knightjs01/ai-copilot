@@ -671,6 +671,10 @@ export interface ShadowJobBoardListing {
   // null unless the company has opted in to a public profile page -- fails open, no link shown,
   // when a company hasn't opted in.
   company_slug: string | null;
+  // Deliberately not gated on company_slug's visibility rule -- employers are always fully
+  // visible on Shadow, regardless of whether their full profile page has gone live yet.
+  is_verified_employer: boolean;
+  logo_url: string | null;
   title: string;
   department: string | null;
   seniority: string | null;

@@ -2,71 +2,55 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
+import { Sparkles, Undo2 } from "lucide-react";
 
 import { EmptyState } from "@/components/shadow/empty-state";
-import { MatchDetailPanel } from "@/components/shadow/match-detail-panel";
-import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
+import { JobMatchCard } from "@/components/shadow/job-match-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { useDismissedJobIds, useDismissJob, useUndismissJob } from "@/lib/queries/dismissed-jobs";
 import { useBatchJobMatches } from "@/lib/queries/passport-matching";
 import { useMyPassport } from "@/lib/queries/phantom-passport";
+import { useSavedJobs, useSaveJob, useUnsaveJob } from "@/lib/queries/saved-jobs";
 import { useShadowBoard } from "@/lib/queries/shadow-jobs";
+import { useThemeScopeContainer } from "@/lib/theme-scope-context";
 import type { ShadowJobBoardListing, ShadowJobMatch } from "@/lib/types";
 
 const MAX_MATCH_BATCH = 24;
 
-// Collapsed by default -- a full 6-dimension breakdown plus complete strengths/gaps lists for up
-// to MAX_MATCH_BATCH ranked cards would be a wall of content on a page whose value is quick
-// scannability of *why you're ranked where you are*. The always-visible top-strength line gives
-// the at-a-glance signal; this toggle gives full richness on demand.
-function ForYouMatchRow({
-  job,
-  match,
-}: {
-  job: ShadowJobBoardListing;
-  match: ShadowJobMatch;
-}) {
-  const [expanded, setExpanded] = React.useState(false);
+type SortOption = "best_match" | "newest" | "salary_desc";
 
-  return (
-    <div className="flex flex-col gap-2">
-      <ShadowJobCard
-        job={job}
-        match={match}
-        description={match.summary}
-        showSeniority={false}
-        showRequirements={false}
-        showCompanyLink={false}
-      />
-      {match.strengths[0] && (
-        <p className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
-          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
-          {match.strengths[0]}
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-fit items-center gap-1 px-1 text-xs font-medium text-brand hover:underline"
-      >
-        Why this matches
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
-      </button>
-      {expanded && (
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <MatchDetailPanel match={match} />
-        </div>
-      )}
-    </div>
-  );
+function sortRanked(
+  ranked: { job: ShadowJobBoardListing; match: ShadowJobMatch }[],
+  sort: SortOption
+) {
+  const copy = [...ranked];
+  if (sort === "newest") {
+    return copy.sort(
+      (a, b) => new Date(b.job.published_at ?? 0).getTime() - new Date(a.job.published_at ?? 0).getTime()
+    );
+  }
+  if (sort === "salary_desc") {
+    return copy.sort(
+      (a, b) => (b.job.salary_max ?? b.job.salary_min ?? 0) - (a.job.salary_max ?? a.job.salary_min ?? 0)
+    );
+  }
+  return copy.sort((a, b) => b.match.match_score - a.match.match_score);
 }
 
 // Requires an approved Passport, unlike Discover which works for anyone -- there's no valid
 // match cache key before that (see backend passport_matching/__init__.py). Sorted by match_score
-// descending, capped at the same batch size the board uses for its own badges.
+// descending by default, capped at the same batch size the board uses for its own badges.
 export default function ShadowForYouPage() {
+  const themeScopeContainer = useThemeScopeContainer();
+  const [sort, setSort] = React.useState<SortOption>("best_match");
+  const [justDismissed, setJustDismissed] = React.useState<{ id: string; title: string } | null>(
+    null
+  );
+  const undoTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data: passport, isLoading: isLoadingPassport } = useMyPassport();
   const passportApproved = passport?.current_version_number != null;
 
@@ -78,15 +62,41 @@ export default function ShadowForYouPage() {
   const { data: matches, isLoading: isLoadingMatches } = useBatchJobMatches(jobIds, {
     enabled: passportApproved,
   });
+  const { data: savedJobs } = useSavedJobs();
+  const { data: dismissedIds } = useDismissedJobIds();
+  const saveJob = useSaveJob();
+  const unsaveJob = useUnsaveJob();
+  const dismissJob = useDismissJob();
+  const undismissJob = useUndismissJob();
+
+  const savedJobIds = React.useMemo(
+    () => new Set((savedJobs ?? []).map((s) => s.job.id)),
+    [savedJobs]
+  );
+  const dismissedSet = React.useMemo(() => new Set(dismissedIds ?? []), [dismissedIds]);
 
   const rankedJobs = React.useMemo(() => {
     if (!jobs || !matches) return [];
     const matchByJobId = new Map(matches.map((match) => [match.job_id, match]));
-    return jobs
-      .filter((job) => matchByJobId.has(job.id))
-      .map((job) => ({ job, match: matchByJobId.get(job.id)! }))
-      .sort((a, b) => b.match.match_score - a.match.match_score);
-  }, [jobs, matches]);
+    const ranked = jobs
+      .filter((job) => matchByJobId.has(job.id) && !dismissedSet.has(job.id))
+      .map((job) => ({ job, match: matchByJobId.get(job.id)! }));
+    return sortRanked(ranked, sort);
+  }, [jobs, matches, dismissedSet, sort]);
+
+  function handleDismiss(job: ShadowJobBoardListing) {
+    dismissJob.mutate(job.id);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setJustDismissed({ id: job.id, title: job.title });
+    undoTimerRef.current = setTimeout(() => setJustDismissed(null), 6000);
+  }
+
+  function handleUndo() {
+    if (!justDismissed) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undismissJob.mutate(justDismissed.id);
+    setJustDismissed(null);
+  }
 
   const isLoading = isLoadingPassport || (passportApproved && (isLoadingJobs || isLoadingMatches));
 
@@ -144,8 +154,47 @@ export default function ShadowForYouPage() {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          {rankedJobs.map(({ job, match }) => (
-            <ForYouMatchRow key={job.id} job={job} match={match} />
+          <div className="flex items-center justify-between gap-3">
+            {justDismissed ? (
+              <button
+                type="button"
+                onClick={handleUndo}
+                className="flex items-center gap-1.5 text-xs font-medium text-brand hover:underline"
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+                Removed &ldquo;{justDismissed.title}&rdquo; &mdash; Undo
+              </button>
+            ) : (
+              <span />
+            )}
+            <Select value={sort} onValueChange={(value) => setSort(value as SortOption)}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent container={themeScopeContainer}>
+                <SelectItem value="best_match">Best match</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="salary_desc">Salary: high to low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {rankedJobs.map(({ job, match }, index) => (
+            <JobMatchCard
+              key={job.id}
+              job={job}
+              match={match}
+              variant={index === 0 && sort === "best_match" ? "featured" : "compact"}
+              saveAction={{
+                saved: savedJobIds.has(job.id),
+                pending: saveJob.isPending || unsaveJob.isPending,
+                onToggle: () =>
+                  savedJobIds.has(job.id)
+                    ? unsaveJob.mutate(job.id)
+                    : saveJob.mutate({ shadowJobId: job.id }),
+              }}
+              onDismiss={() => handleDismiss(job)}
+            />
           ))}
         </div>
       )}

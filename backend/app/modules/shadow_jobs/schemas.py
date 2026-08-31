@@ -74,6 +74,11 @@ class ShadowJobBoardListing(BaseModel):
     # None unless the company's profile page is currently live (Company.profile_status == "live")
     # -- fails open, no link shown, otherwise.
     company_slug: str | None
+    # Deliberately NOT gated on the company profile being publicly live, unlike company_slug above
+    # -- Shadow's anonymity model protects the candidate, never the employer, so a logo/verified
+    # badge is shown regardless of whether the company's full profile page has gone live yet.
+    is_verified_employer: bool = False
+    logo_url: str | None = None
     title: str
     department: str | None
     seniority: str | None
