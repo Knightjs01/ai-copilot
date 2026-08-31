@@ -55,10 +55,13 @@ _SIGNATURE_TAGLINE_2_HIGHLIGHT = "Anonymous,"
 _SIGNATURE_TAGLINE_2_TAIL = "Private Talent Marketplace"
 _SIGNATURE_SITE_URL = "https://app.phantomhire.io"
 
-# Palette sampled directly from the approved design file -- near-black card, violet border/accent,
-# soft gold verification, near-white body text.
+# Palette sampled directly from the approved design file -- near-black card, soft gold
+# verification, near-white body text. Border deliberately muted to gray rather than the sampled
+# violet: a full-saturation purple outline competed visually with the purple text accents inside
+# the card, making the whole thing harder to scan at a glance (flagged directly by the user after
+# seeing it live).
 _SIG_BG = "#00030f"
-_SIG_BORDER = "#7a3fe0"
+_SIG_BORDER = "#3a3a44"
 _SIG_PURPLE = "#8a58f0"
 _SIG_GOLD = "#e3c687"
 _SIG_WHITE = "#ffffff"
