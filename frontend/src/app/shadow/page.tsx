@@ -110,12 +110,11 @@ export default function ShadowBoardPage() {
             The job market you can enter without being seen
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Shadow - Anonymous Talent Network
+            Discover Roles
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground">
             Apply with your Phantom Passport. Companies see your skills and experience, not your
-            name, until you choose to reveal it. Every open role is listed here, unranked — filter
-            or search to narrow it down.
+            name, until you choose to reveal it.
           </p>
           {!candidate ? (
             <p className="text-sm text-muted-foreground">

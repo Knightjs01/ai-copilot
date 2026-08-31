@@ -43,7 +43,7 @@ interface NavItem {
 // candidate needs quick access to, not passport-adjacent settings.
 const MAIN_NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/shadow/home", icon: Home },
-  { label: "Discover", href: "/shadow", icon: Compass },
+  { label: "Discover Roles", href: "/shadow", icon: Compass },
   { label: "For You", href: "/shadow/for-you", icon: Sparkles },
   { label: "Companies", href: "/shadow/companies", icon: Building2 },
   { label: "Applications", href: "/shadow/applications", icon: Briefcase },
