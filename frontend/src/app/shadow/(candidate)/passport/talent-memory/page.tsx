@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { AlertTriangle, Archive, CheckCircle2, Sparkles } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -249,11 +250,7 @@ export default function TalentMemoryPage() {
             ))}
           </div>
         ) : (
-          <Card>
-            <CardContent className="py-6 text-center">
-              <p className="text-sm text-muted-foreground">No potential opportunities right now.</p>
-            </CardContent>
-          </Card>
+          <EmptyState icon={Sparkles} title="No potential opportunities right now" />
         )}
       </div>
 
@@ -264,15 +261,11 @@ export default function TalentMemoryPage() {
       )}
 
       {!isLoading && requests?.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-            <Archive className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No company has asked to keep your Passport on file yet. You&apos;ll see it here the
-              moment one does.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Archive}
+          title="No company has asked to keep your Passport on file yet"
+          description="You'll see it here the moment one does."
+        />
       )}
 
       <div className="flex flex-col gap-3">

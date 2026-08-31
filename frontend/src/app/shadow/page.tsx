@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Briefcase, SearchX } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { ShadowAppShell } from "@/components/shadow/shadow-app-shell";
 import { ShadowBoardToolbar } from "@/components/shadow/shadow-board-toolbar";
 import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
@@ -177,13 +178,12 @@ export default function ShadowBoardPage() {
         )}
 
         {!isLoading && jobs?.length === 0 && (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
-            <Briefcase className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">No roles published yet</p>
-            <p className="max-w-xs text-sm text-muted-foreground">
-              Check back soon, or set up a Job Alert to hear about new roles first.
-            </p>
-          </div>
+          <EmptyState
+            icon={Briefcase}
+            title="No roles published yet"
+            description="Check back soon, or set up a Job Alert to hear about new roles first."
+            action={{ label: "Set up a Job Alert", href: "/shadow/saved-jobs#alerts" }}
+          />
         )}
 
         {!isLoading && (jobs?.length ?? 0) > 0 && filteredJobs.length === 0 && (

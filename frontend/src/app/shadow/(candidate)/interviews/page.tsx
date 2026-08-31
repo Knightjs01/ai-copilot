@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { CalendarClock, Sparkles } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,14 +86,11 @@ export default function MyInterviewsPage() {
       )}
 
       {!isLoading && interviews?.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-            <CalendarClock className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No interviews scheduled yet. They&apos;ll show up here once a company sets one up.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={CalendarClock}
+          title="No interviews scheduled yet"
+          description="They'll show up here once a company sets one up."
+        />
       )}
 
       {upcoming.length > 0 && (

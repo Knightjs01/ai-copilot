@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { MatchDetailPanel } from "@/components/shadow/match-detail-panel";
 import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
 import { Button } from "@/components/ui/button";
@@ -136,11 +137,11 @@ export default function ShadowForYouPage() {
           <Spinner className="h-6 w-6 text-muted-foreground" />
         </div>
       ) : rankedJobs.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No matches yet. Check back once more roles are posted.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Sparkles}
+          title="No matches yet"
+          description="Check back once more roles are posted."
+        />
       ) : (
         <div className="flex flex-col gap-4">
           {rankedJobs.map(({ job, match }) => (

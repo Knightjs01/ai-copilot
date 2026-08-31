@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { Bell, BellOff, Bookmark, Trash2 } from "lucide-react";
+import { Bell, BellOff, BellRing, Bookmark, Trash2 } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,18 +101,12 @@ export default function SavedJobsPage() {
       )}
 
       {!isLoading && savedJobs?.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-            <Bookmark className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Save roles you want to revisit.{" "}
-              <Link href="/shadow" className="font-medium text-foreground underline underline-offset-4">
-                Browse Discover
-              </Link>
-              .
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Bookmark}
+          title="No saved jobs yet"
+          description="Save roles you want to revisit."
+          action={{ label: "Browse Discover", href: "/shadow" }}
+        />
       )}
 
       {[...groups.entries()].map(([collectionName, jobs]) => (
@@ -155,17 +149,12 @@ export default function SavedJobsPage() {
         )}
 
         {!alertsLoading && jobAlerts?.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                No job alerts yet.{" "}
-                <Link href="/shadow" className="font-medium text-foreground underline underline-offset-4">
-                  Save a search
-                </Link>{" "}
-                from the board.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={BellRing}
+            title="No job alerts yet"
+            description="Save a search from the board to get emailed when a new role matches."
+            action={{ label: "Go to Discover", href: "/shadow" }}
+          />
         )}
 
         {!alertsLoading && jobAlerts && jobAlerts.length > 0 && (

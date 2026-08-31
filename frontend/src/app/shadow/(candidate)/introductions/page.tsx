@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { MessageCircle, Sparkles } from "lucide-react";
+import { Handshake, MessageCircle } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,15 +134,11 @@ export default function IntroductionsPage() {
       )}
 
       {!isLoading && requests?.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-            <Sparkles className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No company has requested an introduction yet. You&apos;ll see it here the moment one
-              does.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Handshake}
+          title="No introductions yet"
+          description="You'll see it here the moment a company wants to connect."
+        />
       )}
 
       <div className="flex flex-col gap-3">

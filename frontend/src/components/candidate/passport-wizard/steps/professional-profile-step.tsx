@@ -326,6 +326,9 @@ export function ProfessionalProfileStep({
                 </label>
               </div>
             ))}
+            {careerEntries.length === 0 && (
+              <p className="text-sm text-muted-foreground">No roles added yet.</p>
+            )}
             <Button type="button" variant="secondary" size="sm" className="self-start" onClick={onAddEntry}>
               <Plus className="h-4 w-4" /> Add role
             </Button>

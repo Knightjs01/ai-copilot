@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { Briefcase } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { useShadowCopilot } from "@/components/shadow/shadow-copilot-provider";
-import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useMyApplications } from "@/lib/queries/shadow-jobs";
 import {
@@ -50,9 +51,13 @@ function ApplicationKanbanColumn({
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        {applications.map((application) => (
-          <ApplicationKanbanCard key={application.id} application={application} />
-        ))}
+        {applications.length === 0 ? (
+          <p className="px-2 text-xs text-muted-foreground">No applications here yet.</p>
+        ) : (
+          applications.map((application) => (
+            <ApplicationKanbanCard key={application.id} application={application} />
+          ))
+        )}
       </div>
     </div>
   );
@@ -93,15 +98,11 @@ export default function ApplicationsPage() {
       )}
 
       {!isLoading && applications?.length === 0 && (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            You haven&apos;t applied to any roles yet. Browse{" "}
-            <Link href="/shadow" className="font-medium text-foreground underline underline-offset-4">
-              Discover
-            </Link>
-            .
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Briefcase}
+          title="You haven't applied to any roles yet"
+          action={{ label: "Browse Discover", href: "/shadow" }}
+        />
       )}
 
       {!isLoading && (applications?.length ?? 0) > 0 && (

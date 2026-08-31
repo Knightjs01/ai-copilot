@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { CompanyBoardCard } from "@/components/shadow/company-board-card";
+import { EmptyState } from "@/components/shadow/empty-state";
 import { ShadowJobCard } from "@/components/shadow/shadow-job-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -229,32 +230,43 @@ export default function ShadowHomePage() {
           ))}
         </div>
 
-        {passportApproved && topMatches.length > 0 && (
+        {passportApproved && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-brand" />
                 <h2 className="text-base font-semibold text-foreground">Recommended for you</h2>
               </div>
-              <Link href="/shadow/for-you" className="text-xs font-medium text-brand hover:underline">
-                View all matches
-              </Link>
+              {topMatches.length > 0 && (
+                <Link href="/shadow/for-you" className="text-xs font-medium text-brand hover:underline">
+                  View all matches
+                </Link>
+              )}
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {topMatches.map(({ job, match }) => (
-                <ShadowJobCard
-                  key={job.id}
-                  job={job}
-                  match={match}
-                  description={match.summary}
-                  showSeniority={false}
-                  showRequirements={false}
-                  showCompanyLink={false}
-                  showCompanyAvatar
-                  isNew={isRecentlyPublished(job.published_at)}
-                />
-              ))}
-            </div>
+            {topMatches.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {topMatches.map(({ job, match }) => (
+                  <ShadowJobCard
+                    key={job.id}
+                    job={job}
+                    match={match}
+                    description={match.summary}
+                    showSeniority={false}
+                    showRequirements={false}
+                    showCompanyLink={false}
+                    showCompanyAvatar
+                    isNew={isRecentlyPublished(job.published_at)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Sparkles}
+                title="No matches yet"
+                description="Check back once more roles are posted."
+                action={{ label: "Browse Discover", href: "/shadow" }}
+              />
+            )}
           </div>
         )}
 
@@ -349,6 +361,21 @@ export default function ShadowHomePage() {
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </Link>
               ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {savedJobs && savedJobs.length === 0 && (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-2 py-5 text-center">
+              <Bookmark className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                No saved roles yet.{" "}
+                <Link href="/shadow" className="font-medium text-brand hover:underline">
+                  Browse Discover
+                </Link>
+                .
+              </p>
             </CardContent>
           </Card>
         )}

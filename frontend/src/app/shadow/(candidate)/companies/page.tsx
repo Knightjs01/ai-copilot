@@ -3,6 +3,7 @@
 import { Building2 } from "lucide-react";
 
 import { CompanyBoardCard } from "@/components/shadow/company-board-card";
+import { EmptyState } from "@/components/shadow/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useCompanyBoard } from "@/lib/queries/company";
 
@@ -33,13 +34,11 @@ export default function ShadowCompaniesPage() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
-          <Building2 className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">No companies live yet</p>
-          <p className="max-w-xs text-sm text-muted-foreground">
-            Check back soon as more companies join Phantom.
-          </p>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title="No companies live yet"
+          description="Check back soon as more companies join Phantom."
+        />
       )}
     </div>
   );

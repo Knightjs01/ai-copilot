@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare } from "lucide-react";
 
+import { EmptyState } from "@/components/shadow/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -26,14 +27,12 @@ export default function MessagesInboxPage() {
       )}
 
       {!isLoading && threads?.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-            <MessageSquare className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No conversations yet. A company can message you once you&apos;ve applied.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={MessageSquare}
+          title="No conversations yet"
+          description="A company can message you once you've applied."
+          action={{ label: "Browse Discover", href: "/shadow" }}
+        />
       )}
 
       <div className="flex flex-col gap-3">
