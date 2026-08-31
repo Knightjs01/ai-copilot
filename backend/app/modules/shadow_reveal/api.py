@@ -17,6 +17,7 @@ from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
 from app.modules.candidate_auth.dependencies import require_candidate_mfa_enrolled
 from app.modules.candidate_auth.models import CandidateUser
+from app.modules.shadow_reveal.dependencies import require_shadow_job_access
 from app.modules.shadow_reveal.schemas import (
     CandidateRevealHistoryItem,
     CandidateRevealRequestRead,
@@ -44,6 +45,7 @@ async def request_reveal(
     body: RevealRequestCreate,
     actor: User = Depends(require_mfa_enrolled),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
     email_sender: EmailSender = Depends(get_email_sender),
 ) -> RevealRequestRead:
@@ -58,6 +60,7 @@ async def get_revealed_identity(
     application_id: uuid.UUID,
     actor: User = Depends(require_step_up),
     _: CurrentUser = Depends(require_permission(Permissions.SHADOW_JOBS_UPDATE)),
+    __: None = Depends(require_shadow_job_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> RevealedIdentity:
     return await ShadowRevealService(session).get_revealed_identity(
