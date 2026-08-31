@@ -161,7 +161,22 @@ def _plain_text_to_html(body: str) -> str:
 
 
 def _wrap_html(body: str) -> str:
+    # A full document (not just a body fragment) so the color-scheme meta tags below actually
+    # have a <head> to live in -- without them, Android Gmail's automatic "dark mode" content
+    # rewriting was overriding the signature card's authored near-black background with its own
+    # gray, which then clashed with every small icon image cropped to blend with that near-black
+    # (visible mismatched squares around the ghost mark/ship icon -- reported directly by the
+    # user on a real device). The icons themselves were separately fixed to use true transparency
+    # instead of a baked-in matching background, so they float correctly regardless of what
+    # background color a client ends up rendering behind them -- this meta-tag addition is the
+    # second, defense-in-depth layer, telling standards-compliant clients not to re-color this
+    # email at all, since it's deliberately light-mode-authored apart from the one dark card.
     return (
+        "<!doctype html><html><head><meta charset=\"utf-8\" />"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />"
+        "<meta name=\"color-scheme\" content=\"light\" />"
+        "<meta name=\"supported-color-schemes\" content=\"light\" />"
+        "</head><body style=\"margin:0;background:#ffffff;\">"
         "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,"
         "sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1a1a2e;\">"
         f"<img src=\"{_LOGO_URL}\" alt=\"Phantom Hire\" style=\"height:28px;margin-bottom:28px;\" />"
@@ -171,7 +186,7 @@ def _wrap_html(body: str) -> str:
         "<hr style=\"border:none;border-top:1px solid #e5e5ef;margin:32px 0 16px;\" />"
         "<p style=\"margin:0;font-size:12px;color:#8b8ba7;\">"
         "Phantom Hire · This is an automated message — please don't reply directly to this email."
-        "</p></div>"
+        "</p></div></body></html>"
     )
 
 
