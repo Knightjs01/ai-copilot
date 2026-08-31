@@ -102,15 +102,24 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
         <Card className="transition-colors hover:border-muted-foreground/40">
           <CardContent className="flex items-center gap-3 py-4">
             <CompanyLogo job={job} size={40} />
-            <Link href={`/shadow/jobs/${job.id}`} className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <Link href={`/shadow/jobs/${job.id}`} className="flex items-center gap-1.5">
                 <h3 className="truncate text-sm font-semibold text-foreground">{job.title}</h3>
                 {job.is_verified_employer && (
                   <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-info" />
                 )}
-              </div>
+              </Link>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                <span className="truncate">{job.company_name}</span>
+                {job.company_slug ? (
+                  <Link
+                    href={`/shadow/companies/${job.company_slug}`}
+                    className="truncate hover:text-brand hover:underline"
+                  >
+                    {job.company_name}
+                  </Link>
+                ) : (
+                  <span className="truncate">{job.company_name}</span>
+                )}
                 {job.location && (
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
@@ -119,7 +128,7 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
                 )}
                 {salary && <span>{salary}</span>}
               </div>
-            </Link>
+            </div>
             <MatchScoreRing score={match.match_score} tier={match.match_tier} size={44} strokeWidth={4} />
             <button
               type="button"
@@ -173,7 +182,16 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
                   </Link>
                   {job.is_verified_employer && <BadgeCheck className="h-4 w-4 text-info" />}
                 </div>
-                <p className="text-sm text-muted-foreground">{job.company_name}</p>
+                {job.company_slug ? (
+                  <Link
+                    href={`/shadow/companies/${job.company_slug}`}
+                    className="w-fit text-sm text-muted-foreground hover:text-brand hover:underline"
+                  >
+                    {job.company_name}
+                  </Link>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{job.company_name}</p>
+                )}
                 <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                   {job.location && (
                     <span className="flex items-center gap-1">

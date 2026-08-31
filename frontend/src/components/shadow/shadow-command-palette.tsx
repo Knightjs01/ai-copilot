@@ -11,7 +11,6 @@ import {
   Home,
   IdCard,
   MessageSquare,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,8 +30,7 @@ interface NavCommand {
 
 const NAV_COMMANDS: NavCommand[] = [
   { label: "Home", href: "/shadow/home", icon: Home },
-  { label: "Discover", href: "/shadow", icon: Compass },
-  { label: "For You", href: "/shadow/for-you", icon: Sparkles },
+  { label: "Discover Roles", href: "/shadow", icon: Compass },
   { label: "Applications", href: "/shadow/applications", icon: Briefcase },
   { label: "Messages", href: "/shadow/messages", icon: MessageSquare },
   { label: "Interviews", href: "/shadow/interviews", icon: CalendarClock },

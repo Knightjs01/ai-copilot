@@ -17,7 +17,6 @@ import {
   LogOut,
   MessageCircle,
   MessageSquare,
-  Sparkles,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -36,15 +35,15 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-// Companies (a browse surface) sits with Discover/For You; Introductions (inbound communication)
+// Companies (a browse surface) sits with Discover Roles; Introductions (inbound communication)
 // sits right before Messages, since both carry an unread-style badge (see NavLinks below).
 // Originally this list only had the routes promoted from the old mobile nav bar/command palette;
 // Introductions and Companies were moved in from Private Tools since they're everyday surfaces a
-// candidate needs quick access to, not passport-adjacent settings.
+// candidate needs quick access to, not passport-adjacent settings. "For You" was later merged
+// into Discover Roles as a ranked state on the same page, rather than a separate destination.
 const MAIN_NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/shadow/home", icon: Home },
   { label: "Discover Roles", href: "/shadow", icon: Compass },
-  { label: "For You", href: "/shadow/for-you", icon: Sparkles },
   { label: "Companies", href: "/shadow/companies", icon: Building2 },
   { label: "Applications", href: "/shadow/applications", icon: Briefcase },
   { label: "Introductions", href: "/shadow/introductions", icon: MessageCircle },

@@ -25,6 +25,16 @@ const MAX_REQUIREMENT_TAGS = 2;
 // The company logo/avatar block always renders (real job.logo_url when a company has uploaded
 // one, falling back to a deterministic colored-initial avatar otherwise) -- employers are always
 // fully visible on Shadow, so this isn't gated behind an opt-in prop the way isNew is.
+//
+// showCompanyLink gates whether the company name itself (under the job title) links to the
+// company's Shadow profile -- Saved Jobs opts out (tighter list layout), everywhere else keeps
+// the default. The card's own title/body still links to the job detail page; since nested <a>
+// tags are invalid HTML, that's implemented as an absolutely-positioned "stretched link" (a
+// positioned element sits above plain in-flow content in stacking order regardless of DOM order)
+// rather than a wrapping <Link> -- the company-name link then only needs its own z-index to poke
+// through above the stretched link at its specific spot. The content wrapper below must stay a
+// plain, unpositioned div (no z-index of its own), or it would elevate the whole card above the
+// stretched link and silently swallow every click except the company-name link's.
 export function ShadowJobCard({
   job,
   match,
@@ -82,11 +92,14 @@ export function ShadowJobCard({
         </button>
       )}
 
-      <CardContent className="flex flex-col gap-2.5 py-5">
+      <CardContent className="relative flex flex-col gap-2.5 py-5">
         <Link
           href={`/shadow/jobs/${job.id}`}
-          className={`flex flex-col gap-2.5 ${hasCornerAction ? "pr-8" : ""}`}
-        >
+          className="absolute inset-0 z-0"
+          aria-label={job.title}
+          tabIndex={-1}
+        />
+        <div className={`flex flex-col gap-2.5 ${hasCornerAction ? "pr-8" : ""}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-2.5">
               {job.logo_url ? (
@@ -111,7 +124,16 @@ export function ShadowJobCard({
                   <h2 className="text-base font-semibold text-foreground">{job.title}</h2>
                   {isNew && <Badge variant="info">New</Badge>}
                 </div>
-                <p className="text-sm text-muted-foreground">{job.company_name}</p>
+                {showCompanyLink && job.company_slug ? (
+                  <Link
+                    href={`/shadow/companies/${job.company_slug}`}
+                    className="relative z-10 w-fit text-sm text-muted-foreground hover:text-brand hover:underline"
+                  >
+                    {job.company_name}
+                  </Link>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{job.company_name}</p>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -165,16 +187,7 @@ export function ShadowJobCard({
               )}
             </div>
           )}
-        </Link>
-
-        {showCompanyLink && job.company_slug && (
-          <Link
-            href={`/shadow/companies/${job.company_slug}`}
-            className="w-fit text-xs text-brand underline-offset-2 hover:underline"
-          >
-            View company profile
-          </Link>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

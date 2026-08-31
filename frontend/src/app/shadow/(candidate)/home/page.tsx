@@ -235,7 +235,7 @@ export default function ShadowHomePage() {
                 <h2 className="text-base font-semibold text-foreground">Recommended for you</h2>
               </div>
               {topMatches.length > 0 && (
-                <Link href="/shadow/for-you" className="text-xs font-medium text-brand hover:underline">
+                <Link href="/shadow" className="text-xs font-medium text-brand hover:underline">
                   View all matches
                 </Link>
               )}
