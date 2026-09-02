@@ -20,7 +20,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { API_URL, ApiError } from "@/lib/api-client";
 import { useCandidateAuth } from "@/lib/candidate-auth-context";
 import { formatSalary } from "@/lib/format";
-import { useCompanyProfile } from "@/lib/queries/company";
 import { useJobMatch } from "@/lib/queries/passport-matching";
 import { useSaveJob, useSavedJobs, useUnsaveJob } from "@/lib/queries/saved-jobs";
 import { useApplyToShadowJob, useJobIntelligence, useShadowBoardJob } from "@/lib/queries/shadow-jobs";
@@ -36,7 +35,6 @@ export default function ShadowJobDetailPage() {
   const router = useRouter();
   const { candidate, isLoading: authLoading } = useCandidateAuth();
   const { data: job, isLoading } = useShadowBoardJob(params.jobId);
-  const { data: companyProfile } = useCompanyProfile(job?.company_slug ?? undefined);
   const applyMutation = useApplyToShadowJob(params.jobId);
   const { data: savedJobs } = useSavedJobs({ enabled: !!candidate });
   const isSaved = !!savedJobs?.some((saved) => saved.job.id === params.jobId);
@@ -108,9 +106,9 @@ export default function ShadowJobDetailPage() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-card">
-                  {companyProfile?.logo_url ? (
+                  {job.logo_url ? (
                     <Image
-                      src={`${API_URL}${companyProfile.logo_url}`}
+                      src={`${API_URL}${job.logo_url}`}
                       alt={`${job.company_name} logo`}
                       fill
                       className="object-contain"

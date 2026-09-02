@@ -55,6 +55,30 @@ _IN_PROCESS_CANDIDATE_STATUSES = {
     CandidateStatus.OFFER.value,
 }
 
+# Commercial Phase 2 -- profile visibility. Every plan shows the same core identity (name, logo,
+# tagline, header basics, About). Growth unlocks the richer content tabs plus the verified badge;
+# Scale unlocks the "sell the culture" extras on top of that. Ranked so a missing/unrecognized
+# plan code (get_by_id returning None, or a company with no commercial_plan_id at all) falls back
+# to Core -- the most restrictive tier -- rather than silently showing everything.
+_PLAN_TIER_RANK = {"core": 0, "growth": 1, "scale": 2}
+
+
+def _gate_profile_for_plan(profile: CompanyProfileRead, plan_code: str | None) -> CompanyProfileRead:
+    rank = _PLAN_TIER_RANK.get(plan_code or "", 0)
+    updates: dict[str, object] = {}
+    if rank < _PLAN_TIER_RANK["growth"]:
+        updates.update(
+            cover_image_url=None,
+            culture=None,
+            benefits=[],
+            hiring_process_overview=None,
+            is_verified_employer=False,
+        )
+    if rank < _PLAN_TIER_RANK["scale"]:
+        updates.update(values=[], looking_for=[], hiring_highlights=[])
+    return profile.model_copy(update=updates) if updates else profile
+
+
 _ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/png": ".png",
     "image/jpeg": ".jpg",
@@ -315,11 +339,25 @@ class CompanyService:
         )
         return content, content_type
 
-    async def preview_profile(self, *, actor_company_id: uuid.UUID) -> CompanyProfileRead:
+    async def preview_profile(
+        self, *, actor_company_id: uuid.UUID, apply_plan_gating: bool = True
+    ) -> CompanyProfileRead:
+        """Shared by two different callers that need opposite treatment of plan-tier gating: the
+        company's own "preview as a candidate" step (apply_plan_gating=True, the default) must
+        match the real public page (get_public_profile) exactly, or a Core company previewing
+        their draft would see tabs a real candidate never will. The platform-admin review dialog
+        (apply_plan_gating=False) needs the opposite -- staff reviewing a submission must see
+        every field the company actually wrote, regardless of what their current plan would hide,
+        or a gated section could never be properly reviewed before approval."""
+
         company = await self._repository.get_by_id(actor_company_id)
         if company is None:
             raise CompanyNotFoundError()
-        return self._draft_to_profile_read(company)
+        profile = self._draft_to_profile_read(company)
+        if not apply_plan_gating:
+            return profile
+        plan_code = await self._get_plan_code(company.commercial_plan_id)
+        return _gate_profile_for_plan(profile, plan_code)
 
     # --- Self-service: publish-state transitions -------------------------------------------------
 
@@ -432,7 +470,15 @@ class CompanyService:
         # is_verified_employer is deliberately read live, not frozen into the snapshot -- it's an
         # admin action independent of the company's own draft/review cycle, and a company
         # shouldn't have to resubmit their profile for the verified badge to appear or disappear.
-        return profile.model_copy(update={"is_verified_employer": company.is_verified_employer})
+        profile = profile.model_copy(update={"is_verified_employer": company.is_verified_employer})
+        plan_code = await self._get_plan_code(company.commercial_plan_id)
+        return _gate_profile_for_plan(profile, plan_code)
+
+    async def _get_plan_code(self, plan_id: uuid.UUID | None) -> str | None:
+        if plan_id is None:
+            return None
+        plan = await self._commercial_plans.get_by_id(plan_id)
+        return plan.code if plan is not None else None
 
     async def list_board(self, *, limit: int = 12) -> list[CompanyBoardCard]:
         """Shadow's "Explore companies" -- every company with a real, currently-visible public

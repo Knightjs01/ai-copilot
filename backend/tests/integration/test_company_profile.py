@@ -88,6 +88,17 @@ async def test_public_profile_404_until_approved_then_visible(client: AsyncClien
     headers = auth_headers(owner["access_token"])
     me = await client.get("/api/v1/companies/me", headers=headers)
     slug = me.json()["slug"]
+    company_id = me.json()["id"]
+
+    # New companies default onto Core, which gates hiring_process_overview out of the public
+    # response (see test_commercial_plan_gates_profile_features below) -- upgrade to Growth here
+    # so this test can keep asserting on the full payload without tangling with that gating.
+    admin_headers = await platform_admin_headers(client)
+    await client.post(
+        f"/api/v1/platform-admin/commercial/companies/{company_id}",
+        json={"plan_code": "growth"},
+        headers=admin_headers,
+    )
 
     await client.patch("/api/v1/companies/me", json=_PROFILE_PAYLOAD, headers=headers)
     still_404 = await client.get(f"/api/v1/companies/{slug}")
@@ -107,6 +118,76 @@ async def test_public_profile_404_until_approved_then_visible(client: AsyncClien
 
     me_after = await client.get("/api/v1/companies/me", headers=headers)
     assert me_after.json()["profile_status"] == "live"
+
+
+async def test_commercial_plan_gates_profile_features(client: AsyncClient) -> None:
+    owner = await signup(client, email="owner@companyprofile-plangating.com")
+    headers = auth_headers(owner["access_token"])
+    me = await client.get("/api/v1/companies/me", headers=headers)
+    slug = me.json()["slug"]
+    company_id = me.json()["id"]
+
+    await client.patch(
+        "/api/v1/companies/me",
+        json={
+            **_PROFILE_PAYLOAD,
+            "values": [{"title": "Ownership", "body": "We own outcomes end to end."}],
+            "hiring_highlights": [{"title": "Fast process", "body": "Offer within a week."}],
+            "looking_for": ["Backend engineers"],
+        },
+        headers=headers,
+    )
+    await _submit_and_approve(client, headers=headers)
+
+    # Still on the Core default -- the richer tabs, verified badge, and Scale-only extras must
+    # not leak into the public response yet.
+    core_response = await client.get(f"/api/v1/companies/{slug}")
+    core_body = core_response.json()
+    assert core_body["description"] == _PROFILE_PAYLOAD["description"]
+    assert core_body["culture"] is None
+    assert core_body["benefits"] == []
+    assert core_body["hiring_process_overview"] is None
+    assert core_body["cover_image_url"] is None
+    assert core_body["is_verified_employer"] is False
+    assert core_body["values"] == []
+    assert core_body["looking_for"] == []
+    assert core_body["hiring_highlights"] == []
+
+    admin_headers = await platform_admin_headers(client)
+    await client.post(
+        f"/api/v1/platform-admin/commercial/companies/{company_id}",
+        json={"plan_code": "growth"},
+        headers=admin_headers,
+    )
+
+    growth_response = await client.get(f"/api/v1/companies/{slug}")
+    growth_body = growth_response.json()
+    assert growth_body["culture"] == _PROFILE_PAYLOAD["culture"]
+    assert growth_body["benefits"] == _PROFILE_PAYLOAD["benefits"]
+    assert growth_body["hiring_process_overview"] == _PROFILE_PAYLOAD["hiring_process_overview"]
+    # Scale-only extras still gated on Growth.
+    assert growth_body["values"] == []
+    assert growth_body["hiring_highlights"] == []
+    assert growth_body["looking_for"] == []
+
+    await client.post(
+        f"/api/v1/platform-admin/commercial/companies/{company_id}",
+        json={"plan_code": "scale"},
+        headers=admin_headers,
+    )
+
+    scale_response = await client.get(f"/api/v1/companies/{slug}")
+    scale_body = scale_response.json()
+    assert scale_body["values"] == [{"title": "Ownership", "body": "We own outcomes end to end."}]
+    assert scale_body["hiring_highlights"] == [
+        {"title": "Fast process", "body": "Offer within a week."}
+    ]
+    assert scale_body["looking_for"] == ["Backend engineers"]
+
+    # The preview-as-candidate step must reflect the same gating as the real public page.
+    preview_response = await client.get("/api/v1/companies/me/preview", headers=headers)
+    preview_body = preview_response.json()
+    assert preview_body["values"] == [{"title": "Ownership", "body": "We own outcomes end to end."}]
 
 
 async def test_public_profile_404_for_nonexistent_slug(client: AsyncClient) -> None:
@@ -130,8 +211,16 @@ async def test_board_listing_carries_company_slug_only_when_live(client: AsyncCl
         headers=headers,
     )
     job = job_response.json()
-    publish = await client.post(f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers)
-    published = publish.json()
+    # /publish only submits the job into the platform-admin review queue -- it doesn't actually
+    # go live on the board until a platform admin approves it (shadow_jobs/api.py's publish_job
+    # docstring: "Submits into the platform-admin review queue -- it does not go live yet").
+    await client.post(f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers)
+    admin_headers = await platform_admin_headers(client)
+    approve = await client.post(
+        f"/api/v1/platform-admin/jobs/{job['id']}/approve", headers=admin_headers
+    )
+    assert approve.status_code == 200, approve.text
+    published = approve.json()
 
     board_before = await client.get("/api/v1/shadow-jobs/board")
     listing_before = next(j for j in board_before.json() if j["id"] == published["id"])

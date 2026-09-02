@@ -281,7 +281,9 @@ async def preview_company_profile_for_admin(
     ),
     session: AsyncSession = Depends(get_db),
 ) -> CompanyProfileRead:
-    return await CompanyService(session).preview_profile(actor_company_id=company_id)
+    return await CompanyService(session).preview_profile(
+        actor_company_id=company_id, apply_plan_gating=False
+    )
 
 
 @admin_router.post("/{company_id}/suspend", response_model=CompanyRead)
