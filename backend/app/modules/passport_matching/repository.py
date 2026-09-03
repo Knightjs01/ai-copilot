@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.passport_matching.models import CandidatePass, PassportJobMatch
@@ -35,6 +35,15 @@ class PassportJobMatchRepository:
             )
         )
         return list(result.scalars().all())
+
+    async def count_by_shadow_job_id(self, shadow_job_id: uuid.UUID) -> int:
+        """How many candidates already have a computed match for this job -- not a total
+        addressable count, since matches are computed lazily as candidates/recruiters interact
+        with the job, not for every discoverable candidate up front."""
+        result = await self._session.execute(
+            select(func.count()).where(PassportJobMatch.shadow_job_id == shadow_job_id)
+        )
+        return result.scalar_one()
 
     async def upsert(
         self,

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -14,7 +14,11 @@ from app.modules.platform_admin.dependencies import (
     require_platform_admin_permission,
 )
 from app.modules.platform_admin.permissions import PlatformAdminPermissions
-from app.modules.platform_admin.schemas import AdminShadowJobRead, RejectShadowJobRequest
+from app.modules.platform_admin.schemas import (
+    AdminShadowJobDetail,
+    AdminShadowJobRead,
+    RejectShadowJobRequest,
+)
 from app.modules.shadow_jobs.models import ShadowJob
 from app.modules.shadow_jobs.schemas import ShadowJobRead
 from app.modules.shadow_jobs.service import ShadowJobService
@@ -22,23 +26,50 @@ from app.modules.shadow_jobs.service import ShadowJobService
 router = APIRouter(prefix="/platform-admin/jobs", tags=["platform-admin"])
 
 
-async def _to_admin_read(session: AsyncSession, job: ShadowJob) -> AdminShadowJobRead:
+async def _to_admin_read(
+    session: AsyncSession, service: ShadowJobService, job: ShadowJob
+) -> AdminShadowJobRead:
     company = await CompanyRepository(session).get_by_id(job.company_id)
     company_name = company.name if company is not None else "Unknown company"
-    return AdminShadowJobRead(
-        **ShadowJobRead.model_validate(job).model_dump(), company_name=company_name
-    )
+    read_model = ShadowJobRead.model_validate(job)
+    read_model.applicant_count = await service.get_applicant_count(job.id)
+    return AdminShadowJobRead(**read_model.model_dump(), company_name=company_name)
 
 
-@router.get("/pending-review", response_model=list[AdminShadowJobRead])
-async def list_pending_review(
+@router.get("", response_model=list[AdminShadowJobRead])
+async def list_jobs(
+    status_filter: str | None = Query(default=None, alias="status"),
     _: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.JOBS_VIEW)
     ),
     session: AsyncSession = Depends(get_db),
 ) -> list[AdminShadowJobRead]:
-    jobs = await ShadowJobService(session).list_pending_review()
-    return [await _to_admin_read(session, job) for job in jobs]
+    service = ShadowJobService(session)
+    jobs = await service.list_admin_jobs(status=status_filter)
+    return [await _to_admin_read(session, service, job) for job in jobs]
+
+
+@router.get("/{job_id}", response_model=AdminShadowJobDetail)
+async def get_job_detail(
+    job_id: uuid.UUID,
+    _: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.JOBS_VIEW)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> AdminShadowJobDetail:
+    service = ShadowJobService(session)
+    job = await service.get_job_any_company(job_id)
+    company = await CompanyRepository(session).get_by_id(job.company_id)
+    match_count, interview_count, job_intelligence = await service.get_admin_job_metrics(job)
+    read_model = ShadowJobRead.model_validate(job)
+    read_model.applicant_count = await service.get_applicant_count(job.id)
+    return AdminShadowJobDetail(
+        **read_model.model_dump(),
+        company_name=company.name if company is not None else "Unknown company",
+        match_count=match_count,
+        interview_count=interview_count,
+        job_intelligence=job_intelligence,
+    )
 
 
 @router.post("/{job_id}/approve", response_model=AdminShadowJobRead)
@@ -61,7 +92,7 @@ async def approve_job(
         target_type="shadow_job",
         target_id=job.id,
     )
-    return await _to_admin_read(session, job)
+    return await _to_admin_read(session, service, job)
 
 
 @router.post("/{job_id}/reject", response_model=AdminShadowJobRead)
@@ -82,4 +113,4 @@ async def reject_job(
         target_id=job.id,
         extra_data={"reason": body.reason} if body.reason else {},
     )
-    return await _to_admin_read(session, job)
+    return await _to_admin_read(session, service, job)

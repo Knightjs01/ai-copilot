@@ -8,6 +8,7 @@ import type {
   ActionQueueItem,
   AdminCompanySummary,
   AdminShadowJob,
+  AdminShadowJobDetail,
   CompanyAccessRequest,
   CompanyProfile,
   MfaEnableResponse,
@@ -204,10 +205,22 @@ export function useChangePassword() {
   });
 }
 
-export function usePendingReviewJobs() {
+export function useAdminJobs(status?: string) {
   return useQuery({
-    queryKey: ["platform-admin", "jobs", "pending-review"],
-    queryFn: () => platformAdminApiClient.get<AdminShadowJob[]>("/platform-admin/jobs/pending-review"),
+    queryKey: ["platform-admin", "jobs", "list", status ?? "all"],
+    queryFn: () =>
+      platformAdminApiClient.get<AdminShadowJob[]>(
+        `/platform-admin/jobs${status && status !== "all" ? `?status=${status}` : ""}`
+      ),
+  });
+}
+
+export function useAdminJob(jobId: string) {
+  return useQuery({
+    queryKey: ["platform-admin", "jobs", jobId],
+    queryFn: () =>
+      platformAdminApiClient.get<AdminShadowJobDetail>(`/platform-admin/jobs/${jobId}`),
+    enabled: !!jobId,
   });
 }
 

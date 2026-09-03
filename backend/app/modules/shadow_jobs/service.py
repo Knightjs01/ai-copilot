@@ -19,6 +19,7 @@ from app.modules.companies.service import CompanyService, is_profile_publicly_vi
 from app.modules.interviews.repository import InterviewRepository
 from app.modules.messages.models import Message
 from app.modules.messages.repository import MessageRepository, MessageThreadRepository
+from app.modules.passport_matching.repository import PassportJobMatchRepository
 from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 from app.modules.talent_pool.repository import TalentPoolGrantRepository
 from app.modules.phantom_passport.exceptions import PassportNotApprovedError, PassportNotFoundError
@@ -99,6 +100,7 @@ class ShadowJobService:
         self._interviews = InterviewRepository(session)
         self._talent_pool_grants = TalentPoolGrantRepository(session)
         self._reveal_requests = ShadowRevealRequestRepository(session)
+        self._matches = PassportJobMatchRepository(session)
         self._email_sender = email_sender
         self._settings = get_settings()
 
@@ -245,6 +247,30 @@ class ShadowJobService:
 
     async def list_pending_review(self) -> list[ShadowJob]:
         return await self._jobs.list_by_status(ShadowJobStatus.PENDING_REVIEW.value)
+
+    async def list_admin_jobs(self, *, status: str | None = None) -> list[ShadowJob]:
+        """Powers the platform-admin Jobs list -- spans every company, optionally filtered to
+        one status. status=None returns every non-deleted job."""
+        return await self._jobs.list_all(status=status)
+
+    async def get_admin_job_metrics(
+        self, job: ShadowJob
+    ) -> tuple[int, int, JobIntelligence | None]:
+        """(match_count, interview_count, job_intelligence) for the platform-admin job detail
+        page. match_count counts already-computed PassportJobMatch rows -- not a total
+        addressable count, since matches are computed lazily, not for every discoverable
+        candidate up front. job_intelligence is only ever real for a published job (see
+        get_job_intelligence's own guard)."""
+        applications = await self._applications.list_by_job(job.id)
+        application_ids = [a.id for a in applications]
+        interview_count = len(await self._interviews.list_by_application_ids(application_ids))
+        match_count = await self._matches.count_by_shadow_job_id(job.id)
+        job_intelligence = (
+            await self.get_job_intelligence(job.id)
+            if job.status == ShadowJobStatus.PUBLISHED.value
+            else None
+        )
+        return match_count, interview_count, job_intelligence
 
     async def publish_project_to_shadow(
         self, *, actor: User, project_id: uuid.UUID, body: ShadowJobCreate

@@ -1401,6 +1401,12 @@ export interface AdminShadowJob extends ShadowJob {
   company_name: string;
 }
 
+export interface AdminShadowJobDetail extends AdminShadowJob {
+  match_count: number;
+  interview_count: number;
+  job_intelligence: JobIntelligence | null;
+}
+
 export interface LocationSuggestion {
   formatted: string;
   city: string | null;

@@ -2,34 +2,40 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Briefcase } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
 import { PlatformAdminNav } from "@/components/platform-admin/platform-admin-nav";
-import { useApproveJob, usePendingReviewJobs, useRejectJob } from "@/lib/queries/platform-admin";
+import { useAdminJobs } from "@/lib/queries/platform-admin";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { formatSalary } from "@/lib/format";
-import type { AdminShadowJob } from "@/lib/types";
+import { SHADOW_JOB_STATUS_LABEL, SHADOW_JOB_STATUS_VARIANT } from "@/lib/status-display";
+import type { AdminShadowJob, ShadowJobStatus } from "@/lib/types";
 
-function JobReviewCard({ job, canReview }: { job: AdminShadowJob; canReview: boolean }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const [rejecting, setRejecting] = React.useState(false);
-  const [reason, setReason] = React.useState("");
-  const approve = useApproveJob();
-  const reject = useRejectJob();
-  const isPending = approve.isPending || reject.isPending;
+type StatusFilter = ShadowJobStatus | "all";
 
+const FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: "pending_review", label: "Pending review" },
+  { value: "all", label: "All" },
+  { value: "published", label: "Published" },
+  { value: "closed", label: "Closed" },
+  { value: "draft", label: "Draft" },
+];
+
+function JobRow({ job }: { job: AdminShadowJob }) {
   return (
     <Card>
-      <CardContent className="flex flex-col gap-3 py-5">
+      <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold text-foreground">{job.title}</h3>
             <Badge variant="outline">{job.company_name}</Badge>
+            <Badge variant={SHADOW_JOB_STATUS_VARIANT[job.status]}>
+              {SHADOW_JOB_STATUS_LABEL[job.status]}
+            </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
             {job.department ? `${job.department} · ` : ""}
@@ -37,80 +43,17 @@ function JobReviewCard({ job, canReview }: { job: AdminShadowJob; canReview: boo
             {job.salary_min || job.salary_max
               ? ` · ${formatSalary(job.salary_min, job.salary_max)}`
               : ""}
+            {" · "}
+            {job.applicant_count} applicant{job.applicant_count === 1 ? "" : "s"}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="self-start text-sm font-medium text-brand hover:underline"
+        <Link
+          href={`/platform-admin/jobs/${job.id}`}
+          className="shrink-0 text-sm font-medium text-brand hover:underline"
         >
-          {expanded ? "Hide full listing" : "View full listing"}
-        </button>
-
-        {expanded && (
-          <div className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/40 p-4 text-sm">
-            <p className="whitespace-pre-wrap text-foreground">{job.summary}</p>
-            <p className="whitespace-pre-wrap text-muted-foreground">{job.description}</p>
-            {job.requirements.length > 0 && (
-              <ul className="list-inside list-disc text-muted-foreground">
-                {job.requirements.map((req, i) => (
-                  <li key={i}>{String(req)}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {canReview && rejecting && (
-          <Textarea
-            placeholder="Reason (optional)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={2}
-          />
-        )}
-
-        {(approve.isError || reject.isError) && (
-          <p className="text-sm font-medium text-danger">Couldn&apos;t save. Try again.</p>
-        )}
-
-        {canReview && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="brand"
-              size="sm"
-              onClick={() => approve.mutate(job.id)}
-              disabled={isPending}
-            >
-              {approve.isPending ? "Approving…" : "Approve"}
-            </Button>
-            {rejecting ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  reject.mutate({ jobId: job.id, reason: reason || undefined })
-                }
-                disabled={isPending}
-              >
-                {reject.isPending ? "Rejecting…" : "Confirm reject"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setRejecting(true)}
-                disabled={isPending}
-              >
-                Reject
-              </Button>
-            )}
-          </div>
-        )}
+          View details →
+        </Link>
       </CardContent>
     </Card>
   );
@@ -119,7 +62,8 @@ function JobReviewCard({ job, canReview }: { job: AdminShadowJob; canReview: boo
 export default function PlatformAdminJobsPage() {
   const router = useRouter();
   const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();
-  const { data: jobs, isLoading } = usePendingReviewJobs();
+  const [filter, setFilter] = React.useState<StatusFilter>("pending_review");
+  const { data: jobs, isLoading } = useAdminJobs(filter);
 
   React.useEffect(() => {
     if (authLoading) return;
@@ -135,11 +79,26 @@ export default function PlatformAdminJobsPage() {
     );
   }
 
-  const canReview = hasPermission("jobs.review");
-
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-10">
       <PlatformAdminNav admin={admin} />
+
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setFilter(f.value)}
+            className={
+              f.value === filter
+                ? "rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background"
+                : "rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            }
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       {isLoading && (
         <div className="flex justify-center py-16">
@@ -151,7 +110,7 @@ export default function PlatformAdminJobsPage() {
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
             <Briefcase className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No jobs waiting for review.</p>
+            <p className="text-sm text-muted-foreground">No jobs match this filter.</p>
           </CardContent>
         </Card>
       )}
@@ -159,7 +118,7 @@ export default function PlatformAdminJobsPage() {
       {!isLoading && jobs && jobs.length > 0 && (
         <div className="flex flex-col gap-3">
           {jobs.map((job) => (
-            <JobReviewCard key={job.id} job={job} canReview={canReview} />
+            <JobRow key={job.id} job={job} />
           ))}
         </div>
       )}

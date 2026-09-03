@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.modules.shadow_jobs.schemas import ShadowJobRead
+from app.modules.shadow_jobs.schemas import JobIntelligence, ShadowJobRead
 
 
 class PlatformAdminLoginRequest(BaseModel):
@@ -105,6 +105,12 @@ class CreatePlatformAdminRequest(BaseModel):
 
 class AdminShadowJobRead(ShadowJobRead):
     company_name: str
+
+
+class AdminShadowJobDetail(AdminShadowJobRead):
+    match_count: int
+    interview_count: int
+    job_intelligence: JobIntelligence | None
 
 
 class RejectShadowJobRequest(BaseModel):

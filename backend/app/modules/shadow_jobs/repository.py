@@ -103,6 +103,18 @@ class ShadowJobRepository:
         )
         return list(result.scalars().all())
 
+    async def list_all(
+        self, *, status: str | None = None, limit: int = 100, offset: int = 0
+    ) -> list[ShadowJob]:
+        """Deliberately not company-scoped -- powers the platform-admin Jobs list, which spans
+        every company. status=None returns every non-deleted job regardless of status."""
+        query = select(ShadowJob).where(ShadowJob.deleted_at.is_(None))
+        if status is not None:
+            query = query.where(ShadowJob.status == status)
+        query = query.order_by(ShadowJob.created_at.desc()).limit(limit).offset(offset)
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
     async def count_by_status(self, status: str) -> int:
         result = await self._session.execute(
             select(func.count()).where(
