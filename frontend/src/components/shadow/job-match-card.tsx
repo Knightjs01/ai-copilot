@@ -129,57 +129,94 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
     return (
       <div className="flex flex-col gap-2">
         <Card className="transition-colors hover:border-muted-foreground/40">
-          <CardContent className="flex items-center gap-3 py-4">
-            <CompanyLogo job={job} size={40} />
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <Link href={`/shadow/jobs/${job.id}`} className="flex items-center gap-1.5">
-                <h3 className="truncate text-sm font-semibold text-foreground">{job.title}</h3>
-                {job.is_verified_employer && (
-                  <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-info" />
-                )}
-              </Link>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                {job.company_slug ? (
-                  <Link
-                    href={`/shadow/companies/${job.company_slug}`}
-                    className="truncate hover:text-brand hover:underline"
-                  >
-                    {job.company_name}
-                  </Link>
-                ) : (
-                  <span className="truncate">{job.company_name}</span>
-                )}
-                {job.location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {job.location}
-                  </span>
-                )}
-                {salary && <span>{salary}</span>}
+          <CardContent className="flex flex-col gap-3 py-4">
+            <div className="flex items-center gap-3">
+              <CompanyLogo job={job} size={40} />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <Link href={`/shadow/jobs/${job.id}`} className="flex items-center gap-1.5">
+                  <h3 className="truncate text-sm font-semibold text-foreground">{job.title}</h3>
+                  {job.is_verified_employer && (
+                    <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-info" />
+                  )}
+                </Link>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                  {job.company_slug ? (
+                    <Link
+                      href={`/shadow/companies/${job.company_slug}`}
+                      className="truncate hover:text-brand hover:underline"
+                    >
+                      {job.company_name}
+                    </Link>
+                  ) : (
+                    <span className="truncate">{job.company_name}</span>
+                  )}
+                  {job.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {job.location}
+                    </span>
+                  )}
+                  {salary && <span>{salary}</span>}
+                </div>
               </div>
+              <MatchScoreRing score={match.match_score} tier={match.match_tier} size={44} strokeWidth={4} />
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                aria-label="Why this matches"
+              >
+                <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+              </button>
             </div>
-            <MatchScoreRing score={match.match_score} tier={match.match_tier} size={44} strokeWidth={4} />
-            <button
-              type="button"
-              onClick={saveAction.onToggle}
-              disabled={saveAction.pending}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              aria-label={saveAction.saved ? "Remove from saved jobs" : "Save this job"}
-            >
-              {saveAction.saved ? (
-                <BookmarkCheck className="h-4 w-4 text-brand" />
-              ) : (
-                <Bookmark className="h-4 w-4" />
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="brand"
+                size="sm"
+                onClick={saveAction.onToggle}
+                disabled={saveAction.pending}
+              >
+                {saveAction.saved ? (
+                  <BookmarkCheck className="h-3.5 w-3.5" />
+                ) : (
+                  <Bookmark className="h-3.5 w-3.5" />
+                )}
+                {saveAction.saved ? "Saved" : "Save"}
+              </Button>
+              <Button
+                type="button"
+                variant="success"
+                size="sm"
+                onClick={() => setDisclosureOpen(true)}
+                disabled={applied || applyMutation.isPending}
+              >
+                {applied ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                {applied ? "Applied" : applyMutation.isPending ? "Applying…" : "Apply"}
+              </Button>
+              {onDismiss && (
+                <Button type="button" variant="danger" size="sm" onClick={onDismiss}>
+                  <X className="h-3.5 w-3.5" />
+                  Not interested
+                </Button>
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              aria-label="Why this matches"
-            >
-              <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
-            </button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void shareJob(job.id, job.title, job.company_name)}
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </Button>
+            </div>
+
+            {applyError && <p className="text-xs font-medium text-danger">{applyError}</p>}
           </CardContent>
         </Card>
         {expanded && (
@@ -187,6 +224,13 @@ export function JobMatchCard({ job, match, variant, saveAction, onDismiss }: Job
             <MatchDetailPanel match={match} />
           </div>
         )}
+        <ApplyDisclosureDialog
+          open={disclosureOpen}
+          onOpenChange={setDisclosureOpen}
+          onConfirm={handleConfirmApply}
+          isSubmitting={applyMutation.isPending}
+          container={themeScopeContainer}
+        />
       </div>
     );
   }
