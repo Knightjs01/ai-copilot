@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
 
@@ -48,6 +49,22 @@ class IssuedAdminTokens(NamedTuple):
     refresh_token: str
 
 
+class AdminMfaChallenge(NamedTuple):
+    """Returned from login() instead of tokens when the admin already has MFA enrolled --
+    mirrors auth.service.auth_service.MfaChallenge exactly."""
+
+    challenge_token: str
+
+
+class AdminMfaEnrollmentRequired(NamedTuple):
+    """Returned from login() instead of tokens when the admin has never enrolled MFA -- MFA is
+    mandatory for Phantom Command, so a correct password alone is never enough to reach a
+    session; the caller must complete enrollment via mfa/pending/setup + mfa/pending/enable
+    before a real session is issued."""
+
+    pending_token: str
+
+
 class PlatformAdminAuthService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -56,7 +73,9 @@ class PlatformAdminAuthService:
         self._tokens = PlatformAdminTokenRepository(session)
         self._audit = PlatformAdminAuditService(session)
 
-    async def login(self, *, email: str, password: str) -> IssuedAdminTokens:
+    async def login(
+        self, *, email: str, password: str
+    ) -> IssuedAdminTokens | AdminMfaChallenge | AdminMfaEnrollmentRequired:
         throttle = LoginAttemptTracker(realm="platform_admin")
         if await throttle.is_locked(email):
             raise InvalidCredentialsError()
@@ -70,7 +89,19 @@ class PlatformAdminAuthService:
             raise InvalidCredentialsError()
 
         await throttle.clear(email)
-        return await self._issue_tokens(admin)
+
+        # MFA is mandatory for Phantom Command, no grace period -- a password alone is never
+        # enough to reach a session, matching require_platform_admin_step_up's own "no fallback"
+        # reasoning for Danger Zone, now extended to login itself.
+        if admin.mfa_enabled:
+            return AdminMfaChallenge(
+                challenge_token=security.create_platform_admin_mfa_challenge_token(
+                    admin_id=admin.id
+                )
+            )
+        return AdminMfaEnrollmentRequired(
+            pending_token=security.create_platform_admin_pending_mfa_token(admin_id=admin.id)
+        )
 
     async def refresh(self, *, refresh_token_plain: str) -> IssuedAdminTokens:
         token_hash = security.hash_opaque_token(refresh_token_plain)
@@ -154,22 +185,79 @@ class PlatformAdminAuthService:
             raise InvalidCredentialsError()
 
         if admin.mfa_enabled:
-            if not mfa_code or not admin.mfa_secret_encrypted:
-                raise InvalidMfaCodeError()
-            secret = security.decrypt_secret(admin.mfa_secret_encrypted)
-            if not security.verify_totp_code(secret=secret, code=mfa_code):
-                backup_code = await self._tokens.get_unused_backup_code_by_hash(
-                    admin_id=admin.id,
-                    code_hash=security.hash_opaque_token(mfa_code.strip().upper()),
-                )
-                if backup_code is None:
-                    raise InvalidMfaCodeError()
-                await self._tokens.consume_backup_code(backup_code)
+            await self._verify_mfa_or_backup_code(admin, mfa_code)
 
         await self._audit.record(
             admin_id=admin.id, action="admin.step_up_verified", target_type="platform_admin"
         )
         return security.create_platform_admin_step_up_token(admin_id=admin.id)
+
+    async def verify_mfa_and_login(
+        self, *, challenge_token: str, code: str
+    ) -> IssuedAdminTokens:
+        """Second step of login for an admin who already has MFA enrolled -- mirrors
+        auth.service.auth_service.AuthService.verify_mfa_and_login exactly, against the
+        platform-admin-scoped challenge token login() issues instead of a session."""
+
+        try:
+            payload = security.decode_platform_admin_mfa_challenge_token(challenge_token)
+        except security.TokenError as exc:
+            raise InvalidOrExpiredTokenError() from exc
+
+        admin = await self._admins.get_by_id(uuid.UUID(payload["sub"]))
+        if admin is None or not admin.is_active or not admin.mfa_enabled:
+            raise InvalidOrExpiredTokenError()
+
+        await self._verify_mfa_or_backup_code(admin, code)
+        return await self._issue_tokens(admin)
+
+    async def get_pending_mfa_setup(self, *, pending_token: str) -> tuple[str, str]:
+        """First step of mandatory enrollment for an admin who passed login()'s password check
+        but has never enabled MFA -- same body as setup_mfa, just keyed off a pending token
+        (proof of a correct password) instead of a full session, since one doesn't exist yet."""
+
+        admin = await self._admin_from_pending_token(pending_token)
+        return await self.setup_mfa(admin=admin)
+
+    async def enroll_mfa_and_login(
+        self, *, pending_token: str, secret: str, code: str
+    ) -> tuple[IssuedAdminTokens, list[str]]:
+        """Second step of mandatory enrollment -- combines enable_mfa's exact body (persist the
+        secret, generate backup codes) with issuing a real session in one step, since a valid
+        pending token already proves the password check the login flow requires."""
+
+        admin = await self._admin_from_pending_token(pending_token)
+        backup_codes = await self.enable_mfa(admin=admin, secret=secret, code=code)
+        tokens = await self._issue_tokens(admin)
+        return tokens, backup_codes
+
+    async def _admin_from_pending_token(self, pending_token: str) -> PlatformAdmin:
+        try:
+            payload = security.decode_platform_admin_pending_mfa_token(pending_token)
+        except security.TokenError as exc:
+            raise InvalidOrExpiredTokenError() from exc
+        admin = await self._admins.get_by_id(uuid.UUID(payload["sub"]))
+        if admin is None or not admin.is_active:
+            raise InvalidOrExpiredTokenError()
+        return admin
+
+    async def _verify_mfa_or_backup_code(self, admin: PlatformAdmin, code: str | None) -> None:
+        """Shared by step_up and verify_mfa_and_login -- decrypt the stored secret, try it as a
+        TOTP code, and fall back to a single-use backup code. Extracted here rather than left as
+        a third copy of the same ~15 lines (this codebase already carries this exact sequence
+        twice more, once each in AuthService.verify_mfa_and_login and AuthService.step_up)."""
+
+        if not code or not admin.mfa_secret_encrypted:
+            raise InvalidMfaCodeError()
+        secret = security.decrypt_secret(admin.mfa_secret_encrypted)
+        if not security.verify_totp_code(secret=secret, code=code):
+            backup_code = await self._tokens.get_unused_backup_code_by_hash(
+                admin_id=admin.id,
+                code_hash=security.hash_opaque_token(code.strip().upper()),
+            )
+            if backup_code is None:
+                raise InvalidMfaCodeError()
+            await self._tokens.consume_backup_code(backup_code)
 
     async def _issue_tokens(self, admin: PlatformAdmin) -> IssuedAdminTokens:
         access_token = security.create_platform_admin_access_token(admin_id=admin.id)

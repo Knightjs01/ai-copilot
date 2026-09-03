@@ -61,6 +61,7 @@ Set these environment variables on the backend service:
 | `STORAGE_DIR` | `/app/storage` |
 | `CORS_ORIGINS` | placeholder for now (`http://localhost:3000`) — you'll fix this in step 5 |
 | `FRONTEND_BASE_URL` | same placeholder, same fix in step 5 |
+| `PLATFORM_ADMIN_ALLOWED_IPS` | comma-separated list of the IPs allowed to reach Phantom Command (`/platform-admin`) — leaving this unset blocks everyone, since it fails closed. Must also be set (same value) on the frontend service. |
 
 Deploy. On first boot the container runs `alembic upgrade head` before starting uvicorn —
 watch the deploy logs for the migration output, then confirm `https://<backend-url>/api/v1/health`
@@ -73,9 +74,12 @@ New service → this repo → root directory `frontend/`. Set:
 | Variable | Value |
 |---|---|
 | `NEXT_PUBLIC_API_URL` | the backend service's Railway-assigned public URL (`https://<backend>.up.railway.app`) |
+| `PLATFORM_ADMIN_ALLOWED_IPS` | same comma-separated IP list as the backend service — enforced by `frontend/middleware.ts` on `/platform-admin/*`. No `NEXT_PUBLIC_` prefix: this is read server-side only in middleware, never sent to the browser. |
 
 This **must** be set before the first build — Next.js bakes `NEXT_PUBLIC_*` vars in at build
 time, not read at runtime. If you set it after an initial build, trigger a redeploy.
+(`PLATFORM_ADMIN_ALLOWED_IPS` is read at runtime by middleware, not baked in, so it can be
+changed without a rebuild — a plain redeploy/restart picks up a new value.)
 
 Deploy, then confirm the frontend loads at its Railway URL and hits the backend without CORS
 errors (there will be CORS errors until step 5 — that's expected).

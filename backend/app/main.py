@@ -9,6 +9,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.exceptions import AppError
+from app.core.platform_admin_ip_allowlist import PlatformAdminIPAllowlistMiddleware
 from app.core.rate_limit import limiter
 from app.core.security_headers import SecurityHeadersMiddleware
 
@@ -40,6 +41,11 @@ def create_app() -> FastAPI:
     # imprecise stub on slowapi's side.
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
     app.add_middleware(SlowAPIMiddleware)
+
+    # Registered last so it runs first (Starlette executes middleware in reverse registration
+    # order) -- a disallowed request to Phantom Command is rejected before rate-limiting or CORS
+    # logic even runs.
+    app.add_middleware(PlatformAdminIPAllowlistMiddleware)
 
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:

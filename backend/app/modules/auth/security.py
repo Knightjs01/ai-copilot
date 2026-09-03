@@ -182,6 +182,56 @@ def decode_platform_admin_step_up_token(token: str) -> dict[str, Any]:
     return payload
 
 
+def create_platform_admin_mfa_challenge_token(*, admin_id: uuid.UUID) -> str:
+    """Platform-admin equivalent of create_mfa_challenge_token -- issued instead of a session
+    when a password check succeeds but the admin still needs to supply a TOTP/backup code. A
+    distinct scope so it can never be replayed against the company /auth/mfa/verify route or
+    vice versa."""
+
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(admin_id),
+        "scope": "platform_admin_mfa_challenge",
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.mfa_challenge_expire_minutes),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
+def decode_platform_admin_mfa_challenge_token(token: str) -> dict[str, Any]:
+    payload = decode_access_token(token)
+    if payload.get("scope") != "platform_admin_mfa_challenge":
+        raise TokenError("Not an MFA challenge token")
+    return payload
+
+
+def create_platform_admin_pending_mfa_token(*, admin_id: uuid.UUID) -> str:
+    """Issued instead of a session when a password check succeeds for an admin who has never
+    enrolled MFA -- proof of "correct password, MFA enrollment still required" that only the two
+    pending-enrollment endpoints (mfa/pending/setup, mfa/pending/enable) accept. Deliberately a
+    separate scope from the MFA challenge token above: this one proves a weaker fact (password
+    only, no MFA check has happened yet) and must never be usable anywhere a real session or a
+    post-MFA challenge would be accepted."""
+
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(admin_id),
+        "scope": "platform_admin_pending_mfa",
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.mfa_challenge_expire_minutes),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
+def decode_platform_admin_pending_mfa_token(token: str) -> dict[str, Any]:
+    payload = decode_access_token(token)
+    if payload.get("scope") != "platform_admin_pending_mfa":
+        raise TokenError("Not a pending-MFA token")
+    return payload
+
+
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Union
 
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,11 +20,17 @@ from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import (
     ChangePasswordRequest,
     CreatePlatformAdminRequest,
+    PlatformAdminEnrollAndLoginResponse,
     PlatformAdminLoginRequest,
+    PlatformAdminMfaChallengeResponse,
     PlatformAdminMfaDisableRequest,
     PlatformAdminMfaEnableRequest,
     PlatformAdminMfaEnableResponse,
+    PlatformAdminMfaEnrollmentRequiredResponse,
     PlatformAdminMfaSetupResponse,
+    PlatformAdminMfaVerifyRequest,
+    PlatformAdminPendingMfaEnableRequest,
+    PlatformAdminPendingMfaSetupRequest,
     PlatformAdminRead,
     PlatformAdminStepUpRequest,
     PlatformAdminStepUpResponse,
@@ -34,6 +40,8 @@ from app.modules.platform_admin.schemas import (
     PurgeAllDataResult,
 )
 from app.modules.platform_admin.service import (
+    AdminMfaChallenge,
+    AdminMfaEnrollmentRequired,
     PlatformAdminAuthService,
     PlatformAdminDataService,
     PlatformAdminManagementService,
@@ -62,19 +70,79 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/v1/platform-admin")
 
 
-@router.post("/login", response_model=PlatformAdminTokenResponse)
+@router.post(
+    "/login",
+    response_model=Union[
+        PlatformAdminTokenResponse,
+        PlatformAdminMfaChallengeResponse,
+        PlatformAdminMfaEnrollmentRequiredResponse,
+    ],
+)
 @limiter.limit("10/minute")
 async def login(
     request: Request,
     response: Response,
     body: PlatformAdminLoginRequest,
     session: AsyncSession = Depends(get_db),
-) -> PlatformAdminTokenResponse:
-    tokens = await PlatformAdminAuthService(session).login(
+) -> (
+    PlatformAdminTokenResponse
+    | PlatformAdminMfaChallengeResponse
+    | PlatformAdminMfaEnrollmentRequiredResponse
+):
+    result = await PlatformAdminAuthService(session).login(
         email=body.email, password=body.password
+    )
+    if isinstance(result, AdminMfaChallenge):
+        return PlatformAdminMfaChallengeResponse(challenge_token=result.challenge_token)
+    if isinstance(result, AdminMfaEnrollmentRequired):
+        return PlatformAdminMfaEnrollmentRequiredResponse(pending_token=result.pending_token)
+    _set_refresh_cookie(response, result.refresh_token)
+    return PlatformAdminTokenResponse(access_token=result.access_token)
+
+
+@router.post("/mfa/verify", response_model=PlatformAdminTokenResponse)
+@limiter.limit("10/minute")
+async def verify_mfa(
+    request: Request,
+    response: Response,
+    body: PlatformAdminMfaVerifyRequest,
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminTokenResponse:
+    tokens = await PlatformAdminAuthService(session).verify_mfa_and_login(
+        challenge_token=body.challenge_token, code=body.code
     )
     _set_refresh_cookie(response, tokens.refresh_token)
     return PlatformAdminTokenResponse(access_token=tokens.access_token)
+
+
+@router.post("/mfa/pending/setup", response_model=PlatformAdminMfaSetupResponse)
+@limiter.limit("10/minute")
+async def pending_mfa_setup(
+    request: Request,
+    body: PlatformAdminPendingMfaSetupRequest,
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminMfaSetupResponse:
+    secret, uri = await PlatformAdminAuthService(session).get_pending_mfa_setup(
+        pending_token=body.pending_token
+    )
+    return PlatformAdminMfaSetupResponse(secret=secret, provisioning_uri=uri)
+
+
+@router.post("/mfa/pending/enable", response_model=PlatformAdminEnrollAndLoginResponse)
+@limiter.limit("10/minute")
+async def pending_mfa_enable(
+    request: Request,
+    response: Response,
+    body: PlatformAdminPendingMfaEnableRequest,
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminEnrollAndLoginResponse:
+    tokens, backup_codes = await PlatformAdminAuthService(session).enroll_mfa_and_login(
+        pending_token=body.pending_token, secret=body.secret, code=body.code
+    )
+    _set_refresh_cookie(response, tokens.refresh_token)
+    return PlatformAdminEnrollAndLoginResponse(
+        access_token=tokens.access_token, backup_codes=backup_codes
+    )
 
 
 @router.post("/refresh", response_model=PlatformAdminTokenResponse)

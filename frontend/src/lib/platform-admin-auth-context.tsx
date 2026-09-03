@@ -8,12 +8,27 @@ import {
   refreshPlatformAdminAccessToken,
   setPlatformAdminAccessToken,
 } from "@/lib/platform-admin-api-client";
-import type { PlatformAdmin } from "@/lib/types";
+import type { MfaEnableResponse, MfaSetupResponse, PlatformAdmin } from "@/lib/types";
+
+// Mirrors lib/auth-context.tsx's LoginResult exactly, with a third branch: Phantom Command
+// requires MFA at login with no opt-out, so an admin who has never enrolled must be walked
+// through enrollment (mfaEnrollmentRequired) rather than just being told MFA is required.
+export type PlatformAdminLoginResult =
+  | { mfaRequired: false; mfaEnrollmentRequired: false }
+  | { mfaRequired: true; mfaEnrollmentRequired: false; challengeToken: string }
+  | { mfaRequired: false; mfaEnrollmentRequired: true; pendingToken: string };
 
 interface PlatformAdminAuthContextValue {
   admin: PlatformAdmin | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<PlatformAdminLoginResult>;
+  verifyMfa: (challengeToken: string, code: string) => Promise<void>;
+  getPendingMfaSetup: (pendingToken: string) => Promise<MfaSetupResponse>;
+  enrollMfa: (
+    pendingToken: string,
+    secret: string,
+    code: string
+  ) => Promise<MfaEnableResponse>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   refreshAdmin: () => Promise<void>;
@@ -44,15 +59,60 @@ export function PlatformAdminAuthProvider({ children }: { children: React.ReactN
     })();
   }, []);
 
-  const login = React.useCallback(async (email: string, password: string) => {
+  const login = React.useCallback(
+    async (email: string, password: string): Promise<PlatformAdminLoginResult> => {
+      const res = await platformAdminApiClient.post<
+        | { access_token: string }
+        | { mfa_required: true; challenge_token: string }
+        | { mfa_enrollment_required: true; pending_token: string }
+      >("/platform-admin/login", { email, password });
+      if ("mfa_required" in res) {
+        return { mfaRequired: true, mfaEnrollmentRequired: false, challengeToken: res.challenge_token };
+      }
+      if ("mfa_enrollment_required" in res) {
+        return { mfaRequired: false, mfaEnrollmentRequired: true, pendingToken: res.pending_token };
+      }
+      setPlatformAdminAccessToken(res.access_token);
+      const me = await platformAdminApiClient.get<PlatformAdmin>("/platform-admin/me");
+      setAdmin(me);
+      return { mfaRequired: false, mfaEnrollmentRequired: false };
+    },
+    []
+  );
+
+  const verifyMfa = React.useCallback(async (challengeToken: string, code: string) => {
     const res = await platformAdminApiClient.post<{ access_token: string }>(
-      "/platform-admin/login",
-      { email, password }
+      "/platform-admin/mfa/verify",
+      { challenge_token: challengeToken, code }
     );
     setPlatformAdminAccessToken(res.access_token);
     const me = await platformAdminApiClient.get<PlatformAdmin>("/platform-admin/me");
     setAdmin(me);
   }, []);
+
+  const getPendingMfaSetup = React.useCallback(async (pendingToken: string) => {
+    return platformAdminApiClient.post<MfaSetupResponse>("/platform-admin/mfa/pending/setup", {
+      pending_token: pendingToken,
+    });
+  }, []);
+
+  const enrollMfa = React.useCallback(
+    async (pendingToken: string, secret: string, code: string) => {
+      const res = await platformAdminApiClient.post<{
+        access_token: string;
+        backup_codes: string[];
+      }>("/platform-admin/mfa/pending/enable", {
+        pending_token: pendingToken,
+        secret,
+        code,
+      });
+      setPlatformAdminAccessToken(res.access_token);
+      const me = await platformAdminApiClient.get<PlatformAdmin>("/platform-admin/me");
+      setAdmin(me);
+      return { backup_codes: res.backup_codes };
+    },
+    []
+  );
 
   const logout = React.useCallback(async () => {
     try {
@@ -74,8 +134,28 @@ export function PlatformAdminAuthProvider({ children }: { children: React.ReactN
   }, []);
 
   const value = React.useMemo(
-    () => ({ admin, isLoading, login, logout, hasPermission, refreshAdmin }),
-    [admin, isLoading, login, logout, hasPermission, refreshAdmin]
+    () => ({
+      admin,
+      isLoading,
+      login,
+      verifyMfa,
+      getPendingMfaSetup,
+      enrollMfa,
+      logout,
+      hasPermission,
+      refreshAdmin,
+    }),
+    [
+      admin,
+      isLoading,
+      login,
+      verifyMfa,
+      getPendingMfaSetup,
+      enrollMfa,
+      logout,
+      hasPermission,
+      refreshAdmin,
+    ]
   );
 
   return (

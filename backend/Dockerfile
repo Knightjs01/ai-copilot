@@ -30,5 +30,9 @@ EXPOSE 8000
 # Runs the migration on every container start before serving — correct and simple for a
 # single-instance deployment (a startup migration race only matters with concurrent instances,
 # which this deployment doesn't have). Binds to Railway's dynamic $PORT, falling back to 8000
-# for any other environment that doesn't set it.
-CMD poetry run alembic upgrade head && poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# for any other environment that doesn't set it. --forwarded-allow-ips="*" trusts the incoming
+# connection's X-Forwarded-For header -- safe here specifically because Railway's edge proxy is
+# the only thing that can reach this container's public port at all; without this, uvicorn's
+# default (trust only 127.0.0.1) means request.client.host shows Railway's internal proxy
+# address instead of the real visitor IP, which the platform-admin IP allowlist depends on.
+CMD poetry run alembic upgrade head && poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --forwarded-allow-ips="*"

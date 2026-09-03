@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     secret_key: str = ""
     encryption_key: str = ""
 
+    # Restricts /api/v1/platform-admin/* to a fixed set of visitor IPs -- see
+    # app/core/platform_admin_ip_allowlist.py. Only enforced when environment == "production"
+    # (local dev is never blocked). Deliberately fail-closed: in production, an empty or
+    # misconfigured list blocks every request rather than silently allowing all -- a config
+    # mistake locks everyone out until fixed, which is the safer failure mode for an admin
+    # portal. Comma-separated, same style as cors_origins.
+    platform_admin_allowed_ips: str = ""
+
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
     mfa_challenge_expire_minutes: int = 10
@@ -89,6 +97,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def platform_admin_allowed_ip_list(self) -> list[str]:
+        return [ip.strip() for ip in self.platform_admin_allowed_ips.split(",") if ip.strip()]
 
 
 @lru_cache

@@ -17,6 +17,40 @@ class PlatformAdminTokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class PlatformAdminMfaChallengeResponse(BaseModel):
+    # Discriminator field the frontend checks for -- mirrors auth.schemas.MfaChallengeResponse.
+    mfa_required: bool = True
+    challenge_token: str
+
+
+class PlatformAdminMfaEnrollmentRequiredResponse(BaseModel):
+    # Discriminator field the frontend checks for, distinct from mfa_required above so the two
+    # branches (already enrolled vs. must enroll now) can never be confused for one another.
+    mfa_enrollment_required: bool = True
+    pending_token: str
+
+
+class PlatformAdminMfaVerifyRequest(BaseModel):
+    challenge_token: str
+    code: str = Field(min_length=6, max_length=11)
+
+
+class PlatformAdminPendingMfaSetupRequest(BaseModel):
+    pending_token: str
+
+
+class PlatformAdminPendingMfaEnableRequest(BaseModel):
+    pending_token: str
+    secret: str
+    code: str
+
+
+class PlatformAdminEnrollAndLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    backup_codes: list[str]
+
+
 class PlatformAdminRead(BaseModel):
     id: uuid.UUID
     email: str
