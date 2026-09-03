@@ -7,7 +7,7 @@ export function TalentPartnersHeroSection() {
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-brand" />
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            Phantom Talent Partners
+            Phantom Talent
           </p>
         </div>
         <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">

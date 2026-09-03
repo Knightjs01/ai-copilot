@@ -5,7 +5,7 @@ import { TalentPartnersFinalCtaSection } from "@/components/marketing/talent-par
 import { TalentPartnersHeroSection } from "@/components/marketing/talent-partners-hero-section";
 
 export const metadata: Metadata = {
-  title: "Phantom Talent Partners | Phantom Hire",
+  title: "Phantom Talent | Phantom Hire",
   description:
     "Access verified recruitment experts who manage your search using Phantom's network, technology and insights — the expert layer of the Phantom ecosystem.",
 };
