@@ -113,61 +113,35 @@ export function ProductEcosystemSection() {
               <div
                 key={product.name}
                 className={cn(
-                  "relative flex flex-col gap-2.5 rounded-2xl p-5",
+                  "relative flex flex-col gap-2.5 rounded-2xl border p-5",
                   product.featured
-                    ? "bg-gradient-to-br from-foreground to-brand text-brand-foreground shadow-xl shadow-brand/25"
-                    : "border border-border bg-background"
+                    ? "border-brand/40 bg-brand/5 shadow-lg shadow-brand/10 ring-1 ring-brand/20"
+                    : "border-border bg-background"
                 )}
               >
                 <div className="flex items-start justify-between">
                   <div
                     className={cn(
                       "flex h-11 w-11 items-center justify-center rounded-xl",
-                      product.featured ? "bg-gold/20 text-gold" : "bg-brand/10 text-brand"
+                      product.featured ? "bg-brand/15 text-brand" : "bg-brand/10 text-brand"
                     )}
                   >
                     <product.icon className="h-5 w-5" />
                   </div>
-                  <span
-                    className={cn(
-                      "text-xs font-bold tracking-wide",
-                      product.featured ? "text-brand-foreground/50" : "text-muted-foreground/70"
-                    )}
-                  >
+                  <span className="text-xs font-bold tracking-wide text-muted-foreground/70">
                     0{index + 1}
                   </span>
                 </div>
 
                 <div>
-                  <h3
-                    className={cn(
-                      "text-base font-semibold",
-                      product.featured ? "text-brand-foreground" : "text-foreground"
-                    )}
-                  >
-                    {product.name}
-                  </h3>
-                  <p
-                    className={cn(
-                      "text-sm font-medium",
-                      product.featured ? "text-brand-foreground" : "text-brand"
-                    )}
-                  >
-                    {product.tagline}
-                  </p>
+                  <h3 className="text-base font-semibold text-foreground">{product.name}</h3>
+                  <p className="text-sm font-medium text-brand">{product.tagline}</p>
                 </div>
 
-                <p
-                  className={cn(
-                    "text-sm leading-relaxed",
-                    product.featured ? "text-brand-foreground/80" : "text-muted-foreground"
-                  )}
-                >
-                  {product.body}
-                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{product.body}</p>
 
                 {product.featured && (
-                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gold/40 px-3 py-1 text-xs font-medium text-brand-foreground">
+                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-medium text-gold">
                     <ShieldCheck className="h-3 w-3" />
                     Verified. Private. Portable.
                   </span>
@@ -175,12 +149,7 @@ export function ProductEcosystemSection() {
 
                 <Link
                   href={product.href}
-                  className={cn(
-                    "mt-auto inline-flex items-center gap-1.5 text-sm font-medium",
-                    product.featured
-                      ? "text-gold hover:text-gold/80"
-                      : "text-brand hover:text-brand/80"
-                  )}
+                  className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80"
                 >
                   Learn more
                   <ArrowRight className="h-3.5 w-3.5" />
