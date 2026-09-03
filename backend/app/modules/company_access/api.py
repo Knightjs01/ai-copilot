@@ -16,6 +16,8 @@ from app.modules.company_access.schemas import (
     RequestInfoBody,
 )
 from app.modules.company_access.service import CompanyAccessRequestService
+from app.modules.phantom_passport.models import VerificationStatus
+from app.modules.phantom_passport.repository import PhantomPassportRepository
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 from app.modules.platform_admin.dependencies import (
     PlatformAdminContext,
@@ -23,6 +25,8 @@ from app.modules.platform_admin.dependencies import (
 )
 from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import PlatformAdminAuditLogRead
+from app.modules.shadow_jobs.models import ShadowJobStatus
+from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 
 router = APIRouter(prefix="/company-access", tags=["company-access"])
 
@@ -114,7 +118,20 @@ async def get_stats(
 ) -> AccessRequestStatsRead:
     request_stats = await CompanyAccessRequestService(session).get_stats()
     company_stats = await CompanyService(session).get_status_counts()
-    return AccessRequestStatsRead(**request_stats, **company_stats)
+    active_role_count = await ShadowJobRepository(session).count_by_status(
+        ShadowJobStatus.PUBLISHED.value
+    )
+    verified_candidate_count = await PhantomPassportRepository(session).count_by_verification_status(
+        VerificationStatus.VERIFIED.value
+    )
+    application_count = await ShadowApplicationRepository(session).count_all()
+    return AccessRequestStatsRead(
+        **request_stats,
+        **company_stats,
+        active_role_count=active_role_count,
+        verified_candidate_count=verified_candidate_count,
+        application_count=application_count,
+    )
 
 
 @router.get("/audit-log", response_model=list[PlatformAdminAuditLogRead])

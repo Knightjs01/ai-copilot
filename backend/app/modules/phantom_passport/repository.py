@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.phantom_passport.models import (
@@ -173,6 +173,15 @@ class PhantomPassportRepository:
         passport.visibility = visibility
         await self._session.flush()
         return passport
+
+    async def count_by_verification_status(self, status: str) -> int:
+        result = await self._session.execute(
+            select(func.count()).where(
+                PhantomPassport.verification_status == status,
+                PhantomPassport.deleted_at.is_(None),
+            )
+        )
+        return result.scalar_one()
 
 
 class PassportPersonalInfoRepository:

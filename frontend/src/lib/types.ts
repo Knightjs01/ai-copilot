@@ -1429,6 +1429,22 @@ export interface AccessRequestStats {
   rejected_requests: number;
   active_companies: number;
   suspended_companies: number;
+  active_role_count: number;
+  verified_candidate_count: number;
+  application_count: number;
+}
+
+export type ActionQueueItemType = "access_request" | "job_review" | "profile_review";
+
+export interface ActionQueueItem {
+  id: string;
+  type: ActionQueueItemType;
+  title: string;
+  subtitle: string;
+  company_name: string;
+  created_at: string;
+  priority: "high" | "normal";
+  url: string;
 }
 
 // The admin-facing company directory row -- leaner than the owning company's own Company shape,

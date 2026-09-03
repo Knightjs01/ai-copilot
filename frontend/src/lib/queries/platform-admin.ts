@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { platformAdminApiClient } from "@/lib/platform-admin-api-client";
 import type {
   AccessRequestStats,
+  ActionQueueItem,
   AdminCompanySummary,
   AdminShadowJob,
   CompanyAccessRequest,
@@ -49,6 +50,13 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ["platform-admin", "stats"],
     queryFn: () => platformAdminApiClient.get<AccessRequestStats>("/company-access/stats"),
+  });
+}
+
+export function useActionQueue() {
+  return useQuery({
+    queryKey: ["platform-admin", "action-queue"],
+    queryFn: () => platformAdminApiClient.get<ActionQueueItem[]>("/platform-admin/action-queue"),
   });
 }
 

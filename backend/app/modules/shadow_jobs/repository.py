@@ -103,6 +103,14 @@ class ShadowJobRepository:
         )
         return list(result.scalars().all())
 
+    async def count_by_status(self, status: str) -> int:
+        result = await self._session.execute(
+            select(func.count()).where(
+                ShadowJob.status == status, ShadowJob.deleted_at.is_(None)
+            )
+        )
+        return result.scalar_one()
+
     async def list_published(
         self,
         *,
@@ -255,3 +263,7 @@ class ShadowApplicationRepository:
         await self._session.execute(
             delete(ShadowApplication).where(ShadowApplication.shadow_job_id == shadow_job_id)
         )
+
+    async def count_all(self) -> int:
+        result = await self._session.execute(select(func.count()).select_from(ShadowApplication))
+        return result.scalar_one()

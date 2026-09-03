@@ -38,3 +38,6 @@ class AccessRequestStatsRead(BaseModel):
     rejected_requests: int
     active_companies: int
     suspended_companies: int
+    active_role_count: int
+    verified_candidate_count: int
+    application_count: int

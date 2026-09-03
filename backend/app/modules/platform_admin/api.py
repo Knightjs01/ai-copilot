@@ -7,6 +7,7 @@ from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.modules.auth.exceptions import InvalidOrExpiredTokenError
+from app.modules.platform_admin.action_queue import ActionQueueItem, ActionQueueService
 from app.modules.platform_admin.dependencies import (
     PlatformAdminContext,
     get_current_platform_admin,
@@ -191,6 +192,14 @@ async def me(admin: PlatformAdminContext = Depends(get_current_platform_admin)) 
         permissions=sorted(admin.permissions),
         mfa_enabled=admin.mfa_enabled,
     )
+
+
+@router.get("/action-queue", response_model=list[ActionQueueItem])
+async def get_action_queue(
+    admin: PlatformAdminContext = Depends(get_current_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> list[ActionQueueItem]:
+    return await ActionQueueService(session).list_items(permissions=admin.permissions)
 
 
 @router.post("/mfa/setup", response_model=PlatformAdminMfaSetupResponse)
