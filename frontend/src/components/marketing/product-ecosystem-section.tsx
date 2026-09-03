@@ -41,7 +41,7 @@ const PRODUCTS = [
   },
   {
     icon: Users,
-    name: "Phantom Talent Partners",
+    name: "Phantom Talent",
     tagline: "The expert layer.",
     body: "Access verified recruitment experts who manage your search using our network, technology and insights.",
     href: "/talent-partners",
