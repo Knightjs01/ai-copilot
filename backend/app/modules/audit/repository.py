@@ -54,3 +54,17 @@ class AuditRepository:
             .limit(_MAX_TARGET_ENTRIES)
         )
         return [(row[0], row[1]) for row in result.all()]
+
+    async def list_by_company(
+        self, *, company_id: uuid.UUID, limit: int = 100
+    ) -> list[tuple[AuditLog, str | None]]:
+        """Every audit event for this company, any target -- powers the platform-admin Company
+        Command Profile's Activity tab. Same actor-email left-join as list_by_target above."""
+        result = await self._session.execute(
+            select(AuditLog, User.email)
+            .outerjoin(User, User.id == AuditLog.actor_user_id)
+            .where(AuditLog.company_id == company_id)
+            .order_by(AuditLog.created_at.desc())
+            .limit(limit)
+        )
+        return [(row[0], row[1]) for row in result.all()]

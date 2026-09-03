@@ -182,3 +182,28 @@ class ProfileStats(BaseModel):
     total_hires: int
     team_size: int | None
     candidates_in_pipeline: int
+
+
+class AdminCompanyDetail(AdminCompanySummary):
+    """Platform-admin Company Command Profile detail shape -- AdminCompanySummary's admin-only
+    fields plus the full profile content CompanyRead carries and the company's own ProfileStats,
+    combined into the one call the detail page needs. No new content, just the union of two
+    already-real shapes plus already-real stats."""
+
+    description: str | None
+    culture: str | None
+    benefits: list[Any]
+    size: str | None
+    industry: list[Any]
+    logo_url: str | None
+    cover_image_url: str | None
+    hiring_process_overview: str | None
+    tagline: str | None
+    website: str | None
+    founded_year: int | None
+    headquarters: str | None
+    employee_count: int | None
+    values: list[Any]
+    looking_for: list[Any]
+    hiring_highlights: list[Any]
+    profile_stats: ProfileStats

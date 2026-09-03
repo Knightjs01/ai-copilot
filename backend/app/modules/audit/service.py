@@ -48,3 +48,20 @@ class AuditService:
             )
             for entry, actor_email in rows
         ]
+
+    async def list_by_company(
+        self, *, company_id: uuid.UUID, limit: int = 100
+    ) -> list[AuditEntryRead]:
+        rows = await self._repository.list_by_company(company_id=company_id, limit=limit)
+        return [
+            AuditEntryRead(
+                id=entry.id,
+                actor_email=actor_email,
+                action=entry.action,
+                target_type=entry.target_type,
+                target_id=entry.target_id,
+                extra_data=entry.extra_data,
+                created_at=entry.created_at,
+            )
+            for entry, actor_email in rows
+        ]

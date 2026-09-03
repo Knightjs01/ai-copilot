@@ -6,9 +6,12 @@ import { platformAdminApiClient } from "@/lib/platform-admin-api-client";
 import type {
   AccessRequestStats,
   ActionQueueItem,
+  AdminCompanyDetail,
   AdminCompanySummary,
+  AdminCompanyUser,
   AdminShadowJob,
   AdminShadowJobDetail,
+  AuditEntry,
   CompanyAccessRequest,
   CompanyProfile,
   MfaEnableResponse,
@@ -73,6 +76,33 @@ export function useAllCompanies() {
   return useQuery({
     queryKey: ["platform-admin", "companies"],
     queryFn: () => platformAdminApiClient.get<AdminCompanySummary[]>("/companies"),
+  });
+}
+
+export function useCompanyDetail(companyId: string) {
+  return useQuery({
+    queryKey: ["platform-admin", "companies", companyId],
+    queryFn: () =>
+      platformAdminApiClient.get<AdminCompanyDetail>(`/companies/${companyId}/detail`),
+    enabled: !!companyId,
+  });
+}
+
+export function useCompanyUsers(companyId: string) {
+  return useQuery({
+    queryKey: ["platform-admin", "companies", companyId, "users"],
+    queryFn: () =>
+      platformAdminApiClient.get<AdminCompanyUser[]>(`/companies/${companyId}/users`),
+    enabled: !!companyId,
+  });
+}
+
+export function useCompanyActivity(companyId: string) {
+  return useQuery({
+    queryKey: ["platform-admin", "companies", companyId, "activity"],
+    queryFn: () =>
+      platformAdminApiClient.get<AuditEntry[]>(`/companies/${companyId}/activity`),
+    enabled: !!companyId,
   });
 }
 
@@ -205,13 +235,18 @@ export function useChangePassword() {
   });
 }
 
-export function useAdminJobs(status?: string) {
+export function useAdminJobs(status?: string, companyId?: string) {
   return useQuery({
-    queryKey: ["platform-admin", "jobs", "list", status ?? "all"],
-    queryFn: () =>
-      platformAdminApiClient.get<AdminShadowJob[]>(
-        `/platform-admin/jobs${status && status !== "all" ? `?status=${status}` : ""}`
-      ),
+    queryKey: ["platform-admin", "jobs", "list", status ?? "all", companyId ?? "all"],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (status && status !== "all") params.set("status", status);
+      if (companyId) params.set("company_id", companyId);
+      const query = params.toString();
+      return platformAdminApiClient.get<AdminShadowJob[]>(
+        `/platform-admin/jobs${query ? `?${query}` : ""}`
+      );
+    },
   });
 }
 

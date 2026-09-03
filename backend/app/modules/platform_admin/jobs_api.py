@@ -39,13 +39,14 @@ async def _to_admin_read(
 @router.get("", response_model=list[AdminShadowJobRead])
 async def list_jobs(
     status_filter: str | None = Query(default=None, alias="status"),
+    company_id: uuid.UUID | None = Query(default=None),
     _: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.JOBS_VIEW)
     ),
     session: AsyncSession = Depends(get_db),
 ) -> list[AdminShadowJobRead]:
     service = ShadowJobService(session)
-    jobs = await service.list_admin_jobs(status=status_filter)
+    jobs = await service.list_admin_jobs(status=status_filter, company_id=company_id)
     return [await _to_admin_read(session, service, job) for job in jobs]
 
 

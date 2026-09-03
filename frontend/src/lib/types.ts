@@ -1470,6 +1470,35 @@ export interface AdminCompanySummary {
   is_verified_employer: boolean;
 }
 
+export interface AdminCompanyDetail extends AdminCompanySummary {
+  description: string | null;
+  culture: string | null;
+  benefits: string[];
+  size: CompanySizeBand | null;
+  industry: string[];
+  logo_url: string | null;
+  cover_image_url: string | null;
+  hiring_process_overview: string | null;
+  tagline: string | null;
+  website: string | null;
+  founded_year: number | null;
+  headquarters: string | null;
+  employee_count: number | null;
+  values: ContentItem[];
+  looking_for: string[];
+  hiring_highlights: ContentItem[];
+  profile_stats: ProfileStats;
+}
+
+export interface AdminCompanyUser {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  is_email_verified: boolean;
+  roles: string[];
+}
+
 export interface PlatformAdminAuditLogEntry {
   id: string;
   admin_id: string;

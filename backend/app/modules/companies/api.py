@@ -13,9 +13,12 @@ from app.modules.auth.dependencies import (
     require_mfa_enrolled,
     require_permission,
 )
+from app.modules.audit.schemas import AuditEntryRead
+from app.modules.audit.service import AuditService
 from app.modules.auth.email import EmailSender
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
+from app.modules.auth.repository.users import UserRepository
 from app.modules.auth.schemas import UserRead
 from app.modules.auth.service.auth_service import AuthService
 from app.modules.auth.service.user_service import UserService
@@ -24,6 +27,7 @@ from app.modules.commercial.service import CommercialService
 from app.modules.companies.dependencies import get_media_storage
 from app.modules.companies.models import Company, CompanyProfileStatus
 from app.modules.companies.schemas import (
+    AdminCompanyDetail,
     AdminCompanySummary,
     AdminCreateCompanyRequest,
     AdminInviteCompanyUserRequest,
@@ -36,6 +40,7 @@ from app.modules.companies.schemas import (
     PublishChangesRequest,
 )
 from app.modules.companies.service import CompanyService
+from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 from app.modules.platform_admin.dependencies import (
     PlatformAdminContext,
     require_platform_admin_permission,
@@ -522,3 +527,96 @@ async def admin_invite_company_user(
         is_email_verified=invited.is_email_verified,
         roles=[body.role_name],
     )
+
+
+@admin_router.get("/{company_id}/detail", response_model=AdminCompanyDetail)
+async def get_company_detail_for_admin(
+    company_id: uuid.UUID,
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> AdminCompanyDetail:
+    """Company Command Profile's Overview/Profile tabs -- combines AdminCompanySummary's
+    admin-only fields with CompanyRead's full profile content and the company's own
+    ProfileStats, mirroring list_companies_for_admin's own inline-construction style."""
+    service = CompanyService(session)
+    company = await service.get_company(company_id)
+    if company is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    plan_code_by_id = {
+        plan.id: plan.code for plan in await CommercialService(session).get_plan_catalog()
+    }
+    user_count = await UserRepository(session).count_by_company(company_id)
+    profile_stats = await service.get_profile_stats(company_id)
+    read = service.to_read(company)
+    return AdminCompanyDetail(
+        **read.model_dump(),
+        user_count=user_count,
+        created_at=company.created_at,
+        commercial_plan_code=(
+            plan_code_by_id.get(company.commercial_plan_id)
+            if company.commercial_plan_id is not None
+            else None
+        ),
+        active_role_limit_override=company.active_role_limit_override,
+        profile_stats=profile_stats,
+    )
+
+
+@admin_router.get("/{company_id}/users", response_model=list[UserRead])
+async def list_company_users_for_admin(
+    company_id: uuid.UUID,
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> list[UserRead]:
+    """Company Command Profile's People tab -- read-only for this phase, see the plan this
+    shipped under for why invite/role-change actions aren't part of it yet."""
+    users_with_roles = await UserService(session).list_company_users(company_id=company_id)
+    return [
+        UserRead(
+            id=uwr.user.id,
+            email=uwr.user.email,
+            full_name=uwr.user.full_name,
+            is_active=uwr.user.is_active,
+            is_email_verified=uwr.user.is_email_verified,
+            roles=uwr.role_names,
+        )
+        for uwr in users_with_roles
+    ]
+
+
+@admin_router.get("/{company_id}/activity", response_model=list[AuditEntryRead])
+async def get_company_activity_for_admin(
+    company_id: uuid.UUID,
+    admin: PlatformAdminContext = Depends(
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> list[AuditEntryRead]:
+    """Company Command Profile's Activity tab -- merges the company-scoped AuditLog (real
+    day-to-day events, e.g. shadow_job.created/.published, company.profile_submitted_for_review)
+    with PlatformAdminAuditLog rows targeting this company (admin-lifecycle events like
+    company.suspended/.verified_employer_set, which the company-scoped log never records --
+    see the plan this shipped under). Admin identity is deliberately never resolved here,
+    matching the existing global Activity page's own choice."""
+    company_events = await AuditService(session).list_by_company(company_id=company_id)
+    admin_events = await PlatformAdminAuditService(session).list_by_target(
+        target_type="company", target_id=company_id
+    )
+    merged = company_events + [
+        AuditEntryRead(
+            id=entry.id,
+            actor_email=None,
+            action=entry.action,
+            target_type=entry.target_type,
+            target_id=entry.target_id,
+            extra_data=entry.extra_data,
+            created_at=entry.created_at,
+        )
+        for entry in admin_events
+    ]
+    merged.sort(key=lambda entry: entry.created_at, reverse=True)
+    return merged[:100]

@@ -30,3 +30,10 @@ class PlatformAdminAuditService:
 
     async def list_recent(self, *, limit: int = 50) -> list[PlatformAdminAuditLog]:
         return await self._repository.list_recent(limit=limit)
+
+    async def list_by_target(
+        self, *, target_type: str, target_id: uuid.UUID, limit: int = 50
+    ) -> list[PlatformAdminAuditLog]:
+        return await self._repository.list_by_target(
+            target_type=target_type, target_id=target_id, limit=limit
+        )

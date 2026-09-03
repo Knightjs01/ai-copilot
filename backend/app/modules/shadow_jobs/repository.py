@@ -104,13 +104,21 @@ class ShadowJobRepository:
         return list(result.scalars().all())
 
     async def list_all(
-        self, *, status: str | None = None, limit: int = 100, offset: int = 0
+        self,
+        *,
+        status: str | None = None,
+        company_id: uuid.UUID | None = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[ShadowJob]:
-        """Deliberately not company-scoped -- powers the platform-admin Jobs list, which spans
-        every company. status=None returns every non-deleted job regardless of status."""
+        """Powers the platform-admin Jobs list, which spans every company by default.
+        status=None returns every non-deleted job regardless of status; company_id narrows to
+        one company (used by the Company Command Profile's Jobs tab)."""
         query = select(ShadowJob).where(ShadowJob.deleted_at.is_(None))
         if status is not None:
             query = query.where(ShadowJob.status == status)
+        if company_id is not None:
+            query = query.where(ShadowJob.company_id == company_id)
         query = query.order_by(ShadowJob.created_at.desc()).limit(limit).offset(offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())

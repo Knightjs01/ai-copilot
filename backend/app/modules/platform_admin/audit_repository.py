@@ -38,3 +38,17 @@ class PlatformAdminAuditRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def list_by_target(
+        self, *, target_type: str, target_id: uuid.UUID, limit: int = 50
+    ) -> list[PlatformAdminAuditLog]:
+        result = await self._session.execute(
+            select(PlatformAdminAuditLog)
+            .where(
+                PlatformAdminAuditLog.target_type == target_type,
+                PlatformAdminAuditLog.target_id == target_id,
+            )
+            .order_by(PlatformAdminAuditLog.created_at.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())

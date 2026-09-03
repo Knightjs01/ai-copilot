@@ -9,28 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { EditCommercialDialog } from "@/components/platform-admin/edit-commercial-dialog";
 import { PlatformAdminNav } from "@/components/platform-admin/platform-admin-nav";
-import { ProfileReviewDialog } from "@/components/platform-admin/profile-review-dialog";
-import {
-  useAllCompanies,
-  useReactivateCompany,
-  useSuspendCompany,
-  useUnverifyCompany,
-  useVerifyCompany,
-} from "@/lib/queries/platform-admin";
+import { useAllCompanies } from "@/lib/queries/platform-admin";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { COMPANY_PROFILE_STATUS_LABEL, COMPANY_PROFILE_STATUS_VARIANT } from "@/lib/status-display";
 import type { AdminCompanySummary } from "@/lib/types";
 
 function CompanyRow({ company }: { company: AdminCompanySummary }) {
-  const suspend = useSuspendCompany();
-  const reactivate = useReactivateCompany();
-  const verify = useVerifyCompany();
-  const unverify = useUnverifyCompany();
-  const isPending =
-    suspend.isPending || reactivate.isPending || verify.isPending || unverify.isPending;
-
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -66,58 +51,12 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
           </p>
         </div>
 
-        {(suspend.isError || reactivate.isError || verify.isError || unverify.isError) && (
-          <p className="text-sm font-medium text-danger">Couldn&apos;t save. Try again.</p>
-        )}
-
-        <div className="flex shrink-0 gap-2">
-          <EditCommercialDialog company={company} />
-          {company.profile_status === "pending_review" && (
-            <ProfileReviewDialog companyId={company.id} companyName={company.name} />
-          )}
-          {company.is_verified_employer ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => unverify.mutate(company.id)}
-              disabled={isPending}
-            >
-              {unverify.isPending ? "Removing…" : "Unverify"}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => verify.mutate(company.id)}
-              disabled={isPending}
-            >
-              {verify.isPending ? "Verifying…" : "Verify employer"}
-            </Button>
-          )}
-          {company.status === "suspended" ? (
-            <Button
-              type="button"
-              variant="brand"
-              size="sm"
-              onClick={() => reactivate.mutate(company.id)}
-              disabled={isPending}
-            >
-              {reactivate.isPending ? "Reactivating…" : "Reactivate"}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => suspend.mutate(company.id)}
-              disabled={isPending}
-            >
-              {suspend.isPending ? "Suspending…" : "Suspend"}
-            </Button>
-          )}
-        </div>
+        <Link
+          href={`/platform-admin/companies/${company.id}`}
+          className="shrink-0 text-sm font-medium text-brand hover:underline"
+        >
+          View details →
+        </Link>
       </CardContent>
     </Card>
   );

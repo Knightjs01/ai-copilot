@@ -2,18 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Briefcase } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { PlatformAdminNav } from "@/components/platform-admin/platform-admin-nav";
+import { JobRow } from "@/components/platform-admin/job-row";
 import { useAdminJobs } from "@/lib/queries/platform-admin";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
-import { formatSalary } from "@/lib/format";
-import { SHADOW_JOB_STATUS_LABEL, SHADOW_JOB_STATUS_VARIANT } from "@/lib/status-display";
-import type { AdminShadowJob, ShadowJobStatus } from "@/lib/types";
+import type { ShadowJobStatus } from "@/lib/types";
 
 type StatusFilter = ShadowJobStatus | "all";
 
@@ -24,40 +21,6 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "closed", label: "Closed" },
   { value: "draft", label: "Draft" },
 ];
-
-function JobRow({ job }: { job: AdminShadowJob }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-foreground">{job.title}</h3>
-            <Badge variant="outline">{job.company_name}</Badge>
-            <Badge variant={SHADOW_JOB_STATUS_VARIANT[job.status]}>
-              {SHADOW_JOB_STATUS_LABEL[job.status]}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {job.department ? `${job.department} · ` : ""}
-            {job.location ?? "Remote/unspecified"}
-            {job.salary_min || job.salary_max
-              ? ` · ${formatSalary(job.salary_min, job.salary_max)}`
-              : ""}
-            {" · "}
-            {job.applicant_count} applicant{job.applicant_count === 1 ? "" : "s"}
-          </p>
-        </div>
-
-        <Link
-          href={`/platform-admin/jobs/${job.id}`}
-          className="shrink-0 text-sm font-medium text-brand hover:underline"
-        >
-          View details →
-        </Link>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function PlatformAdminJobsPage() {
   const router = useRouter();
