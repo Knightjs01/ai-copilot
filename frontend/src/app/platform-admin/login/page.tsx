@@ -33,7 +33,7 @@ export default function PlatformAdminLoginPage() {
 
   return (
     <AuthShell
-      title="Phantom Admin"
+      title="Phantom Command"
       subtitle="Internal staff only."
       footer="Not a Phantom staff member? Close this tab."
     >
