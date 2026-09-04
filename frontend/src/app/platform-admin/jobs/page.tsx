@@ -27,6 +27,20 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 const PAGE_SIZE = 25;
 
 export default function PlatformAdminJobsPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Spinner className="h-6 w-6 text-muted-foreground" />
+        </div>
+      }
+    >
+      <PlatformAdminJobsPageContent />
+    </React.Suspense>
+  );
+}
+
+function PlatformAdminJobsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();

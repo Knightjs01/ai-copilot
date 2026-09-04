@@ -61,6 +61,20 @@ function CandidateRow({ candidate }: { candidate: AdminCandidateSummary }) {
 }
 
 export default function PlatformAdminCandidatesPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Spinner className="h-6 w-6 text-muted-foreground" />
+        </div>
+      }
+    >
+      <PlatformAdminCandidatesPageContent />
+    </React.Suspense>
+  );
+}
+
+function PlatformAdminCandidatesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();

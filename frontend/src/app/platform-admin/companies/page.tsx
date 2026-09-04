@@ -66,6 +66,20 @@ function CompanyRow({ company }: { company: AdminCompanySummary }) {
 }
 
 export default function PlatformAdminCompaniesPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Spinner className="h-6 w-6 text-muted-foreground" />
+        </div>
+      }
+    >
+      <PlatformAdminCompaniesPageContent />
+    </React.Suspense>
+  );
+}
+
+function PlatformAdminCompaniesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();
