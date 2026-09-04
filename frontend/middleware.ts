@@ -16,12 +16,22 @@ import type { NextRequest } from "next/server";
 // Trusts the x-forwarded-for header's first entry as the real visitor IP -- safe here for the
 // same reason as the backend: Railway's edge proxy is the only thing that can reach this
 // container at all, so trusting that one hop is the standard pattern for this deployment shape.
+//
+// The literal value "disabled" (case-insensitive) mirrors the backend's own escape hatch -- a
+// deliberate, explicit way to turn this check off (e.g. no stable IP to allowlist yet) without
+// relying on "empty means allow everyone", which is exactly the silent-misconfiguration failure
+// mode this feature exists to avoid.
 export function middleware(request: NextRequest) {
   if (process.env.NODE_ENV !== "production") {
     return NextResponse.next();
   }
 
-  const allowedIps = (process.env.PLATFORM_ADMIN_ALLOWED_IPS ?? "")
+  const rawAllowedIps = process.env.PLATFORM_ADMIN_ALLOWED_IPS ?? "";
+  if (rawAllowedIps.trim().toLowerCase() === "disabled") {
+    return NextResponse.next();
+  }
+
+  const allowedIps = rawAllowedIps
     .split(",")
     .map((ip) => ip.trim())
     .filter(Boolean);

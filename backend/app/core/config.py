@@ -29,7 +29,11 @@ class Settings(BaseSettings):
     # (local dev is never blocked). Deliberately fail-closed: in production, an empty or
     # misconfigured list blocks every request rather than silently allowing all -- a config
     # mistake locks everyone out until fixed, which is the safer failure mode for an admin
-    # portal. Comma-separated, same style as cors_origins.
+    # portal. Comma-separated, same style as cors_origins. The literal value "disabled"
+    # (case-insensitive, nothing else in the field) is a deliberate, explicit escape hatch to
+    # turn the whole check off -- e.g. when there's no stable IP to allowlist yet -- without
+    # relying on "empty means allow everyone", which is exactly the silent-misconfiguration
+    # failure mode this feature exists to avoid.
     platform_admin_allowed_ips: str = ""
 
     access_token_expire_minutes: int = 15
@@ -97,6 +101,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def platform_admin_ip_allowlist_disabled(self) -> bool:
+        return self.platform_admin_allowed_ips.strip().lower() == "disabled"
 
     @property
     def platform_admin_allowed_ip_list(self) -> list[str]:

@@ -32,6 +32,8 @@ class PlatformAdminIPAllowlistMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         if not request.url.path.startswith(_PROTECTED_PREFIX):
             return await call_next(request)
+        if settings.platform_admin_ip_allowlist_disabled:
+            return await call_next(request)
 
         allowed_ips = settings.platform_admin_allowed_ip_list
         client_ip = request.client.host if request.client else None
