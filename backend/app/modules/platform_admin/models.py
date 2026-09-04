@@ -18,6 +18,13 @@ class PlatformAdmin(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     mfa_secret_encrypted: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # A single per-admin "unread since" watermark, not a per-notification read-state table --
+    # advanced to now() whenever this admin opens the notification panel. Defaults to now() at
+    # creation (via the repository's create() call) so a freshly created admin never sees a
+    # backlog of pre-existing notifications as "unread".
+    notifications_read_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class PlatformAdminRefreshToken(UUIDPrimaryKeyMixin, Base):
@@ -94,3 +101,24 @@ class PlatformAdminMfaBackupCode(UUIDPrimaryKeyMixin, Base):
     code_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlatformAdminNotification(UUIDPrimaryKeyMixin, Base):
+    """A real, append-only feed of point-in-time events worth pinging staff about -- distinct
+    from platform_admin_audit_logs (a record of who-did-what, admin-actor-scoped) and from
+    ActionQueueService's pull-based "Needs Your Attention" aggregation (live, pending-only, no
+    table). required_permission is null for "visible to every admin"; otherwise a row is only
+    ever shown to an admin holding that exact permission code, mirroring the same permission-
+    filtering ActionQueueService already does for its own three sources."""
+
+    __tablename__ = "platform_admin_notifications"
+
+    action: Mapped[str] = mapped_column(String(100), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(String(500))
+    target_type: Mapped[str] = mapped_column(String(100))
+    target_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    required_permission: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )

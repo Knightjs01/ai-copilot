@@ -17,6 +17,8 @@ from app.modules.auth.exceptions import (
 from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
 from app.modules.platform_admin.models import PlatformAdmin
+from app.modules.platform_admin.notification_service import PlatformAdminNotificationService
+from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.repository import (
     PlatformAdminRepository,
     PlatformAdminTokenRepository,
@@ -307,6 +309,7 @@ class PlatformAdminDataService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._audit = PlatformAdminAuditService(session)
+        self._notifications = PlatformAdminNotificationService(session)
 
     async def purge_all_tenant_data(
         self, *, admin: PlatformAdmin, confirmation_phrase: str
@@ -326,6 +329,13 @@ class PlatformAdminDataService:
             action="tenant_data.purged",
             target_type="platform",
             extra_data={"table_count": len(tables), "tables": tables},
+        )
+        await self._notifications.notify(
+            action="tenant_data.purged",
+            title="Tenant data purged",
+            body=f"{admin.full_name} purged all tenant data ({len(tables)} tables cleared)",
+            target_type="platform",
+            required_permission=PlatformAdminPermissions.DANGER_ZONE_PURGE,
         )
         return PurgeAllDataResult(tables_cleared=len(tables))
 
@@ -385,6 +395,8 @@ class PlatformAdminManagementService:
         self._session = session
         self._admins = PlatformAdminRepository(session)
         self._roles = PlatformAdminRoleRepository(session)
+        self._audit = PlatformAdminAuditService(session)
+        self._notifications = PlatformAdminNotificationService(session)
 
     async def list_admins(self) -> list[PlatformAdminSummary]:
         admins = await self._admins.list_all()
@@ -404,7 +416,7 @@ class PlatformAdminManagementService:
         return summaries
 
     async def create_admin(
-        self, *, full_name: str, email: str, password: str, role_name: str
+        self, *, actor_admin_id: uuid.UUID, full_name: str, email: str, password: str, role_name: str
     ) -> PlatformAdminSummary:
         if await self._admins.get_by_email(email) is not None:
             raise EmailAlreadyRegisteredError()
@@ -417,6 +429,22 @@ class PlatformAdminManagementService:
             full_name=full_name, email=email, hashed_password=security.hash_password(password)
         )
         await self._roles.assign_role_to_admin(admin_id=admin.id, role_id=role.id)
+
+        await self._audit.record(
+            admin_id=actor_admin_id,
+            action="admin.created",
+            target_type="platform_admin",
+            target_id=admin.id,
+            extra_data={"email": email, "role": role_name},
+        )
+        await self._notifications.notify(
+            action="admin.created",
+            title="New platform admin created",
+            body=f"{full_name} ({email}) was added as {role_name}",
+            target_type="platform_admin",
+            target_id=admin.id,
+            required_permission=PlatformAdminPermissions.ADMINS_MANAGE,
+        )
 
         return PlatformAdminSummary(
             id=admin.id,

@@ -26,6 +26,8 @@ from app.modules.company_access.models import AccessRequestStatus
 from app.modules.company_access.repository import CompanyAccessRequestRepository
 from app.modules.company_access.schemas import CompanyAccessRequestCreate, CompanyAccessRequestRead
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
+from app.modules.platform_admin.notification_service import PlatformAdminNotificationService
+from app.modules.platform_admin.permissions import PlatformAdminPermissions
 
 
 class CompanyAccessRequestService:
@@ -35,6 +37,7 @@ class CompanyAccessRequestService:
         self._users = UserRepository(session)
         self._companies = CompanyRepository(session)
         self._audit = PlatformAdminAuditService(session)
+        self._notifications = PlatformAdminNotificationService(session)
         self._email_sender = email_sender
 
     async def submit_request(self, body: CompanyAccessRequestCreate) -> CompanyAccessRequestRead:
@@ -61,6 +64,14 @@ class CompanyAccessRequestService:
             company_name=body.company_name,
             work_email=body.work_email,
             hashed_password=security.hash_password(body.password),
+        )
+        await self._notifications.notify(
+            action="access_request.submitted",
+            title="New access request",
+            body=f"{body.full_name} ({body.company_name}) requested access",
+            target_type="company_access_request",
+            target_id=request.id,
+            required_permission=PlatformAdminPermissions.COMPANIES_VIEW,
         )
         return CompanyAccessRequestRead.model_validate(request)
 

@@ -158,6 +158,36 @@ class PlatformAdminAuditLogRead(BaseModel):
     created_at: datetime
 
 
+class PlatformAdminAuditLogListResponse(BaseModel):
+    """Real server-side pagination for the Activity page -- see the identically-shaped
+    AdminCompanyListResponse (companies/schemas.py) from the prior phase."""
+
+    items: list[PlatformAdminAuditLogRead]
+    total: int
+
+
+class PlatformAdminNotificationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    action: str
+    title: str
+    body: str
+    target_type: str
+    target_id: uuid.UUID | None
+    created_at: datetime
+
+
+class PlatformAdminNotificationListResponse(BaseModel):
+    items: list[PlatformAdminNotificationRead]
+    total: int
+    unread_count: int
+
+
+class PlatformAdminUnreadNotificationCountResponse(BaseModel):
+    unread_count: int
+
+
 class AdminCandidateSummary(BaseModel):
     """Platform-admin Candidate Command list row -- anonymous professional data only, the same
     boundary ShadowProfile already enforces elsewhere. Never a name, email, or phone."""

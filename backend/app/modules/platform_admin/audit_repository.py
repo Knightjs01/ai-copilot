@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.platform_admin.audit_models import PlatformAdminAuditLog
@@ -52,3 +52,31 @@ class PlatformAdminAuditRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def list_all(
+        self,
+        *,
+        action: str | None = None,
+        admin_id: uuid.UUID | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[PlatformAdminAuditLog]:
+        query = select(PlatformAdminAuditLog)
+        if action is not None:
+            query = query.where(PlatformAdminAuditLog.action == action)
+        if admin_id is not None:
+            query = query.where(PlatformAdminAuditLog.admin_id == admin_id)
+        query = query.order_by(PlatformAdminAuditLog.created_at.desc()).limit(limit).offset(offset)
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
+    async def count_all(
+        self, *, action: str | None = None, admin_id: uuid.UUID | None = None
+    ) -> int:
+        query = select(func.count()).select_from(PlatformAdminAuditLog)
+        if action is not None:
+            query = query.where(PlatformAdminAuditLog.action == action)
+        if admin_id is not None:
+            query = query.where(PlatformAdminAuditLog.admin_id == admin_id)
+        result = await self._session.execute(query)
+        return result.scalar_one()

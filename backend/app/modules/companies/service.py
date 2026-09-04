@@ -35,6 +35,8 @@ from app.modules.companies.schemas import (
 )
 from app.modules.company_access.exceptions import ExistingWorkspaceError, FreeEmailDomainError
 from app.modules.platform_admin.audit_service import PlatformAdminAuditService
+from app.modules.platform_admin.notification_service import PlatformAdminNotificationService
+from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.projects.repository import ProjectRepository
 
 _SLUG_INVALID_CHARS = re.compile(r"[^a-z0-9]+")
@@ -132,6 +134,7 @@ class CompanyService:
         self._users = UserRepository(session)
         self._audit = AuditService(session)
         self._platform_audit = PlatformAdminAuditService(session)
+        self._notifications = PlatformAdminNotificationService(session)
         self._storage = storage
         self._email_sender = email_sender
 
@@ -375,6 +378,14 @@ class CompanyService:
             action="company.profile_submitted_for_review",
             target_type="company",
             target_id=company.id,
+        )
+        await self._notifications.notify(
+            action="company.profile_submitted_for_review",
+            title="Company profile submitted for review",
+            body=f"{company.name} submitted their profile for review",
+            target_type="company",
+            target_id=company.id,
+            required_permission=PlatformAdminPermissions.COMPANIES_VIEW,
         )
         return company
 
@@ -637,6 +648,14 @@ class CompanyService:
             target_type="company",
             target_id=company.id,
             extra_data={"company_name": company.name},
+        )
+        await self._notifications.notify(
+            action="company.suspended",
+            title="Company suspended",
+            body=f"{company.name} was suspended",
+            target_type="company",
+            target_id=company.id,
+            required_permission=PlatformAdminPermissions.COMPANIES_VIEW,
         )
         return company
 

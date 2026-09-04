@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/platform-admin/change-password-dialog";
 import { GlobalSearchBox } from "@/components/platform-admin/global-search-box";
+import { NotificationBell } from "@/components/platform-admin/notification-bell";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { cn } from "@/lib/utils";
 import type { PlatformAdmin } from "@/lib/types";
@@ -39,6 +40,7 @@ export function PlatformAdminNav({ admin }: { admin: PlatformAdmin }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <GlobalSearchBox />
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <ChangePasswordDialog />
             <Button type="button" variant="secondary" size="sm" onClick={logout}>
               Log out

@@ -20,6 +20,8 @@ from app.modules.interviews.repository import InterviewRepository
 from app.modules.messages.models import Message
 from app.modules.messages.repository import MessageRepository, MessageThreadRepository
 from app.modules.passport_matching.repository import PassportJobMatchRepository
+from app.modules.platform_admin.notification_service import PlatformAdminNotificationService
+from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.shadow_reveal.repository import ShadowRevealRequestRepository
 from app.modules.talent_pool.repository import TalentPoolGrantRepository
 from app.modules.phantom_passport.exceptions import PassportNotApprovedError, PassportNotFoundError
@@ -101,6 +103,7 @@ class ShadowJobService:
         self._talent_pool_grants = TalentPoolGrantRepository(session)
         self._reveal_requests = ShadowRevealRequestRepository(session)
         self._matches = PassportJobMatchRepository(session)
+        self._notifications = PlatformAdminNotificationService(session)
         self._email_sender = email_sender
         self._settings = get_settings()
 
@@ -185,6 +188,14 @@ class ShadowJobService:
             action="shadow_job.submitted_for_review",
             target_type="shadow_job",
             target_id=job.id,
+        )
+        await self._notifications.notify(
+            action="shadow_job.submitted_for_review",
+            title="Job submitted for review",
+            body=f'"{job.title}" was submitted for Shadow review',
+            target_type="shadow_job",
+            target_id=job.id,
+            required_permission=PlatformAdminPermissions.JOBS_VIEW,
         )
         return job
 

@@ -1529,6 +1529,27 @@ export interface PlatformAdminAuditLogEntry {
   created_at: string;
 }
 
+export interface PlatformAdminAuditLogListResponse {
+  items: PlatformAdminAuditLogEntry[];
+  total: number;
+}
+
+export interface PlatformAdminNotification {
+  id: string;
+  action: string;
+  title: string;
+  body: string;
+  target_type: string;
+  target_id: string | null;
+  created_at: string;
+}
+
+export interface PlatformAdminNotificationListResponse {
+  items: PlatformAdminNotification[];
+  total: number;
+  unread_count: number;
+}
+
 // --- Candidate Command (Phantom Command 2.0 Phase 4) — anonymous professional data only, the
 // same boundary ShadowProfile already enforces elsewhere. Never a name, email, or phone.
 

@@ -24,7 +24,10 @@ from app.modules.platform_admin.dependencies import (
     require_platform_admin_permission,
 )
 from app.modules.platform_admin.permissions import PlatformAdminPermissions
-from app.modules.platform_admin.schemas import PlatformAdminAuditLogRead
+from app.modules.platform_admin.schemas import (
+    PlatformAdminAuditLogListResponse,
+    PlatformAdminAuditLogRead,
+)
 from app.modules.shadow_jobs.models import ShadowJobStatus
 from app.modules.shadow_jobs.repository import ShadowApplicationRepository, ShadowJobRepository
 
@@ -134,12 +137,20 @@ async def get_stats(
     )
 
 
-@router.get("/audit-log", response_model=list[PlatformAdminAuditLogRead])
+@router.get("/audit-log", response_model=PlatformAdminAuditLogListResponse)
 async def get_audit_log(
+    action: str | None = Query(default=None),
+    admin_id: uuid.UUID | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     admin: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.AUDIT_VIEW)
     ),
     session: AsyncSession = Depends(get_db),
-) -> list[PlatformAdminAuditLogRead]:
-    entries = await PlatformAdminAuditService(session).list_recent()
-    return [PlatformAdminAuditLogRead.model_validate(e) for e in entries]
+) -> PlatformAdminAuditLogListResponse:
+    service = PlatformAdminAuditService(session)
+    entries = await service.list_all(action=action, admin_id=admin_id, limit=limit, offset=offset)
+    total = await service.count_all(action=action, admin_id=admin_id)
+    return PlatformAdminAuditLogListResponse(
+        items=[PlatformAdminAuditLogRead.model_validate(e) for e in entries], total=total
+    )

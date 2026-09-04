@@ -18,6 +18,7 @@ from app.modules.platform_admin.dependencies import (
     require_platform_admin_step_up,
 )
 from app.modules.platform_admin.models import PlatformAdmin
+from app.modules.platform_admin.notification_service import PlatformAdminNotificationService
 from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import (
     ChangePasswordRequest,
@@ -32,6 +33,8 @@ from app.modules.platform_admin.schemas import (
     PlatformAdminMfaEnrollmentRequiredResponse,
     PlatformAdminMfaSetupResponse,
     PlatformAdminMfaVerifyRequest,
+    PlatformAdminNotificationListResponse,
+    PlatformAdminNotificationRead,
     PlatformAdminPendingMfaEnableRequest,
     PlatformAdminPendingMfaSetupRequest,
     PlatformAdminRead,
@@ -39,6 +42,7 @@ from app.modules.platform_admin.schemas import (
     PlatformAdminStepUpResponse,
     PlatformAdminSummary,
     PlatformAdminTokenResponse,
+    PlatformAdminUnreadNotificationCountResponse,
     PurgeAllDataRequest,
     PurgeAllDataResult,
 )
@@ -228,6 +232,45 @@ async def global_search(
     return await GlobalSearchService(session).search(query=q, permissions=admin.permissions)
 
 
+@router.get("/notifications", response_model=PlatformAdminNotificationListResponse)
+async def list_notifications(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    admin: PlatformAdminContext = Depends(get_current_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminNotificationListResponse:
+    service = PlatformAdminNotificationService(session)
+    items = await service.list_visible(permissions=admin.permissions, limit=limit, offset=offset)
+    total = await service.count_visible(permissions=admin.permissions)
+    unread_count = await service.get_unread_count(admin_id=admin.id, permissions=admin.permissions)
+    return PlatformAdminNotificationListResponse(
+        items=[PlatformAdminNotificationRead.model_validate(n) for n in items],
+        total=total,
+        unread_count=unread_count,
+    )
+
+
+@router.get(
+    "/notifications/unread-count", response_model=PlatformAdminUnreadNotificationCountResponse
+)
+async def get_unread_notification_count(
+    admin: PlatformAdminContext = Depends(get_current_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> PlatformAdminUnreadNotificationCountResponse:
+    unread_count = await PlatformAdminNotificationService(session).get_unread_count(
+        admin_id=admin.id, permissions=admin.permissions
+    )
+    return PlatformAdminUnreadNotificationCountResponse(unread_count=unread_count)
+
+
+@router.post("/notifications/mark-read", status_code=204)
+async def mark_notifications_read(
+    admin: PlatformAdminContext = Depends(get_current_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await PlatformAdminNotificationService(session).mark_read(admin_id=admin.id)
+
+
 @router.post("/mfa/setup", response_model=PlatformAdminMfaSetupResponse)
 async def setup_mfa(
     admin: PlatformAdmin = Depends(require_platform_admin),
@@ -301,11 +344,15 @@ async def list_admins(
 @router.post("/admins", response_model=PlatformAdminSummary, status_code=201)
 async def create_admin(
     body: CreatePlatformAdminRequest,
-    _: PlatformAdminContext = Depends(
+    admin: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.ADMINS_MANAGE)
     ),
     session: AsyncSession = Depends(get_db),
 ) -> PlatformAdminSummary:
     return await PlatformAdminManagementService(session).create_admin(
-        full_name=body.full_name, email=body.email, password=body.password, role_name=body.role
+        actor_admin_id=admin.id,
+        full_name=body.full_name,
+        email=body.email,
+        password=body.password,
+        role_name=body.role,
     )

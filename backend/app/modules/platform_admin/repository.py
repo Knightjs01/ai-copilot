@@ -36,6 +36,14 @@ class PlatformAdminRepository:
         await self._session.flush()
         return admin
 
+    async def mark_notifications_read(self, admin_id: uuid.UUID) -> None:
+        await self._session.execute(
+            update(PlatformAdmin)
+            .where(PlatformAdmin.id == admin_id)
+            .values(notifications_read_at=datetime.now(timezone.utc))
+        )
+        await self._session.flush()
+
 
 class PlatformAdminTokenRepository:
     """Mirrors auth.repository.tokens.TokenRepository's refresh-token methods exactly, against

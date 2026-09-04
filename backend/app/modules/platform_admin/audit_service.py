@@ -37,3 +37,20 @@ class PlatformAdminAuditService:
         return await self._repository.list_by_target(
             target_type=target_type, target_id=target_id, limit=limit
         )
+
+    async def list_all(
+        self,
+        *,
+        action: str | None = None,
+        admin_id: uuid.UUID | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[PlatformAdminAuditLog]:
+        return await self._repository.list_all(
+            action=action, admin_id=admin_id, limit=limit, offset=offset
+        )
+
+    async def count_all(
+        self, *, action: str | None = None, admin_id: uuid.UUID | None = None
+    ) -> int:
+        return await self._repository.count_all(action=action, admin_id=admin_id)

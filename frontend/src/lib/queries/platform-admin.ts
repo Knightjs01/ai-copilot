@@ -20,7 +20,8 @@ import type {
   GlobalSearchResultItem,
   MfaEnableResponse,
   MfaSetupResponse,
-  PlatformAdminAuditLogEntry,
+  PlatformAdminAuditLogListResponse,
+  PlatformAdminNotificationListResponse,
   PlatformAdminSummary,
 } from "@/lib/types";
 
@@ -29,6 +30,8 @@ interface AdminListOptions {
   page?: number;
   pageSize?: number;
 }
+
+const NOTIFICATION_POLL_INTERVAL_MS = 20000;
 
 export function usePlatformAdminMfaSetup() {
   return useMutation({
@@ -74,11 +77,58 @@ export function useActionQueue() {
   });
 }
 
-export function useAuditLog() {
+export function useAuditLog(
+  options: { action?: string; adminId?: string; page?: number; pageSize?: number } = {}
+) {
+  const { action, adminId, page = 1, pageSize = 50 } = options;
   return useQuery({
-    queryKey: ["platform-admin", "audit-log"],
+    queryKey: ["platform-admin", "audit-log", action ?? "", adminId ?? "", page, pageSize],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (action) params.set("action", action);
+      if (adminId) params.set("admin_id", adminId);
+      params.set("limit", String(pageSize));
+      params.set("offset", String((page - 1) * pageSize));
+      return platformAdminApiClient.get<PlatformAdminAuditLogListResponse>(
+        `/company-access/audit-log?${params.toString()}`
+      );
+    },
+  });
+}
+
+export function useUnreadNotificationCount() {
+  return useQuery({
+    queryKey: ["platform-admin", "notifications", "unread-count"],
     queryFn: () =>
-      platformAdminApiClient.get<PlatformAdminAuditLogEntry[]>("/company-access/audit-log"),
+      platformAdminApiClient.get<{ unread_count: number }>(
+        "/platform-admin/notifications/unread-count"
+      ),
+    refetchInterval: NOTIFICATION_POLL_INTERVAL_MS,
+  });
+}
+
+export function useNotifications(options: { page?: number; pageSize?: number } = {}) {
+  const { page = 1, pageSize = 20 } = options;
+  return useQuery({
+    queryKey: ["platform-admin", "notifications", "list", page, pageSize],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("limit", String(pageSize));
+      params.set("offset", String((page - 1) * pageSize));
+      return platformAdminApiClient.get<PlatformAdminNotificationListResponse>(
+        `/platform-admin/notifications?${params.toString()}`
+      );
+    },
+  });
+}
+
+export function useMarkNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      platformAdminApiClient.post<void>("/platform-admin/notifications/mark-read"),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["platform-admin", "notifications"] }),
   });
 }
 
