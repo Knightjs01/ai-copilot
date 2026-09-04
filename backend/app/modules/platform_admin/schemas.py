@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -147,3 +147,54 @@ class PlatformAdminAuditLogRead(BaseModel):
     target_id: uuid.UUID | None
     extra_data: dict[str, Any]
     created_at: datetime
+
+
+class AdminCandidateSummary(BaseModel):
+    """Platform-admin Candidate Command list row -- anonymous professional data only, the same
+    boundary ShadowProfile already enforces elsewhere. Never a name, email, or phone."""
+
+    id: uuid.UUID
+    callsign: str | None
+    headline: str | None
+    seniority: str | None
+    verification_status: str
+    visibility: str
+    career_intent: str
+    created_at: datetime
+
+
+class AdminCandidateCareerEntry(BaseModel):
+    title: str
+    company_name_anonymized: str
+    start_date: date | None
+    end_date: date | None
+    is_current: bool
+    responsibilities: str | None
+    achievements: list[Any]
+
+
+class AdminCandidateApplication(BaseModel):
+    """Real, cross-company application data -- companies are never anonymized in this product
+    (only candidates are), so this is genuine platform-oversight data, not an identity leak."""
+
+    shadow_job_id: uuid.UUID
+    job_title: str
+    company_id: uuid.UUID
+    company_name: str
+    status: str
+    pipeline_stage: str
+    created_at: datetime
+
+
+class AdminCandidateDetail(AdminCandidateSummary):
+    years_experience: int | None
+    summary: str | None
+    skills: list[Any]
+    industries: list[Any]
+    location: str | None
+    remote_preference: str | None
+    salary_min: int | None
+    salary_max: int | None
+    notice_period: str | None
+    career_entries: list[AdminCandidateCareerEntry]
+    applications: list[AdminCandidateApplication]

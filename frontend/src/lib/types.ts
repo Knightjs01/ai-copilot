@@ -1509,6 +1509,54 @@ export interface PlatformAdminAuditLogEntry {
   created_at: string;
 }
 
+// --- Candidate Command (Phantom Command 2.0 Phase 4) — anonymous professional data only, the
+// same boundary ShadowProfile already enforces elsewhere. Never a name, email, or phone.
+
+export interface AdminCandidateSummary {
+  id: string;
+  callsign: string | null;
+  headline: string | null;
+  seniority: string | null;
+  verification_status: VerificationStatus;
+  visibility: PassportVisibility;
+  career_intent: CareerIntent;
+  created_at: string;
+}
+
+export interface AdminCandidateCareerEntry {
+  title: string;
+  company_name_anonymized: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_current: boolean;
+  responsibilities: string | null;
+  achievements: unknown[];
+}
+
+export interface AdminCandidateApplication {
+  shadow_job_id: string;
+  job_title: string;
+  company_id: string;
+  company_name: string;
+  status: ShadowApplicationStatus;
+  pipeline_stage: string;
+  created_at: string;
+}
+
+export interface AdminCandidateDetail extends AdminCandidateSummary {
+  years_experience: number | null;
+  summary: string | null;
+  skills: string[];
+  industries: string[];
+  location: string | null;
+  remote_preference: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  notice_period: string | null;
+  career_entries: AdminCandidateCareerEntry[];
+  applications: AdminCandidateApplication[];
+}
+
 // --- Candidate Activity (Phase 5) — see backend candidate_activity/schemas.py -----------------
 
 export type TimelineEventType =

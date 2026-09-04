@@ -41,6 +41,8 @@ from app.modules.phantom_passport.schemas import (
 )
 from app.modules.privacy_gateway.extraction import extract_text
 from app.modules.privacy_gateway.redaction import PHONE_PATTERN, redact_text
+from app.modules.shadow_jobs.models import ShadowApplication
+from app.modules.shadow_jobs.repository import ShadowApplicationRepository
 
 # Each present field is worth an equal share of 100%, rounded down — simple and legible ("you're
 # missing N things") beats a weighted formula nobody can predict.
@@ -82,6 +84,7 @@ class PhantomPassportService:
         self._versions = PassportVersionRepository(session)
         self._llm_client = llm_client
         self._storage = storage or EncryptingFileStorage(LocalFileStorage())
+        self._applications = ShadowApplicationRepository(session)
 
     async def get_passport(self, *, candidate: CandidateUser) -> PassportRead:
         passport = await self._passports.get_by_candidate_user_id(candidate.id)
@@ -478,6 +481,29 @@ class PhantomPassportService:
                 for entry in career_entries
             ],
         )
+
+    async def list_admin_candidates(
+        self, *, verification_status: str | None = None
+    ) -> list[PhantomPassport]:
+        """Platform-admin Candidate Command list -- see PhantomPassportRepository.list_all's own
+        docstring for why this is not list_discoverable_candidates."""
+        return await self._passports.list_all(verification_status=verification_status)
+
+    async def get_admin_candidate_detail(
+        self, passport_id: uuid.UUID
+    ) -> tuple[PhantomPassport, list[PassportCareerEntry], list[ShadowApplication]]:
+        """Returns raw pieces, not the final response schema -- the platform_admin API route
+        (which already legitimately imports companies/shadow_jobs/phantom_passport) assembles
+        AdminCandidateDetail, mirroring how Phase 2/3's admin detail routes are built. Never
+        touches PassportPersonalInfo, PassportCareerEntry.company_name_encrypted,
+        CandidateCvDocument, or CandidateUser.email -- this method is the one hard line Candidate
+        Command exists to hold."""
+        passport = await self._passports.get_by_id(passport_id)
+        if passport is None:
+            raise PassportNotFoundError()
+        career_entries = await self._career_entries.list_by_passport_id(passport.id)
+        applications = await self._applications.list_by_candidate(passport.candidate_user_id)
+        return passport, career_entries, applications
 
 
 def _completion_percentage(

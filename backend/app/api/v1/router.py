@@ -30,6 +30,7 @@ from app.modules.passport_matching.api import router as passport_matching_router
 from app.modules.phantom_passport.api import public_router as phantom_passport_public_router
 from app.modules.phantom_passport.api import router as phantom_passport_router
 from app.modules.platform_admin.api import router as platform_admin_router
+from app.modules.platform_admin.candidates_api import router as platform_admin_candidates_router
 from app.modules.platform_admin.jobs_api import router as platform_admin_jobs_router
 from app.modules.prescreen_assessment.api import router as prescreen_assessment_router
 from app.modules.privacy_gateway.api import router as privacy_gateway_router
@@ -83,6 +84,7 @@ api_router.include_router(phantom_passport_public_router)
 api_router.include_router(company_access_router)
 api_router.include_router(platform_admin_router)
 api_router.include_router(platform_admin_jobs_router)
+api_router.include_router(platform_admin_candidates_router)
 api_router.include_router(commercial_router)
 api_router.include_router(commercial_admin_router)
 api_router.include_router(commercial_public_router)

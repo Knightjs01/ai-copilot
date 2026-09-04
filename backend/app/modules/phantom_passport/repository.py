@@ -183,6 +183,20 @@ class PhantomPassportRepository:
         )
         return result.scalar_one()
 
+    async def list_all(
+        self, *, verification_status: str | None = None, limit: int = 100, offset: int = 0
+    ) -> list[PhantomPassport]:
+        """Platform-admin candidate oversight -- deliberately NOT list_discoverable_candidates'
+        company-search pool: no visibility/career_intent/current_version_id filtering, since an
+        admin overview needs to see private and not-yet-approved passports too, not just the ones
+        a company could find."""
+        query = select(PhantomPassport).where(PhantomPassport.deleted_at.is_(None))
+        if verification_status is not None:
+            query = query.where(PhantomPassport.verification_status == verification_status)
+        query = query.order_by(PhantomPassport.created_at.desc()).limit(limit).offset(offset)
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
 
 class PassportPersonalInfoRepository:
     def __init__(self, session: AsyncSession) -> None:

@@ -6,6 +6,8 @@ import { platformAdminApiClient } from "@/lib/platform-admin-api-client";
 import type {
   AccessRequestStats,
   ActionQueueItem,
+  AdminCandidateDetail,
+  AdminCandidateSummary,
   AdminCompanyDetail,
   AdminCompanySummary,
   AdminCompanyUser,
@@ -256,6 +258,31 @@ export function useAdminJob(jobId: string) {
     queryFn: () =>
       platformAdminApiClient.get<AdminShadowJobDetail>(`/platform-admin/jobs/${jobId}`),
     enabled: !!jobId,
+  });
+}
+
+export function useAdminCandidates(verificationStatus?: string) {
+  return useQuery({
+    queryKey: ["platform-admin", "candidates", "list", verificationStatus ?? "all"],
+    queryFn: () =>
+      platformAdminApiClient.get<AdminCandidateSummary[]>(
+        `/platform-admin/candidates${
+          verificationStatus && verificationStatus !== "all"
+            ? `?verification_status=${verificationStatus}`
+            : ""
+        }`
+      ),
+  });
+}
+
+export function useAdminCandidate(passportId: string) {
+  return useQuery({
+    queryKey: ["platform-admin", "candidates", passportId],
+    queryFn: () =>
+      platformAdminApiClient.get<AdminCandidateDetail>(
+        `/platform-admin/candidates/${passportId}`
+      ),
+    enabled: !!passportId,
   });
 }
 

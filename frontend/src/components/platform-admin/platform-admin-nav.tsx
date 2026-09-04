@@ -14,6 +14,7 @@ const NAV_ITEMS: { href: string; label: string; permission?: string }[] = [
   { href: "/platform-admin/requests", label: "Requests", permission: "companies.view" },
   { href: "/platform-admin/companies", label: "Companies", permission: "companies.view" },
   { href: "/platform-admin/jobs", label: "Jobs", permission: "jobs.view" },
+  { href: "/platform-admin/candidates", label: "Candidates", permission: "candidates.view" },
   { href: "/platform-admin/activity", label: "Activity", permission: "audit.view" },
   { href: "/platform-admin/team", label: "Team", permission: "admins.manage" },
   { href: "/platform-admin/security", label: "Security" },

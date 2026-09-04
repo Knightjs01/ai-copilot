@@ -8,6 +8,7 @@ class PlatformAdminPermissions:
     AUDIT_VIEW = "audit.view"
     COMMERCIAL_MANAGE = "commercial.manage"
     COMPANIES_CREATE = "companies.create"
+    CANDIDATES_VIEW = "candidates.view"
 
 
 ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
@@ -27,6 +28,9 @@ ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
     PlatformAdminPermissions.COMPANIES_CREATE: (
         "Originate a brand-new company + Owner with no prior access request, and author its "
         "initial Shadow profile before activation"
+    ),
+    PlatformAdminPermissions.CANDIDATES_VIEW: (
+        "View candidate Passports and their real application history"
     ),
 }
 
@@ -54,12 +58,14 @@ PLATFORM_ADMIN_ROLE_PERMISSIONS: dict[str, list[str]] = {
         PlatformAdminPermissions.JOBS_VIEW,
         PlatformAdminPermissions.AUDIT_VIEW,
         PlatformAdminPermissions.COMMERCIAL_MANAGE,
+        PlatformAdminPermissions.CANDIDATES_VIEW,
     ],
     PlatformAdminRoleName.REVIEWER: [
         PlatformAdminPermissions.COMPANIES_VIEW,
         PlatformAdminPermissions.JOBS_REVIEW,
         PlatformAdminPermissions.JOBS_VIEW,
         PlatformAdminPermissions.AUDIT_VIEW,
+        PlatformAdminPermissions.CANDIDATES_VIEW,
     ],
     # Deliberately narrow -- expand once there's a real support workflow to gate (see the plan
     # this shipped under: "structure so individual permissions can be expanded later").
@@ -71,5 +77,6 @@ PLATFORM_ADMIN_ROLE_PERMISSIONS: dict[str, list[str]] = {
         PlatformAdminPermissions.COMPANIES_VIEW,
         PlatformAdminPermissions.JOBS_VIEW,
         PlatformAdminPermissions.AUDIT_VIEW,
+        PlatformAdminPermissions.CANDIDATES_VIEW,
     ],
 }
