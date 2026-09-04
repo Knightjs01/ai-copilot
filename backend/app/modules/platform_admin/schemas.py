@@ -113,6 +113,15 @@ class AdminShadowJobDetail(AdminShadowJobRead):
     job_intelligence: JobIntelligence | None
 
 
+class AdminShadowJobListResponse(BaseModel):
+    """Real server-side pagination for the platform-admin Jobs list -- see
+    AdminCompanyListResponse (companies/schemas.py) for why items+total replaces the old bare
+    array response."""
+
+    items: list[AdminShadowJobRead]
+    total: int
+
+
 class RejectShadowJobRequest(BaseModel):
     reason: str | None = None
 
@@ -161,6 +170,15 @@ class AdminCandidateSummary(BaseModel):
     visibility: str
     career_intent: str
     created_at: datetime
+
+
+class AdminCandidateListResponse(BaseModel):
+    """Real server-side pagination for the platform-admin Candidates list -- see
+    AdminCompanyListResponse (companies/schemas.py) for why items+total replaces the old bare
+    array response."""
+
+    items: list[AdminCandidateSummary]
+    total: int
 
 
 class AdminCandidateCareerEntry(BaseModel):

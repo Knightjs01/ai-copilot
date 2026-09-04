@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -16,6 +17,8 @@ import { VERIFICATION_STATUS_LABEL, VERIFICATION_STATUS_VARIANT } from "@/lib/st
 import type { AdminCandidateSummary, VerificationStatus } from "@/lib/types";
 
 type StatusFilter = VerificationStatus | "all";
+
+const PAGE_SIZE = 25;
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -59,16 +62,25 @@ function CandidateRow({ candidate }: { candidate: AdminCandidateSummary }) {
 
 export default function PlatformAdminCandidatesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { admin, isLoading: authLoading, hasPermission } = usePlatformAdminAuth();
   const [filter, setFilter] = React.useState<StatusFilter>("all");
-  const [search, setSearch] = React.useState("");
-  const { data: candidates, isLoading } = useAdminCandidates(filter);
+  const [search, setSearch] = React.useState(searchParams.get("search") ?? "");
+  const [page, setPage] = React.useState(1);
+  const { data, isLoading } = useAdminCandidates(filter, { search, page, pageSize: PAGE_SIZE });
+  const candidates = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const hasNextPage = page * PAGE_SIZE < total;
 
   React.useEffect(() => {
     if (authLoading) return;
     if (!admin) router.push("/platform-admin/login");
     else if (!hasPermission("candidates.view")) router.push("/platform-admin");
   }, [authLoading, admin, hasPermission, router]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [filter, search]);
 
   if (authLoading || !admin || !hasPermission("candidates.view")) {
     return (
@@ -77,15 +89,6 @@ export default function PlatformAdminCandidatesPage() {
       </div>
     );
   }
-
-  const filtered = (candidates ?? []).filter((c) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      (c.callsign ?? "").toLowerCase().includes(q) ||
-      (c.headline ?? "").toLowerCase().includes(q)
-    );
-  });
 
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-10">
@@ -116,9 +119,10 @@ export default function PlatformAdminCandidatesPage() {
         />
       </div>
 
-      {!isLoading && candidates && (
+      {!isLoading && (
         <p className="text-xs text-muted-foreground">
-          Showing {filtered.length} of {candidates.length} candidates
+          Showing {candidates.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
+          {(page - 1) * PAGE_SIZE + candidates.length} of {total} candidates
         </p>
       )}
 
@@ -128,7 +132,7 @@ export default function PlatformAdminCandidatesPage() {
         </div>
       )}
 
-      {!isLoading && filtered.length === 0 && (
+      {!isLoading && candidates.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
             <UserRound className="h-5 w-5 text-muted-foreground" />
@@ -137,11 +141,33 @@ export default function PlatformAdminCandidatesPage() {
         </Card>
       )}
 
-      {!isLoading && filtered.length > 0 && (
+      {!isLoading && candidates.length > 0 && (
         <div className="flex flex-col gap-3">
-          {filtered.map((candidate) => (
+          {candidates.map((candidate) => (
             <CandidateRow key={candidate.id} candidate={candidate} />
           ))}
+        </div>
+      )}
+
+      {!isLoading && total > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-xs text-muted-foreground">Page {page}</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!hasNextPage}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
         </div>
       )}
     </div>

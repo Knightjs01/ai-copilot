@@ -249,12 +249,30 @@ class ShadowJobService:
         return await self._jobs.list_by_status(ShadowJobStatus.PENDING_REVIEW.value)
 
     async def list_admin_jobs(
-        self, *, status: str | None = None, company_id: uuid.UUID | None = None
+        self,
+        *,
+        status: str | None = None,
+        company_id: uuid.UUID | None = None,
+        search: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[ShadowJob]:
         """Powers the platform-admin Jobs list -- spans every company by default, optionally
         filtered to one status and/or one company (the latter for the Company Command Profile's
-        Jobs tab). status=None and company_id=None returns every non-deleted job."""
-        return await self._jobs.list_all(status=status, company_id=company_id)
+        Jobs tab, which relies on the 100 default to see every job without paginating).
+        status=None and company_id=None returns every non-deleted job."""
+        return await self._jobs.list_all(
+            status=status, company_id=company_id, search=search, limit=limit, offset=offset
+        )
+
+    async def count_admin_jobs(
+        self,
+        *,
+        status: str | None = None,
+        company_id: uuid.UUID | None = None,
+        search: str | None = None,
+    ) -> int:
+        return await self._jobs.count_all(status=status, company_id=company_id, search=search)
 
     async def get_admin_job_metrics(
         self, job: ShadowJob

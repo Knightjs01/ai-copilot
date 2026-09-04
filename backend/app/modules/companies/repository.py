@@ -56,13 +56,35 @@ class CompanyRepository:
         result = await self._session.execute(select(Company.id).where(Company.slug == slug))
         return result.scalar_one_or_none() is not None
 
-    async def list_all(self, *, profile_status: str | None = None) -> list[Company]:
+    async def list_all(
+        self,
+        *,
+        profile_status: str | None = None,
+        search: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[Company]:
         query = select(Company).where(Company.deleted_at.is_(None))
         if profile_status is not None:
             query = query.where(Company.profile_status == profile_status)
+        if search:
+            query = query.where(Company.name.ilike(f"%{search}%"))
         query = query.order_by(Company.created_at.desc())
+        if limit is not None:
+            query = query.limit(limit).offset(offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def count_all(
+        self, *, profile_status: str | None = None, search: str | None = None
+    ) -> int:
+        query = select(func.count()).select_from(Company).where(Company.deleted_at.is_(None))
+        if profile_status is not None:
+            query = query.where(Company.profile_status == profile_status)
+        if search:
+            query = query.where(Company.name.ilike(f"%{search}%"))
+        result = await self._session.execute(query)
+        return result.scalar_one()
 
     async def get_status_counts(self) -> dict[str, int]:
         result = await self._session.execute(

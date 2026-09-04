@@ -509,10 +509,22 @@ class CompanyService:
     # --- Admin: profile review queue ------------------------------------------------------------
 
     async def list_companies_with_user_counts(
-        self, *, profile_status: str | None = None
+        self,
+        *,
+        profile_status: str | None = None,
+        search: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[tuple[Company, int]]:
-        companies = await self._repository.list_all(profile_status=profile_status)
+        companies = await self._repository.list_all(
+            profile_status=profile_status, search=search, limit=limit, offset=offset
+        )
         return [(company, await self._users.count_by_company(company.id)) for company in companies]
+
+    async def count_companies(
+        self, *, profile_status: str | None = None, search: str | None = None
+    ) -> int:
+        return await self._repository.count_all(profile_status=profile_status, search=search)
 
     async def approve_profile_review(
         self, *, admin_id: uuid.UUID, company_id: uuid.UUID

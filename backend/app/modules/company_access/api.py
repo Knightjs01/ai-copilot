@@ -69,7 +69,7 @@ async def get_access_request(
 async def approve_access_request(
     request_id: uuid.UUID,
     admin: PlatformAdminContext = Depends(
-        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_REVIEW)
     ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
@@ -84,7 +84,7 @@ async def reject_access_request(
     request_id: uuid.UUID,
     body: RejectAccessRequestBody = RejectAccessRequestBody(),
     admin: PlatformAdminContext = Depends(
-        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_REVIEW)
     ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
@@ -99,7 +99,7 @@ async def request_more_info(
     request_id: uuid.UUID,
     body: RequestInfoBody,
     admin: PlatformAdminContext = Depends(
-        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_REVIEW)
     ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),

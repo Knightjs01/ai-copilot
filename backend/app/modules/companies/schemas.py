@@ -168,6 +168,15 @@ class AdminCompanySummary(BaseModel):
     is_verified_employer: bool
 
 
+class AdminCompanyListResponse(BaseModel):
+    """Real server-side pagination for the platform-admin Companies list -- items is the current
+    page, total is the real matching-row count (independent of limit/offset), so the frontend can
+    show an honest "Showing X-Y of N" line instead of a flat capped list with no total."""
+
+    items: list[AdminCompanySummary]
+    total: int
+
+
 class ProfileStats(BaseModel):
     """Internal-only numbers shown on the company's own profile page -- never part of the shared
     public/preview shape above. total_hires is all-time (not "this year") since Candidate has no

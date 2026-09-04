@@ -9,6 +9,8 @@ class PlatformAdminPermissions:
     COMMERCIAL_MANAGE = "commercial.manage"
     COMPANIES_CREATE = "companies.create"
     CANDIDATES_VIEW = "candidates.view"
+    COMPANIES_REVIEW = "companies.review"
+    COMMERCIAL_VIEW = "commercial.view"
 
 
 ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
@@ -32,6 +34,10 @@ ALL_PLATFORM_ADMIN_PERMISSIONS: dict[str, str] = {
     PlatformAdminPermissions.CANDIDATES_VIEW: (
         "View candidate Passports and their real application history"
     ),
+    PlatformAdminPermissions.COMPANIES_REVIEW: (
+        "Approve or reject a pending company profile review or access request"
+    ),
+    PlatformAdminPermissions.COMMERCIAL_VIEW: "View the commercial plan catalog",
 }
 
 
@@ -59,6 +65,8 @@ PLATFORM_ADMIN_ROLE_PERMISSIONS: dict[str, list[str]] = {
         PlatformAdminPermissions.AUDIT_VIEW,
         PlatformAdminPermissions.COMMERCIAL_MANAGE,
         PlatformAdminPermissions.CANDIDATES_VIEW,
+        PlatformAdminPermissions.COMPANIES_REVIEW,
+        PlatformAdminPermissions.COMMERCIAL_VIEW,
     ],
     PlatformAdminRoleName.REVIEWER: [
         PlatformAdminPermissions.COMPANIES_VIEW,
@@ -66,6 +74,7 @@ PLATFORM_ADMIN_ROLE_PERMISSIONS: dict[str, list[str]] = {
         PlatformAdminPermissions.JOBS_VIEW,
         PlatformAdminPermissions.AUDIT_VIEW,
         PlatformAdminPermissions.CANDIDATES_VIEW,
+        PlatformAdminPermissions.COMPANIES_REVIEW,
     ],
     # Deliberately narrow -- expand once there's a real support workflow to gate (see the plan
     # this shipped under: "structure so individual permissions can be expanded later").
@@ -78,5 +87,6 @@ PLATFORM_ADMIN_ROLE_PERMISSIONS: dict[str, list[str]] = {
         PlatformAdminPermissions.JOBS_VIEW,
         PlatformAdminPermissions.AUDIT_VIEW,
         PlatformAdminPermissions.CANDIDATES_VIEW,
+        PlatformAdminPermissions.COMMERCIAL_VIEW,
     ],
 }

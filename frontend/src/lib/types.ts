@@ -1407,6 +1407,11 @@ export interface AdminShadowJobDetail extends AdminShadowJob {
   job_intelligence: JobIntelligence | null;
 }
 
+export interface AdminShadowJobListResponse {
+  items: AdminShadowJob[];
+  total: number;
+}
+
 export interface LocationSuggestion {
   formatted: string;
   city: string | null;
@@ -1453,6 +1458,16 @@ export interface ActionQueueItem {
   url: string;
 }
 
+export type GlobalSearchResultType = "company" | "job" | "candidate";
+
+export interface GlobalSearchResultItem {
+  id: string;
+  type: GlobalSearchResultType;
+  title: string;
+  subtitle: string;
+  url: string;
+}
+
 // The admin-facing company directory row -- leaner than the owning company's own Company shape,
 // includes admin-only fields (user_count) never returned to a company's own users.
 export interface AdminCompanySummary {
@@ -1468,6 +1483,11 @@ export interface AdminCompanySummary {
   commercial_plan_code: CommercialPlanCode | null;
   active_role_limit_override: number | null;
   is_verified_employer: boolean;
+}
+
+export interface AdminCompanyListResponse {
+  items: AdminCompanySummary[];
+  total: number;
 }
 
 export interface AdminCompanyDetail extends AdminCompanySummary {
@@ -1521,6 +1541,11 @@ export interface AdminCandidateSummary {
   visibility: PassportVisibility;
   career_intent: CareerIntent;
   created_at: string;
+}
+
+export interface AdminCandidateListResponse {
+  items: AdminCandidateSummary[];
+  total: number;
 }
 
 export interface AdminCandidateCareerEntry {

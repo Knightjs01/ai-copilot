@@ -1,6 +1,6 @@
 from typing import Literal, Union
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response
+from fastapi import APIRouter, Cookie, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -8,6 +8,7 @@ from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.modules.auth.exceptions import InvalidOrExpiredTokenError
 from app.modules.platform_admin.action_queue import ActionQueueItem, ActionQueueService
+from app.modules.platform_admin.global_search import GlobalSearchResultItem, GlobalSearchService
 from app.modules.platform_admin.dependencies import (
     PlatformAdminContext,
     get_current_platform_admin,
@@ -216,6 +217,15 @@ async def get_action_queue(
     session: AsyncSession = Depends(get_db),
 ) -> list[ActionQueueItem]:
     return await ActionQueueService(session).list_items(permissions=admin.permissions)
+
+
+@router.get("/search", response_model=list[GlobalSearchResultItem])
+async def global_search(
+    q: str = Query(min_length=2),
+    admin: PlatformAdminContext = Depends(get_current_platform_admin),
+    session: AsyncSession = Depends(get_db),
+) -> list[GlobalSearchResultItem]:
+    return await GlobalSearchService(session).search(query=q, permissions=admin.permissions)
 
 
 @router.post("/mfa/setup", response_model=PlatformAdminMfaSetupResponse)

@@ -483,11 +483,25 @@ class PhantomPassportService:
         )
 
     async def list_admin_candidates(
-        self, *, verification_status: str | None = None
+        self,
+        *,
+        verification_status: str | None = None,
+        search: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[PhantomPassport]:
         """Platform-admin Candidate Command list -- see PhantomPassportRepository.list_all's own
         docstring for why this is not list_discoverable_candidates."""
-        return await self._passports.list_all(verification_status=verification_status)
+        return await self._passports.list_all(
+            verification_status=verification_status, search=search, limit=limit, offset=offset
+        )
+
+    async def count_admin_candidates(
+        self, *, verification_status: str | None = None, search: str | None = None
+    ) -> int:
+        return await self._passports.count_all(
+            verification_status=verification_status, search=search
+        )
 
     async def get_admin_candidate_detail(
         self, passport_id: uuid.UUID

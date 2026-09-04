@@ -108,20 +108,41 @@ class ShadowJobRepository:
         *,
         status: str | None = None,
         company_id: uuid.UUID | None = None,
+        search: str | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[ShadowJob]:
         """Powers the platform-admin Jobs list, which spans every company by default.
         status=None returns every non-deleted job regardless of status; company_id narrows to
-        one company (used by the Company Command Profile's Jobs tab)."""
+        one company (used by the Company Command Profile's Jobs tab); search does a plain
+        case-insensitive substring match on title only."""
         query = select(ShadowJob).where(ShadowJob.deleted_at.is_(None))
         if status is not None:
             query = query.where(ShadowJob.status == status)
         if company_id is not None:
             query = query.where(ShadowJob.company_id == company_id)
+        if search:
+            query = query.where(ShadowJob.title.ilike(f"%{search}%"))
         query = query.order_by(ShadowJob.created_at.desc()).limit(limit).offset(offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def count_all(
+        self,
+        *,
+        status: str | None = None,
+        company_id: uuid.UUID | None = None,
+        search: str | None = None,
+    ) -> int:
+        query = select(func.count()).select_from(ShadowJob).where(ShadowJob.deleted_at.is_(None))
+        if status is not None:
+            query = query.where(ShadowJob.status == status)
+        if company_id is not None:
+            query = query.where(ShadowJob.company_id == company_id)
+        if search:
+            query = query.where(ShadowJob.title.ilike(f"%{search}%"))
+        result = await self._session.execute(query)
+        return result.scalar_one()
 
     async def count_by_status(self, status: str) -> int:
         result = await self._session.execute(

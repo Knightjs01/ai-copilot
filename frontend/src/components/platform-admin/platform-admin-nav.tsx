@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/platform-admin/change-password-dialog";
+import { GlobalSearchBox } from "@/components/platform-admin/global-search-box";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { cn } from "@/lib/utils";
 import type { PlatformAdmin } from "@/lib/types";
@@ -30,16 +31,19 @@ export function PlatformAdminNav({ admin }: { admin: PlatformAdmin }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Phantom Command</h1>
           <p className="text-sm text-muted-foreground">Signed in as {admin.email}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <ChangePasswordDialog />
-          <Button type="button" variant="secondary" size="sm" onClick={logout}>
-            Log out
-          </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <GlobalSearchBox />
+          <div className="flex items-center gap-2">
+            <ChangePasswordDialog />
+            <Button type="button" variant="secondary" size="sm" onClick={logout}>
+              Log out
+            </Button>
+          </div>
         </div>
       </div>
       <nav className="flex gap-1 border-b border-border">

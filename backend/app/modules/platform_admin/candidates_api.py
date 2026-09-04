@@ -16,6 +16,7 @@ from app.modules.platform_admin.schemas import (
     AdminCandidateApplication,
     AdminCandidateCareerEntry,
     AdminCandidateDetail,
+    AdminCandidateListResponse,
     AdminCandidateSummary,
 )
 from app.modules.shadow_jobs.repository import ShadowJobRepository
@@ -36,17 +37,26 @@ def _to_summary(passport: PhantomPassport) -> AdminCandidateSummary:
     )
 
 
-@router.get("", response_model=list[AdminCandidateSummary])
+@router.get("", response_model=AdminCandidateListResponse)
 async def list_candidates(
     verification_status: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     _: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.CANDIDATES_VIEW)
     ),
     session: AsyncSession = Depends(get_db),
-) -> list[AdminCandidateSummary]:
+) -> AdminCandidateListResponse:
     service = PhantomPassportService(session)
-    passports = await service.list_admin_candidates(verification_status=verification_status)
-    return [_to_summary(passport) for passport in passports]
+    passports = await service.list_admin_candidates(
+        verification_status=verification_status, search=search, limit=limit, offset=offset
+    )
+    total = await service.count_admin_candidates(
+        verification_status=verification_status, search=search
+    )
+    items = [_to_summary(passport) for passport in passports]
+    return AdminCandidateListResponse(items=items, total=total)
 
 
 @router.get("/{passport_id}", response_model=AdminCandidateDetail)

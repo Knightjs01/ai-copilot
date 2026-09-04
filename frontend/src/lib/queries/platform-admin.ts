@@ -7,20 +7,28 @@ import type {
   AccessRequestStats,
   ActionQueueItem,
   AdminCandidateDetail,
-  AdminCandidateSummary,
+  AdminCandidateListResponse,
   AdminCompanyDetail,
-  AdminCompanySummary,
+  AdminCompanyListResponse,
   AdminCompanyUser,
   AdminShadowJob,
   AdminShadowJobDetail,
+  AdminShadowJobListResponse,
   AuditEntry,
   CompanyAccessRequest,
   CompanyProfile,
+  GlobalSearchResultItem,
   MfaEnableResponse,
   MfaSetupResponse,
   PlatformAdminAuditLogEntry,
   PlatformAdminSummary,
 } from "@/lib/types";
+
+interface AdminListOptions {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
 
 export function usePlatformAdminMfaSetup() {
   return useMutation({
@@ -74,10 +82,19 @@ export function useAuditLog() {
   });
 }
 
-export function useAllCompanies() {
+export function useAllCompanies(options: AdminListOptions = {}) {
+  const { search, page = 1, pageSize = 25 } = options;
   return useQuery({
-    queryKey: ["platform-admin", "companies"],
-    queryFn: () => platformAdminApiClient.get<AdminCompanySummary[]>("/companies"),
+    queryKey: ["platform-admin", "companies", "list", search ?? "", page, pageSize],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("limit", String(pageSize));
+      params.set("offset", String((page - 1) * pageSize));
+      return platformAdminApiClient.get<AdminCompanyListResponse>(
+        `/companies?${params.toString()}`
+      );
+    },
   });
 }
 
@@ -111,8 +128,12 @@ export function useCompanyActivity(companyId: string) {
 export function useProfileReviews() {
   return useQuery({
     queryKey: ["platform-admin", "companies", "profile-reviews"],
-    queryFn: () =>
-      platformAdminApiClient.get<AdminCompanySummary[]>("/companies?profile_status=pending_review"),
+    queryFn: async () => {
+      const response = await platformAdminApiClient.get<AdminCompanyListResponse>(
+        "/companies?profile_status=pending_review"
+      );
+      return response.items;
+    },
   });
 }
 
@@ -237,16 +258,28 @@ export function useChangePassword() {
   });
 }
 
-export function useAdminJobs(status?: string, companyId?: string) {
+export function useAdminJobs(status?: string, companyId?: string, options: AdminListOptions = {}) {
+  const { search, page = 1, pageSize = 100 } = options;
   return useQuery({
-    queryKey: ["platform-admin", "jobs", "list", status ?? "all", companyId ?? "all"],
+    queryKey: [
+      "platform-admin",
+      "jobs",
+      "list",
+      status ?? "all",
+      companyId ?? "all",
+      search ?? "",
+      page,
+      pageSize,
+    ],
     queryFn: () => {
       const params = new URLSearchParams();
       if (status && status !== "all") params.set("status", status);
       if (companyId) params.set("company_id", companyId);
-      const query = params.toString();
-      return platformAdminApiClient.get<AdminShadowJob[]>(
-        `/platform-admin/jobs${query ? `?${query}` : ""}`
+      if (search) params.set("search", search);
+      params.set("limit", String(pageSize));
+      params.set("offset", String((page - 1) * pageSize));
+      return platformAdminApiClient.get<AdminShadowJobListResponse>(
+        `/platform-admin/jobs?${params.toString()}`
       );
     },
   });
@@ -261,17 +294,41 @@ export function useAdminJob(jobId: string) {
   });
 }
 
-export function useAdminCandidates(verificationStatus?: string) {
+export function useAdminCandidates(verificationStatus?: string, options: AdminListOptions = {}) {
+  const { search, page = 1, pageSize = 25 } = options;
   return useQuery({
-    queryKey: ["platform-admin", "candidates", "list", verificationStatus ?? "all"],
+    queryKey: [
+      "platform-admin",
+      "candidates",
+      "list",
+      verificationStatus ?? "all",
+      search ?? "",
+      page,
+      pageSize,
+    ],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (verificationStatus && verificationStatus !== "all") {
+        params.set("verification_status", verificationStatus);
+      }
+      if (search) params.set("search", search);
+      params.set("limit", String(pageSize));
+      params.set("offset", String((page - 1) * pageSize));
+      return platformAdminApiClient.get<AdminCandidateListResponse>(
+        `/platform-admin/candidates?${params.toString()}`
+      );
+    },
+  });
+}
+
+export function useGlobalSearch(query: string) {
+  return useQuery({
+    queryKey: ["platform-admin", "search", query],
     queryFn: () =>
-      platformAdminApiClient.get<AdminCandidateSummary[]>(
-        `/platform-admin/candidates${
-          verificationStatus && verificationStatus !== "all"
-            ? `?verification_status=${verificationStatus}`
-            : ""
-        }`
+      platformAdminApiClient.get<GlobalSearchResultItem[]>(
+        `/platform-admin/search?q=${encodeURIComponent(query)}`
       ),
+    enabled: query.trim().length >= 2,
   });
 }
 

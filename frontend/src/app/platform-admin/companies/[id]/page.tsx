@@ -82,7 +82,8 @@ export default function PlatformAdminCompanyDetailPage() {
   const [activeTab, setActiveTab] = React.useState<TabKey>("overview");
   const { data: company, isLoading } = useCompanyDetail(params.id);
   const { data: users, isLoading: usersLoading } = useCompanyUsers(params.id);
-  const { data: jobs, isLoading: jobsLoading } = useAdminJobs(undefined, params.id);
+  const { data: jobsData, isLoading: jobsLoading } = useAdminJobs(undefined, params.id);
+  const jobs = jobsData?.items;
   const { data: activity, isLoading: activityLoading } = useCompanyActivity(params.id);
   const suspend = useSuspendCompany();
   const reactivate = useReactivateCompany();

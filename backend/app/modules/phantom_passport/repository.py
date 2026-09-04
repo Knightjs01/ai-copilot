@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.phantom_passport.models import (
@@ -184,18 +184,53 @@ class PhantomPassportRepository:
         return result.scalar_one()
 
     async def list_all(
-        self, *, verification_status: str | None = None, limit: int = 100, offset: int = 0
+        self,
+        *,
+        verification_status: str | None = None,
+        search: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[PhantomPassport]:
         """Platform-admin candidate oversight -- deliberately NOT list_discoverable_candidates'
         company-search pool: no visibility/career_intent/current_version_id filtering, since an
         admin overview needs to see private and not-yet-approved passports too, not just the ones
-        a company could find."""
+        a company could find. search matches only callsign/headline -- never a real-identity
+        field (legal_name/phone/email/company_name_encrypted), preserving Phase 4's guardrail."""
         query = select(PhantomPassport).where(PhantomPassport.deleted_at.is_(None))
         if verification_status is not None:
             query = query.where(PhantomPassport.verification_status == verification_status)
+        if search:
+            pattern = f"%{search}%"
+            query = query.where(
+                or_(
+                    PhantomPassport.callsign.ilike(pattern),
+                    PhantomPassport.headline.ilike(pattern),
+                )
+            )
         query = query.order_by(PhantomPassport.created_at.desc()).limit(limit).offset(offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def count_all(
+        self, *, verification_status: str | None = None, search: str | None = None
+    ) -> int:
+        query = (
+            select(func.count())
+            .select_from(PhantomPassport)
+            .where(PhantomPassport.deleted_at.is_(None))
+        )
+        if verification_status is not None:
+            query = query.where(PhantomPassport.verification_status == verification_status)
+        if search:
+            pattern = f"%{search}%"
+            query = query.where(
+                or_(
+                    PhantomPassport.callsign.ilike(pattern),
+                    PhantomPassport.headline.ilike(pattern),
+                )
+            )
+        result = await self._session.execute(query)
+        return result.scalar_one()
 
 
 class PassportPersonalInfoRepository:

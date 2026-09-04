@@ -16,6 +16,7 @@ from app.modules.platform_admin.dependencies import (
 from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import (
     AdminShadowJobDetail,
+    AdminShadowJobListResponse,
     AdminShadowJobRead,
     RejectShadowJobRequest,
 )
@@ -36,18 +37,27 @@ async def _to_admin_read(
     return AdminShadowJobRead(**read_model.model_dump(), company_name=company_name)
 
 
-@router.get("", response_model=list[AdminShadowJobRead])
+@router.get("", response_model=AdminShadowJobListResponse)
 async def list_jobs(
     status_filter: str | None = Query(default=None, alias="status"),
     company_id: uuid.UUID | None = Query(default=None),
+    search: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     _: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.JOBS_VIEW)
     ),
     session: AsyncSession = Depends(get_db),
-) -> list[AdminShadowJobRead]:
+) -> AdminShadowJobListResponse:
     service = ShadowJobService(session)
-    jobs = await service.list_admin_jobs(status=status_filter, company_id=company_id)
-    return [await _to_admin_read(session, service, job) for job in jobs]
+    jobs = await service.list_admin_jobs(
+        status=status_filter, company_id=company_id, search=search, limit=limit, offset=offset
+    )
+    total = await service.count_admin_jobs(
+        status=status_filter, company_id=company_id, search=search
+    )
+    items = [await _to_admin_read(session, service, job) for job in jobs]
+    return AdminShadowJobListResponse(items=items, total=total)
 
 
 @router.get("/{job_id}", response_model=AdminShadowJobDetail)

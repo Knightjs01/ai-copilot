@@ -28,6 +28,7 @@ from app.modules.companies.dependencies import get_media_storage
 from app.modules.companies.models import Company, CompanyProfileStatus
 from app.modules.companies.schemas import (
     AdminCompanyDetail,
+    AdminCompanyListResponse,
     AdminCompanySummary,
     AdminCreateCompanyRequest,
     AdminInviteCompanyUserRequest,
@@ -241,21 +242,26 @@ async def get_company_cover_image(
     return Response(content=content, media_type=content_type)
 
 
-@admin_router.get("", response_model=list[AdminCompanySummary])
+@admin_router.get("", response_model=AdminCompanyListResponse)
 async def list_companies_for_admin(
     profile_status: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     admin: PlatformAdminContext = Depends(
         require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_VIEW)
     ),
     session: AsyncSession = Depends(get_db),
-) -> list[AdminCompanySummary]:
-    pairs = await CompanyService(session).list_companies_with_user_counts(
-        profile_status=profile_status
+) -> AdminCompanyListResponse:
+    service = CompanyService(session)
+    pairs = await service.list_companies_with_user_counts(
+        profile_status=profile_status, search=search, limit=limit, offset=offset
     )
+    total = await service.count_companies(profile_status=profile_status, search=search)
     plan_code_by_id = {
         plan.id: plan.code for plan in await CommercialService(session).get_plan_catalog()
     }
-    return [
+    items = [
         AdminCompanySummary(
             id=company.id,
             name=company.name,
@@ -276,6 +282,7 @@ async def list_companies_for_admin(
         )
         for company, user_count in pairs
     ]
+    return AdminCompanyListResponse(items=items, total=total)
 
 
 @admin_router.get("/{company_id}/profile-review/preview", response_model=CompanyProfileRead)
@@ -351,7 +358,7 @@ async def unverify_employer(
 async def approve_profile_review(
     company_id: uuid.UUID,
     admin: PlatformAdminContext = Depends(
-        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_REVIEW)
     ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),
@@ -366,7 +373,7 @@ async def reject_profile_review(
     company_id: uuid.UUID,
     body: ProfileReviewRejectBody = ProfileReviewRejectBody(),
     admin: PlatformAdminContext = Depends(
-        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_MANAGE)
+        require_platform_admin_permission(PlatformAdminPermissions.COMPANIES_REVIEW)
     ),
     session: AsyncSession = Depends(get_db),
     email_sender: EmailSender = Depends(get_email_sender),

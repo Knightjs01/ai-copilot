@@ -53,7 +53,7 @@ async def get_my_commercial_summary(
 @admin_router.get("/plans", response_model=list[CommercialPlanRead])
 async def list_commercial_plans(
     admin: PlatformAdminContext = Depends(
-        require_platform_admin_permission(PlatformAdminPermissions.COMMERCIAL_MANAGE)
+        require_platform_admin_permission(PlatformAdminPermissions.COMMERCIAL_VIEW)
     ),
     session: AsyncSession = Depends(get_db),
 ) -> list[CommercialPlanRead]:
