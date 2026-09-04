@@ -145,6 +145,27 @@ class PlatformAdminAuthService:
         # other session, not just leave old refresh tokens quietly valid.
         await self._tokens.revoke_all_refresh_tokens_for_admin(admin.id)
 
+    async def reset_password_with_token(self, *, reset_token: str, new_password: str) -> None:
+        """Account-recovery counterpart to change_password -- proves possession of a valid
+        password-reset link instead of the current password. Mirrors AuthService.reset_password's
+        session-revocation behavior exactly: a reset ends every existing session, not just the
+        one that requested it."""
+        try:
+            payload = security.decode_platform_admin_password_reset_token(reset_token)
+        except security.TokenError as exc:
+            raise InvalidOrExpiredTokenError() from exc
+        admin = await self._admins.get_by_id(uuid.UUID(payload["sub"]))
+        if admin is None or not admin.is_active:
+            raise InvalidOrExpiredTokenError()
+        admin.hashed_password = security.hash_password(new_password)
+        await self._tokens.revoke_all_refresh_tokens_for_admin(admin.id)
+        await self._audit.record(
+            admin_id=admin.id,
+            action="admin.password_reset",
+            target_type="platform_admin",
+            target_id=admin.id,
+        )
+
     async def setup_mfa(self, *, admin: PlatformAdmin) -> tuple[str, str]:
         secret = security.generate_totp_secret()
         uri = security.get_totp_provisioning_uri(secret=secret, email=admin.email)

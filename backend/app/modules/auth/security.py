@@ -232,6 +232,31 @@ def decode_platform_admin_pending_mfa_token(token: str) -> dict[str, Any]:
     return payload
 
 
+def create_platform_admin_password_reset_token(*, admin_id: uuid.UUID) -> str:
+    """Account-recovery token: proves nothing but "someone with this link wants to set a new
+    password for this admin" -- deliberately a distinct scope so it can never be replayed
+    anywhere a session, step-up, or MFA-flow token would be accepted. 60-minute expiry, longer
+    than the MFA-flow tokens since a human has to read an email/message and act on it, not
+    complete an in-progress form."""
+
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(admin_id),
+        "scope": "platform_admin_password_reset",
+        "iat": now,
+        "exp": now + timedelta(minutes=60),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
+def decode_platform_admin_password_reset_token(token: str) -> dict[str, Any]:
+    payload = decode_access_token(token)
+    if payload.get("scope") != "platform_admin_password_reset":
+        raise TokenError("Not a password reset token")
+    return payload
+
+
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 

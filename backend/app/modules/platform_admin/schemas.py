@@ -122,6 +122,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8)
 
 
+class PasswordResetConfirmRequest(BaseModel):
+    reset_token: str
+    new_password: str = Field(min_length=8)
+
+
 class PurgeAllDataRequest(BaseModel):
     # No password field -- superseded by the step-up token this route now requires (see
     # require_platform_admin_step_up), which already re-verified password + MFA moments ago.

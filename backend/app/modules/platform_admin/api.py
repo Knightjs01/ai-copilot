@@ -21,6 +21,7 @@ from app.modules.platform_admin.permissions import PlatformAdminPermissions
 from app.modules.platform_admin.schemas import (
     ChangePasswordRequest,
     CreatePlatformAdminRequest,
+    PasswordResetConfirmRequest,
     PlatformAdminEnrollAndLoginResponse,
     PlatformAdminLoginRequest,
     PlatformAdminMfaChallengeResponse,
@@ -179,6 +180,21 @@ async def change_password(
 ) -> None:
     await PlatformAdminAuthService(session).change_password(
         admin=admin, current_password=body.current_password, new_password=body.new_password
+    )
+
+
+@router.post("/password-reset/confirm", status_code=204)
+@limiter.limit("10/minute")
+async def confirm_password_reset(
+    request: Request,
+    body: PasswordResetConfirmRequest,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Account-recovery counterpart to /change-password -- no session required, since the whole
+    point is recovering access without one. Proof of intent is possession of the reset link
+    (see security.create_platform_admin_password_reset_token), not a current password."""
+    await PlatformAdminAuthService(session).reset_password_with_token(
+        reset_token=body.reset_token, new_password=body.new_password
     )
 
 
