@@ -1,6 +1,9 @@
 import { ApiError } from "@/lib/api-client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Empty on purpose -- see api-client.ts's own API_URL for why: every call below must stay a
+// same-origin relative path, proxied to the backend by next.config.js's rewrites(), not a
+// cross-origin request to the backend's raw hostname.
+const API_URL = "";
 
 // A candidate is a separate principal from a company User (see
 // backend/app/modules/candidate_auth/__init__.py) — deliberately its own module-scoped token

@@ -1,4 +1,9 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Empty on purpose -- every call below builds a same-origin relative path
+// (`/api/v1/...`), proxied to the real backend by next.config.js's rewrites(). Never point this
+// at an absolute backend URL again: that made every login form submit a password as a
+// cross-origin request to a raw, unrelated cloud hostname, which is exactly what got this site's
+// login page flagged as phishing by NordVPN's Threat Protection.
+export const API_URL = "";
 
 export class ApiError extends Error {
   status: number;

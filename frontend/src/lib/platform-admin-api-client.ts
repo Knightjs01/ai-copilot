@@ -1,6 +1,10 @@
 import { ApiError } from "@/lib/api-client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Empty on purpose -- see api-client.ts's own API_URL for why: every call below must stay a
+// same-origin relative path, proxied to the backend by next.config.js's rewrites(), not a
+// cross-origin request to the backend's raw hostname (the exact request pattern that got the
+// Phantom Command login page flagged as phishing by NordVPN's Threat Protection).
+const API_URL = "";
 
 // Phantom staff are a third, separate principal from company Users and candidates — its own
 // module-scoped token var, matching candidate-api-client.ts's exact reasoning. The refresh token

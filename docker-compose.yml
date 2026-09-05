@@ -59,6 +59,12 @@ services:
       - ./frontend/.env
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Server-side only (next.config.js's rewrites()) -- the browser-facing NEXT_PUBLIC_API_URL
+      # above is correct for the browser (which reaches the backend via the host's published
+      # port), but the Next.js *server* process runs inside this container, where "localhost"
+      # means itself, not the backend container. Docker Compose's own service-name DNS
+      # ("backend") is what actually reaches it from here.
+      BACKEND_INTERNAL_URL: http://backend:8000
       # No TTY is ever attached to this container, so pnpm's interactive
       # "confirm modules purge" prompt (triggered when its dependency
       # consistency check wants to reinstall) has nothing to answer and
