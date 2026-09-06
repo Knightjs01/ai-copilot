@@ -22,6 +22,8 @@ from app.modules.auth.repository.users import UserRepository
 from app.modules.auth.schemas import UserRead
 from app.modules.auth.service.auth_service import AuthService
 from app.modules.auth.service.user_service import UserService
+from app.modules.billing.models import CompanyBillingStatus
+from app.modules.billing.service import BillingService
 from app.modules.candidates.storage import FileStorage
 from app.modules.commercial.service import CommercialService
 from app.modules.companies.dependencies import get_media_storage
@@ -556,6 +558,8 @@ async def get_company_detail_for_admin(
     }
     user_count = await UserRepository(session).count_by_company(company_id)
     profile_stats = await service.get_profile_stats(company_id)
+    billing = await BillingService(session).get_billing_status(company_id)
+    billing_status = billing.status if billing is not None else CompanyBillingStatus.NOT_STARTED.value
     read = service.to_read(company)
     return AdminCompanyDetail(
         **read.model_dump(),
@@ -568,6 +572,7 @@ async def get_company_detail_for_admin(
         ),
         active_role_limit_override=company.active_role_limit_override,
         profile_stats=profile_stats,
+        billing_status=billing_status,
     )
 
 

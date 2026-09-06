@@ -2,6 +2,7 @@
 
 import { ShieldAlert } from "lucide-react";
 
+import { BillingCard } from "@/components/company/billing-card";
 import { CommercialUsageBanner } from "@/components/company/commercial-usage-banner";
 import { CompanyProfileWizard } from "@/components/company/company-profile-wizard";
 import { ProfileStatsCard } from "@/components/company/profile-stats-card";
@@ -31,6 +32,7 @@ export default function CompanyProfilePage() {
   return (
     <div className="flex flex-col gap-6">
       <CommercialUsageBanner />
+      <BillingCard />
       <ProfileStatsCard />
       <CompanyProfileWizard />
     </div>

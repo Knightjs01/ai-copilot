@@ -10,6 +10,8 @@ from app.modules.auth.dependencies import (
     get_tenant_db,
     require_mfa_enrolled,
 )
+from app.modules.billing.dependencies import get_stripe_client
+from app.modules.billing.stripe_client import StripeClient
 from app.modules.commercial.schemas import (
     CommercialPlanRead,
     CompanyCommercialSummary,
@@ -69,9 +71,10 @@ async def update_company_commercial(
         require_platform_admin_permission(PlatformAdminPermissions.COMMERCIAL_MANAGE)
     ),
     session: AsyncSession = Depends(get_db),
+    stripe: StripeClient = Depends(get_stripe_client),
 ) -> CompanyRead:
     fields_set = body.model_fields_set
-    company = await CommercialService(session).set_company_commercial(
+    company = await CommercialService(session, stripe=stripe).set_company_commercial(
         admin_id=admin.id,
         company_id=company_id,
         plan_code=body.plan_code,

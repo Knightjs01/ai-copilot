@@ -21,3 +21,10 @@ class CommercialPlan(UUIDPrimaryKeyMixin, Base):
     annual_price_pence: Mapped[int] = mapped_column(Integer)
     active_role_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Phase 7 (Revenue Command) -- populated by billing.service.BillingService's
+    # ensure_plans_synced_to_stripe(), a real Stripe API call, not migration data. Null until
+    # that sync has run at least once (e.g. against a fresh database with no Stripe key yet).
+    stripe_product_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_price_id_monthly: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_price_id_annual: Mapped[str | None] = mapped_column(String(255), nullable=True)

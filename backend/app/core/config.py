@@ -98,6 +98,17 @@ class Settings(BaseSettings):
     # dev without this key set is never blocked.
     geoapify_api_key: str = ""
 
+    # Phantom Hire Phase 7 (Revenue Command) -- a test-mode key (sk_test_...) during development,
+    # a live key only once the whole flow is verified end-to-end. Unlike geoapify_api_key above,
+    # every billing.service call raises a clear, explicit error (never a crash, never a silent
+    # no-op) when unset -- billing actions are explicit user-initiated requests, not a passive
+    # autocomplete field, so silently doing nothing would be the wrong failure mode.
+    stripe_secret_key: str = ""
+    # HMAC secret Stripe signs webhook payloads with (from the Stripe Dashboard's webhook
+    # endpoint config, or `stripe listen`'s own printed secret in local dev) -- verified via
+    # stripe.Webhook.construct_event, never trusted without this check.
+    stripe_webhook_secret: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

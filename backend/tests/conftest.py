@@ -1,3 +1,4 @@
+import json
 import os
 
 # Must happen before any `app.*` import — app.db.base builds its engine at import time from
@@ -36,6 +37,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
+from app.modules.billing.exceptions import InvalidWebhookSignatureError  # noqa: E402
 from app.modules.candidates.storage import EncryptingFileStorage, LocalFileStorage  # noqa: E402
 from app.modules.hiring_blueprint.llm_client import HiringBlueprintExtraction  # noqa: E402
 from app.modules.intelligence.llm_client import (  # noqa: E402
@@ -492,6 +494,77 @@ def fake_passport_llm_client() -> FakePassportLLMClient:
     return FakePassportLLMClient()
 
 
+class FakeStripeClient:
+    """Test double for app.modules.billing.stripe_client.StripeClient -- returns deterministic
+    canned responses instead of calling Stripe's real API. No automated test may ever hit the
+    real Stripe API: it costs money, requires real API keys just to run the suite, and a webhook
+    test can't forge a real HMAC signature without holding the real signing secret anyway --
+    verify_webhook_signature here checks for a fixed sentinel instead."""
+
+    def __init__(self) -> None:
+        self.created_products: list[str] = []
+        self.created_prices: list[tuple[str, int, str]] = []
+        self.created_customers: list[tuple[str, str, str]] = []
+        self.checkout_sessions: list[dict[str, str]] = []
+        self.portal_session_customer_ids: list[str] = []
+        self.subscription_price_updates: list[tuple[str, str]] = []
+        self._next_id = 0
+
+    def _id(self, prefix: str) -> str:
+        self._next_id += 1
+        return f"{prefix}_fake_{self._next_id}"
+
+    async def create_product(self, *, name: str) -> str:
+        self.created_products.append(name)
+        return self._id("prod")
+
+    async def create_price(
+        self, *, product_id: str, unit_amount_pence: int, interval: str
+    ) -> str:
+        self.created_prices.append((product_id, unit_amount_pence, interval))
+        return self._id("price")
+
+    async def create_customer(self, *, email: str, name: str, company_id: str) -> str:
+        self.created_customers.append((email, name, company_id))
+        return self._id("cus")
+
+    async def create_checkout_session(
+        self,
+        *,
+        customer_id: str,
+        price_id: str,
+        success_url: str,
+        cancel_url: str,
+        company_id: str,
+    ) -> dict[str, str]:
+        session_id = self._id("cs")
+        session = {"id": session_id, "url": f"https://checkout.stripe.test/{session_id}"}
+        self.checkout_sessions.append(
+            {"customer_id": customer_id, "price_id": price_id, "company_id": company_id, **session}
+        )
+        return session
+
+    async def create_billing_portal_session(self, *, customer_id: str, return_url: str) -> str:
+        self.portal_session_customer_ids.append(customer_id)
+        return f"https://billing.stripe.test/{self._id('bps')}"
+
+    async def retrieve_subscription(self, subscription_id: str) -> dict[str, object]:
+        return {"id": subscription_id, "items": {"data": [{"id": "si_fake_1"}]}}
+
+    async def update_subscription_price(self, *, subscription_id: str, new_price_id: str) -> None:
+        self.subscription_price_updates.append((subscription_id, new_price_id))
+
+    def verify_webhook_signature(self, *, payload: bytes, sig_header: str) -> dict[str, object]:
+        if sig_header != "test-signature":
+            raise InvalidWebhookSignatureError()
+        return json.loads(payload)  # type: ignore[no-any-return]
+
+
+@pytest.fixture
+def fake_stripe_client() -> FakeStripeClient:
+    return FakeStripeClient()
+
+
 @pytest.fixture
 def test_storage(tmp_path: Path) -> EncryptingFileStorage:
     # Own temp directory per test, not the shared dev storage_dir — otherwise every test run
@@ -518,10 +591,12 @@ async def client(
     fake_copilot_llm_client: FakeCopilotLLMClient,
     fake_projects_llm_client: FakeProjectsLLMClient,
     fake_interview_scorecard_llm_client: FakeInterviewScorecardLLMClient,
+    fake_stripe_client: FakeStripeClient,
     test_storage: EncryptingFileStorage,
 ) -> AsyncGenerator[AsyncClient, None]:
     from app.main import app
     from app.modules.auth.dependencies import get_email_sender
+    from app.modules.billing.dependencies import get_stripe_client
     from app.modules.candidates.dependencies import get_file_storage
     from app.modules.copilot.dependencies import get_copilot_llm_client
     from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_client
@@ -556,6 +631,7 @@ async def client(
     app.dependency_overrides[get_interview_scorecard_llm_client] = (
         lambda: fake_interview_scorecard_llm_client
     )
+    app.dependency_overrides[get_stripe_client] = lambda: fake_stripe_client
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -572,3 +648,4 @@ async def client(
         app.dependency_overrides.pop(get_copilot_llm_client, None)
         app.dependency_overrides.pop(get_projects_llm_client, None)
         app.dependency_overrides.pop(get_interview_scorecard_llm_client, None)
+        app.dependency_overrides.pop(get_stripe_client, None)

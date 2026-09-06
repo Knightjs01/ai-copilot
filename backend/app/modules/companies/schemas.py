@@ -216,3 +216,8 @@ class AdminCompanyDetail(AdminCompanySummary):
     looking_for: list[Any]
     hiring_highlights: list[Any]
     profile_stats: ProfileStats
+    # Phase 7 (Revenue Command) -- "not_started" for every company that hasn't completed a real
+    # Stripe checkout yet, which today is most of them (plan assignment has never required
+    # payment). A plain string, not the CompanyBillingStatus enum itself, to avoid this schema
+    # importing the billing module just for one string literal.
+    billing_status: str

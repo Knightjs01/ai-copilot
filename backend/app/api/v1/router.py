@@ -4,6 +4,9 @@ from app.api.v1 import health
 from app.modules.analytics.api import router as analytics_router
 from app.modules.applicant_notes.api import router as applicant_notes_router
 from app.modules.auth.api import router as auth_router
+from app.modules.billing.api import admin_router as billing_admin_router
+from app.modules.billing.api import router as billing_router
+from app.modules.billing.api import webhook_router as billing_webhook_router
 from app.modules.candidate_activity.api import router as candidate_activity_router
 from app.modules.candidate_auth.api import router as candidate_auth_router
 from app.modules.candidates.api import router as candidates_router
@@ -88,6 +91,9 @@ api_router.include_router(platform_admin_candidates_router)
 api_router.include_router(commercial_router)
 api_router.include_router(commercial_admin_router)
 api_router.include_router(commercial_public_router)
+api_router.include_router(billing_router)
+api_router.include_router(billing_admin_router)
+api_router.include_router(billing_webhook_router)
 
 # Everything past pre-screen (interview loops, scorecards, offer, decision) is handled in the
 # company's ATS (Greenhouse), not this platform — see README Roadmap.

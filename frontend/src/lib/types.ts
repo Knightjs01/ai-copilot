@@ -815,6 +815,23 @@ export interface CompanyCommercialSummary {
   effective_limit: number | null;
 }
 
+export type CompanyBillingStatus = "not_started" | "active" | "past_due" | "canceled";
+export type BillingPeriod = "monthly" | "annual";
+
+export interface CompanyBilling {
+  status: CompanyBillingStatus;
+  billing_period: BillingPeriod | null;
+  current_period_end: string | null;
+}
+
+export interface CheckoutSessionResponse {
+  checkout_url: string;
+}
+
+export interface PortalSessionResponse {
+  portal_url: string;
+}
+
 export interface CompanyUpdateInput {
   description?: string | null;
   culture?: string | null;
@@ -1508,6 +1525,7 @@ export interface AdminCompanyDetail extends AdminCompanySummary {
   looking_for: string[];
   hiring_highlights: ContentItem[];
   profile_stats: ProfileStats;
+  billing_status: CompanyBillingStatus;
 }
 
 export interface AdminCompanyUser {

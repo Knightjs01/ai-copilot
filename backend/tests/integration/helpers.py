@@ -1,6 +1,7 @@
 import re
 import uuid
 
+import pyotp
 from httpx import AsyncClient
 
 from app.db.base import auth_session_factory
@@ -58,17 +59,54 @@ def auth_headers(access_token: str) -> dict:
 async def platform_admin_headers(client: AsyncClient) -> dict:
     """Real HTTP login as the seeded bootstrap platform admin -- for tests that specifically
     need the admin-authenticated HTTP flow itself (e.g. to exercise get_email_sender's real
-    dependency injection), as opposed to signup()'s service-layer shortcut."""
+    dependency injection), as opposed to signup()'s service-layer shortcut.
 
-    response = await client.post(
+    Login mandates MFA with no fallback (platform_admin/service.py's login() -- "no grace
+    period"), so a call here always has to complete a real enroll-then-login round trip, never
+    a bare password check. platform_admins is system-seeded data, not per-test tenant data, so
+    _clean_tables deliberately never truncates it between tests (same reasoning it already
+    applies to permissions/roles) -- which means the bootstrap admin's MFA-enrolled state would
+    otherwise leak across tests: whichever test happens to enroll it first leaves every other
+    test in the run facing a TOTP challenge for a secret only that first test ever saw. Reset
+    back to not-yet-enrolled directly via the DB first -- the same "bypass HTTP for test setup"
+    shortcut signup() already uses for request approval -- so this always gets the exact same
+    deterministic enrollment-required response regardless of what any other test did first."""
+
+    async with auth_session_factory() as session:
+        admin = await PlatformAdminRepository(session).get_by_email(
+            _BOOTSTRAP_PLATFORM_ADMIN_EMAIL
+        )
+        assert admin is not None, "bootstrap platform admin not seeded — check migration 0040"
+        admin.mfa_enabled = False
+        admin.mfa_secret_encrypted = None
+        await session.commit()
+
+    login_response = await client.post(
         "/api/v1/platform-admin/login",
         json={
             "email": _BOOTSTRAP_PLATFORM_ADMIN_EMAIL,
             "password": _BOOTSTRAP_PLATFORM_ADMIN_PASSWORD,
         },
     )
-    assert response.status_code == 200, response.text
-    return auth_headers(response.json()["access_token"])
+    assert login_response.status_code == 200, login_response.text
+    pending_token = login_response.json()["pending_token"]
+
+    setup_response = await client.post(
+        "/api/v1/platform-admin/mfa/pending/setup", json={"pending_token": pending_token}
+    )
+    assert setup_response.status_code == 200, setup_response.text
+    secret = setup_response.json()["secret"]
+
+    enable_response = await client.post(
+        "/api/v1/platform-admin/mfa/pending/enable",
+        json={
+            "pending_token": pending_token,
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
+    )
+    assert enable_response.status_code == 200, enable_response.text
+    return auth_headers(enable_response.json()["access_token"])
 
 
 async def step_up_headers(

@@ -2,6 +2,8 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.billing.service import BillingService
+from app.modules.billing.stripe_client import StripeClient
 from app.modules.commercial.exceptions import CommercialPlanNotFoundError
 from app.modules.commercial.models import CommercialPlan
 from app.modules.commercial.repository import CommercialPlanRepository
@@ -18,11 +20,16 @@ class CommercialService:
     same cross-module pattern shadow_jobs.service already uses to read Company for board
     listings) rather than duplicating company lookups into a second repository."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, stripe: StripeClient | None = None) -> None:
         self._session = session
         self._plans = CommercialPlanRepository(session)
         self._projects = ProjectRepository(session)
         self._platform_audit = PlatformAdminAuditService(session)
+        # Threaded through to the internally-composed BillingService so a caller injecting a
+        # test double (via Depends(get_stripe_client)) doesn't silently fall through to a real
+        # StripeClient here -- same composition bug PrivacyGatewayService/CandidateService's
+        # storage param already hit and fixed.
+        self._billing = BillingService(session, stripe=stripe)
 
     async def get_plan_catalog(self) -> list[CommercialPlan]:
         return await self._plans.list_active()
@@ -85,12 +92,14 @@ class CommercialService:
         old_override = company.active_role_limit_override
 
         new_plan = old_plan
+        plan_changed = False
         if plan_code_set:
             if plan_code is None:
                 raise CommercialPlanNotFoundError("A commercial plan code is required")
             new_plan = await self._plans.get_by_code(plan_code)
             if new_plan is None:
                 raise CommercialPlanNotFoundError()
+            plan_changed = old_plan is None or old_plan.id != new_plan.id
             company.commercial_plan_id = new_plan.id
         if active_role_limit_override_set:
             company.active_role_limit_override = active_role_limit_override
@@ -110,4 +119,12 @@ class CommercialService:
                 "reason": reason,
             },
         )
+
+        # Phase 7 (Revenue Command) -- if this company already has a real, active Stripe
+        # subscription, keep it billing the plan it's actually assigned rather than silently
+        # drifting from what an admin just set here. A company with no subscription yet (the
+        # common case -- billing only starts once the Owner completes checkout) has nothing to
+        # sync, so this is a no-op for them.
+        if plan_changed:
+            await self._billing.sync_subscription_price(company=company)
         return company

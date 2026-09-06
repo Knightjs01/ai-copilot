@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -26,7 +26,21 @@ import {
 } from "@/lib/queries/platform-admin";
 import { usePlatformAdminAuth } from "@/lib/platform-admin-auth-context";
 import { COMPANY_PROFILE_STATUS_LABEL, COMPANY_PROFILE_STATUS_VARIANT } from "@/lib/status-display";
-import type { AuditEntry } from "@/lib/types";
+import type { AuditEntry, CompanyBillingStatus } from "@/lib/types";
+
+const BILLING_STATUS_LABEL: Record<CompanyBillingStatus, string> = {
+  not_started: "Not started",
+  active: "Active",
+  past_due: "Past due",
+  canceled: "Canceled",
+};
+
+const BILLING_STATUS_VARIANT: Record<CompanyBillingStatus, BadgeProps["variant"]> = {
+  not_started: "outline",
+  active: "success",
+  past_due: "warning",
+  canceled: "danger",
+};
 
 type TabKey = "overview" | "profile" | "people" | "jobs" | "activity" | "verification";
 
@@ -190,6 +204,9 @@ export default function PlatformAdminCompanyDetailPage() {
                   ` (${company.active_role_limit_override} override)`}
               </Badge>
             )}
+            <Badge variant={BILLING_STATUS_VARIANT[company.billing_status]}>
+              Billing: {BILLING_STATUS_LABEL[company.billing_status]}
+            </Badge>
           </div>
         </div>
       )}
