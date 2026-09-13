@@ -1,7 +1,13 @@
 from httpx import AsyncClient
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, candidate_signup, signup, step_up_headers
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    publish_and_approve_job,
+    signup,
+    step_up_headers,
+)
 
 _JOB_PAYLOAD = {
     "title": "Staff Product Designer",
@@ -14,11 +20,7 @@ async def _create_and_publish_job(client: AsyncClient, *, headers: dict) -> dict
     response = await client.post("/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _apply_with_new_candidate(
@@ -100,8 +102,9 @@ async def test_request_reveal_emails_the_candidate(
     )
     assert request_response.status_code == 201, request_response.text
 
-    assert len(sent_emails.sent) == 1
-    email = sent_emails.sent[0]
+    # candidate_signup's real signup call sends its own welcome/verify-email first -- the reveal
+    # notification under test here is always the last one sent, not the only one.
+    email = sent_emails.sent[-1]
     assert email["to"] == "applicant@shadowreveal-notify.com"
     assert "Notify Reveal Co" in email["subject"]
     assert application["id"] in email["body"]
@@ -665,11 +668,7 @@ async def test_reveal_on_one_job_does_not_leak_to_another_job_for_the_same_candi
     )
     assert job_b_response.status_code == 201, job_b_response.text
     job_b = job_b_response.json()
-    publish_b = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job_b['id']}/publish", headers=headers
-    )
-    assert publish_b.status_code == 200, publish_b.text
-    job_b = publish_b.json()
+    job_b = await publish_and_approve_job(client, headers=headers, job_id=job_b["id"])
 
     tokens = await candidate_signup(
         client, email="applicant@shadowreveal-crossjob.com", full_name="Cross Job Applicant"

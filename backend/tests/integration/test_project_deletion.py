@@ -11,6 +11,7 @@ from tests.integration.helpers import (
     candidate_signup,
     create_project,
     invite_and_accept,
+    publish_and_approve_job,
     signup,
     step_up_headers,
 )
@@ -379,10 +380,7 @@ async def test_burn_project_purges_linked_shadow_job(client: AsyncClient) -> Non
     )
     assert job_response.status_code == 201, job_response.text
     job_id = job_response.json()["id"]
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job_id}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
+    await publish_and_approve_job(client, headers=headers, job_id=job_id)
 
     candidate_tokens = await candidate_signup(client, email="applicant@burnshadow.com")
     candidate_headers = auth_headers(candidate_tokens["access_token"])

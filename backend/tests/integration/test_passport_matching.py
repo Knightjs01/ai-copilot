@@ -1,7 +1,13 @@
 from httpx import AsyncClient
 
 from tests.conftest import FakePassportMatchingLLMClient
-from tests.integration.helpers import auth_headers, candidate_signup, create_project, signup
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    create_project,
+    publish_and_approve_job,
+    signup,
+)
 
 _JOB_PAYLOAD = {
     "title": "Staff Product Designer",
@@ -22,11 +28,7 @@ async def _create_and_publish_job(client: AsyncClient, *, headers: dict) -> dict
     create_response = await client.post("/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=headers)
     assert create_response.status_code == 201, create_response.text
     job = create_response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _build_and_approve_passport(
@@ -127,10 +129,9 @@ async def test_batch_matches_returns_scores_for_each_job(
     job_b_payload = {**_JOB_PAYLOAD, "title": "Backend Engineer"}
     create_b = await client.post("/api/v1/shadow-jobs", json=job_b_payload, headers=owner_headers)
     assert create_b.status_code == 201, create_b.text
-    publish_b = await client.post(
-        f"/api/v1/shadow-jobs/mine/{create_b.json()['id']}/publish", headers=owner_headers
+    job_b = await publish_and_approve_job(
+        client, headers=owner_headers, job_id=create_b.json()["id"]
     )
-    job_b = publish_b.json()
 
     candidate_headers = auth_headers(
         (await candidate_signup(client, email="candidate@matching-batch.com"))["access_token"]
@@ -253,10 +254,7 @@ async def test_candidate_facing_match_never_reads_blueprint_or_alignment(
     assert create_response.status_code == 201, create_response.text
     job = create_response.json()
     assert job["project_id"] == project["id"]
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=owner_headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
+    await publish_and_approve_job(client, headers=owner_headers, job_id=job["id"])
 
     candidate_headers = auth_headers(
         (await candidate_signup(client, email="candidate@matching-linked.com"))["access_token"]

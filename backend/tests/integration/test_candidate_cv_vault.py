@@ -6,7 +6,12 @@ from sqlalchemy import text
 
 from app.modules.candidates.storage import EncryptingFileStorage
 from tests.conftest import FakePassportLLMClient
-from tests.integration.helpers import auth_headers, candidate_signup, signup
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    publish_and_approve_job,
+    signup,
+)
 
 
 def _build_cv_pdf(text_body: str) -> bytes:
@@ -245,7 +250,7 @@ async def test_apply_requires_approved_passport(client: AsyncClient) -> None:
         headers=owner_headers,
     )
     job = job_response.json()
-    await client.post(f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=owner_headers)
+    await publish_and_approve_job(client, headers=owner_headers, job_id=job["id"])
 
     tokens = await candidate_signup(client, email="unapproved@vault-gate.com")
     headers = auth_headers(tokens["access_token"])
@@ -296,7 +301,7 @@ async def test_editing_after_approval_does_not_change_an_already_submitted_appli
         headers=owner_headers,
     )
     job = job_response.json()
-    await client.post(f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=owner_headers)
+    await publish_and_approve_job(client, headers=owner_headers, job_id=job["id"])
 
     tokens = await candidate_signup(client, email="applicant@vault-freeze.com")
     candidate_headers = auth_headers(tokens["access_token"])
@@ -338,8 +343,7 @@ async def test_new_application_after_reapproval_reflects_the_new_version(
             headers=owner_headers,
         )
         job = response.json()
-        await client.post(f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=owner_headers)
-        return job
+        return await publish_and_approve_job(client, headers=owner_headers, job_id=job["id"])
 
     job_one = await _create_and_publish("Role One")
     job_two = await _create_and_publish("Role Two")

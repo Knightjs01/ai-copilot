@@ -6,6 +6,7 @@ from httpx import AsyncClient
 
 from app.db.base import auth_session_factory
 from app.modules.auth import security
+from app.modules.candidate_auth.repository import CandidateUserRepository
 from app.modules.company_access.service import CompanyAccessRequestService
 from app.modules.platform_admin.repository import PlatformAdminRepository
 from tests.conftest import CapturingEmailSender
@@ -137,7 +138,23 @@ async def candidate_signup(
         },
     )
     assert response.status_code == 201, response.text
-    return response.json()
+    body = response.json()
+
+    # require_verified_candidate (candidate_auth/dependencies.py) gates applying to jobs and For
+    # You matches on is_email_verified -- a real candidate verifies by clicking an emailed link
+    # (CandidateAuthService.verify_email), but almost every one of this helper's ~40 call sites
+    # wants an immediately-usable candidate, not to re-implement that round trip every time.
+    # Bypass it directly via the DB, same "bypass HTTP for test setup" shortcut signup() already
+    # uses for company request approval. Tests that specifically exercise the unverified state
+    # (test_candidate_auth.py, test_auth_flow.py) build their own candidate state directly rather
+    # than through this helper, so this doesn't shadow real coverage of that gate.
+    async with auth_session_factory() as session:
+        candidate = await CandidateUserRepository(session).get_by_email(email)
+        assert candidate is not None
+        candidate.is_email_verified = True
+        await session.commit()
+
+    return body
 
 
 def extract_token_from_email(sent_emails: CapturingEmailSender) -> str:
@@ -170,6 +187,28 @@ async def invite_and_accept(
     )
     assert accept_response.status_code == 200, accept_response.text
     return accept_response.json()
+
+
+async def publish_and_approve_job(client: AsyncClient, *, headers: dict, job_id: str) -> dict:
+    """POST .../publish only submits a job into the platform-admin review queue -- it doesn't
+    actually go live (see shadow_jobs/api.py's publish_job docstring: "it does not go live yet").
+    Actual publishing requires a separate platform-admin approve call
+    (platform_admin/jobs_api.py's approve_job). Centralized here since this "publish = live"
+    assumption was baked into test call sites across five files before the review-queue feature
+    shipped -- no dedicated test exists for the review-queue feature itself, so auto-approving
+    here doesn't shadow any real coverage of it."""
+
+    publish_response = await client.post(
+        f"/api/v1/shadow-jobs/mine/{job_id}/publish", headers=headers
+    )
+    assert publish_response.status_code == 200, publish_response.text
+
+    admin_headers = await platform_admin_headers(client)
+    approve_response = await client.post(
+        f"/api/v1/platform-admin/jobs/{job_id}/approve", headers=admin_headers
+    )
+    assert approve_response.status_code == 200, approve_response.text
+    return approve_response.json()
 
 
 async def create_project(

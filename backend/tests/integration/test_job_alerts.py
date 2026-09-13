@@ -1,7 +1,12 @@
 from httpx import AsyncClient
 
 from tests.conftest import CapturingEmailSender
-from tests.integration.helpers import auth_headers, candidate_signup, signup
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    publish_and_approve_job,
+    signup,
+)
 
 _JOB_PAYLOAD = {
     "title": "Senior Backend Engineer",
@@ -17,11 +22,7 @@ async def _create_and_publish_job(client: AsyncClient, *, headers: dict, **overr
     create_response = await client.post("/api/v1/shadow-jobs", json=payload, headers=headers)
     assert create_response.status_code == 201, create_response.text
     job = create_response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def test_candidate_can_create_list_update_delete_an_alert(client: AsyncClient) -> None:

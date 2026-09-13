@@ -4,7 +4,21 @@ from tests.integration.helpers import auth_headers, candidate_signup, create_pro
 
 
 async def test_candidate_signup_and_me(client: AsyncClient) -> None:
-    tokens = await candidate_signup(client, email="jamie@example.com", full_name="Jamie Candidate")
+    # Hits /signup directly rather than going through the candidate_signup() helper -- that
+    # helper auto-verifies the email as a test-setup convenience (most callers want an
+    # immediately-usable candidate), but this test specifically checks the real, raw signup
+    # response's unverified state.
+    signup_response = await client.post(
+        "/api/v1/candidate-auth/signup",
+        json={
+            "email": "jamie@example.com",
+            "password": "correct horse battery staple",
+            "first_name": "Jamie",
+            "last_name": "Candidate",
+        },
+    )
+    assert signup_response.status_code == 201, signup_response.text
+    tokens = signup_response.json()
     assert tokens["access_token"]
 
     me_response = await client.get(

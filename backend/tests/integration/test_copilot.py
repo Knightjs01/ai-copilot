@@ -2,7 +2,12 @@ from datetime import datetime, timedelta, timezone
 
 from httpx import AsyncClient
 
-from tests.integration.helpers import auth_headers, candidate_signup, signup
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    publish_and_approve_job,
+    signup,
+)
 
 _JOB_PAYLOAD = {
     "title": "Senior Backend Engineer",
@@ -19,11 +24,7 @@ async def _create_and_publish_job(client: AsyncClient, *, headers: dict) -> dict
     response = await client.post("/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _build_and_approve_passport(

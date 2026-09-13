@@ -10,6 +10,7 @@ from tests.integration.helpers import (
     candidate_signup,
     create_project,
     invite_and_accept,
+    publish_and_approve_job,
     signup,
     step_up_headers,
 )
@@ -36,11 +37,7 @@ async def _create_and_publish_job(
     response = await client.post("/api/v1/shadow-jobs", json=payload, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _apply_with_new_candidate(
@@ -142,8 +139,9 @@ async def test_schedule_emails_the_candidate(
     )
     assert schedule_response.status_code == 201, schedule_response.text
 
-    assert len(sent_emails.sent) == 1
-    email = sent_emails.sent[0]
+    # candidate_signup's real signup call sends its own welcome/verify-email first -- the
+    # interview-scheduled notification under test here is always the last one sent.
+    email = sent_emails.sent[-1]
     assert email["to"] == "candidate@interviews-notify.com"
     assert "Notify Interviews Co" in email["subject"]
 

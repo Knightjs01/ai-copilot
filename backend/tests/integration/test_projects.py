@@ -235,9 +235,12 @@ async def test_rls_blocks_cross_tenant_project_reads(client: AsyncClient) -> Non
             assert explicit_cross_tenant_query.fetchall() == []
 
 
-async def test_app_auth_role_has_no_grants_on_projects() -> None:
-    """Proves the Phase 2 migration's default-privileges fix actually took effect — app_auth
-    should be unable to touch `projects` at all, not just see zero rows via RLS."""
+async def test_app_auth_role_has_select_but_no_write_grants_on_projects() -> None:
+    """Proves the Phase 2 migration's default-privileges fix actually took effect for writes --
+    app_auth should be unable to modify `projects`, not just see zero rows via RLS. Migration
+    0071 later deliberately granted app_auth read-only SELECT on projects too (Phantom Command
+    2.0's admin stats endpoint needs cross-tenant project counts), so SELECT is now expected to
+    succeed; the write-protection invariant below is what this test actually exists to prove."""
 
     from app.core.config import get_settings
     from sqlalchemy.ext.asyncio import create_async_engine
@@ -246,12 +249,13 @@ async def test_app_auth_role_has_no_grants_on_projects() -> None:
     auth_engine = create_async_engine(settings.auth_database_url)
     try:
         async with auth_engine.connect() as conn:
+            await conn.execute(text("SELECT 1 FROM projects LIMIT 1"))
             try:
-                await conn.execute(text("SELECT 1 FROM projects LIMIT 1"))
+                await conn.execute(text("DELETE FROM projects WHERE false"))
                 raised = False
             except DBAPIError:
                 raised = True
-            assert raised, "app_auth should not have SELECT privilege on projects"
+            assert raised, "app_auth should not have write privileges on projects"
     finally:
         await auth_engine.dispose()
 

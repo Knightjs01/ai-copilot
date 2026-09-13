@@ -1,6 +1,12 @@
 from httpx import AsyncClient
 
-from tests.integration.helpers import auth_headers, candidate_signup, create_project, signup
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    create_project,
+    publish_and_approve_job,
+    signup,
+)
 from tests.integration.test_prescreen_assessment import (
     _create_candidate_with_intelligence_pack,
     _setup_project_with_blueprint_and_alignment,
@@ -20,11 +26,7 @@ async def _create_and_publish_job(
     response = await client.post("/api/v1/shadow-jobs", json=payload, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _apply_and_get_reveal_response(

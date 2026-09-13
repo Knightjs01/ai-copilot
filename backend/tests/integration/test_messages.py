@@ -9,6 +9,7 @@ from tests.integration.helpers import (
     candidate_signup,
     create_project,
     invite_and_accept,
+    publish_and_approve_job,
     signup,
     step_up_headers,
 )
@@ -27,11 +28,7 @@ async def _create_and_publish_job(
     response = await client.post("/api/v1/shadow-jobs", json=payload, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _apply_with_new_candidate(
@@ -126,13 +123,15 @@ async def test_company_reply_emails_the_candidate(
     application, candidate_headers = await _apply_with_new_candidate(
         client, job_id=job["id"], email="candidate@messages-notify.com"
     )
-    # Candidate's own first message doesn't need to email themselves.
+    # Candidate's own first message doesn't need to email themselves -- candidate_signup's real
+    # signup call already sent its own welcome/verify-email, so the count just shouldn't grow.
+    emails_before_own_message = len(sent_emails.sent)
     await client.post(
         f"/api/v1/messages/{application['id']}",
         json={"body": "Hi, just checking in."},
         headers=candidate_headers,
     )
-    assert sent_emails.sent == []
+    assert len(sent_emails.sent) == emails_before_own_message
 
     reply_response = await client.post(
         f"/api/v1/messages/mine/{job['id']}/applicants/{application['id']}",
@@ -141,8 +140,7 @@ async def test_company_reply_emails_the_candidate(
     )
     assert reply_response.status_code == 201, reply_response.text
 
-    assert len(sent_emails.sent) == 1
-    email = sent_emails.sent[0]
+    email = sent_emails.sent[-1]
     assert email["to"] == "candidate@messages-notify.com"
     assert "Notify Messages Co" in email["subject"]
     assert application["id"] in email["body"]

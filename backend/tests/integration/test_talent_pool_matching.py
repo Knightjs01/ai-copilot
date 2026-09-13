@@ -6,6 +6,7 @@ from tests.integration.helpers import (
     candidate_signup,
     create_project,
     invite_and_accept,
+    publish_and_approve_job,
     signup,
     step_up_headers,
 )
@@ -24,11 +25,7 @@ async def _create_and_publish_job(
     response = await client.post("/api/v1/shadow-jobs", json=payload, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _grant_talent_pool(
@@ -130,10 +127,7 @@ async def test_project_only_grant_matches_only_the_same_project(client: AsyncCli
     )
 
     # Re-searching the exact source job (reopened) -> eligible.
-    reopen_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{source_job['id']}/publish", headers=owner_headers
-    )
-    assert reopen_response.status_code == 200, reopen_response.text
+    await publish_and_approve_job(client, headers=owner_headers, job_id=source_job["id"])
     same_job_response = await client.get(
         f"/api/v1/matches/mine/{source_job['id']}/talent-pool", headers=owner_headers
     )
@@ -317,10 +311,7 @@ async def test_talent_pool_match_enriches_job_facts_with_linked_project_blueprin
 
     # ShadowJob.project_id is hard-unique -- re-search the same source job (reopened) rather than
     # trying to create a second job on the same project, which the schema doesn't allow.
-    reopen_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{source_job['id']}/publish", headers=owner_headers
-    )
-    assert reopen_response.status_code == 200, reopen_response.text
+    await publish_and_approve_job(client, headers=owner_headers, job_id=source_job["id"])
     response = await client.get(
         f"/api/v1/matches/mine/{source_job['id']}/talent-pool", headers=owner_headers
     )

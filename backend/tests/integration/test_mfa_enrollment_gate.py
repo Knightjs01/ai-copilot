@@ -1,4 +1,5 @@
 import pyotp
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -59,6 +60,17 @@ async def test_company_user_blocked_from_business_routes_after_grace_period_expi
     assert after.status_code == 200
 
 
+@pytest.mark.skip(
+    reason=(
+        "require_candidate_mfa_enrolled (candidate_auth/dependencies.py) deliberately does not "
+        "enforce the grace-period gate this test exercises -- confirmed live 2026-08-29 that no "
+        "candidate-facing MFA enrollment UI ever shipped, so the gate locked every candidate out "
+        "with zero way to comply ('a gate nobody can satisfy isn't security, it's an outage'). "
+        "Re-enable this test once a real candidate MFA enrollment flow ships and the gate is "
+        "re-enforced in that dependency. See the identical situation in test_webauthn_flow.py's "
+        "test_candidate_webauthn_registration_satisfies_mandatory_mfa_gate."
+    )
+)
 async def test_candidate_blocked_from_phantom_passport_after_grace_period_expires(
     client: AsyncClient,
 ) -> None:

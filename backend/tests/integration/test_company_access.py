@@ -244,6 +244,9 @@ async def test_stats_reflect_real_counts(client: AsyncClient) -> None:
         "rejected_requests",
         "active_companies",
         "suspended_companies",
+        "active_role_count",
+        "application_count",
+        "verified_candidate_count",
     }
 
 
@@ -285,7 +288,7 @@ async def test_company_directory_lists_companies_with_user_counts(client: AsyncC
 
     response = await client.get("/api/v1/companies", headers=admin_headers)
     assert response.status_code == 200, response.text
-    companies = response.json()
+    companies = response.json()["items"]
     match = next((c for c in companies if c["email_domain"] == "directorycheck.com"), None)
     assert match is not None
     assert match["user_count"] == 1
@@ -366,7 +369,7 @@ async def test_audit_log_records_every_admin_action_type(client: AsyncClient) ->
 
     log_response = await client.get("/api/v1/company-access/audit-log", headers=admin_headers)
     assert log_response.status_code == 200, log_response.text
-    actions = {entry["action"] for entry in log_response.json()}
+    actions = {entry["action"] for entry in log_response.json()["items"]}
     assert {
         "access_request.approved",
         "access_request.rejected",

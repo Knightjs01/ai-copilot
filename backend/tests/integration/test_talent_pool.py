@@ -9,6 +9,7 @@ from tests.integration.helpers import (
     candidate_signup,
     create_project,
     invite_and_accept,
+    publish_and_approve_job,
     signup,
     step_up_headers,
 )
@@ -24,11 +25,7 @@ async def _create_and_publish_job(client: AsyncClient, *, headers: dict) -> dict
     response = await client.post("/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _close_job(client: AsyncClient, *, job_id: str, headers: dict) -> dict:
@@ -119,13 +116,15 @@ async def test_bulk_request_talent_pool_from_search_results(
     assert set(body["requested"]) == set(callsigns)
     assert body["skipped"] == []
 
-    # Both candidates got a real email notification.
-    assert len(sent_emails.sent) == 2
-    assert {e["to"] for e in sent_emails.sent} == {
+    # Both candidates got a real email notification -- alongside the welcome/verify-email each
+    # one's own candidate_signup call already sent, which isn't what this assertion is about.
+    notification_emails = [e for e in sent_emails.sent if e["subject"] != "Verify your Phantom Hire email"]
+    assert len(notification_emails) == 2
+    assert {e["to"] for e in notification_emails} == {
         "candidate-a@talentpool-bulk.com",
         "candidate-b@talentpool-bulk.com",
     }
-    assert all("Bulk Talent Pool Co" in e["subject"] for e in sent_emails.sent)
+    assert all("Bulk Talent Pool Co" in e["subject"] for e in notification_emails)
 
     # Each candidate can see the pending request on their own side.
     for candidate_headers in (candidate_a_headers, candidate_b_headers):
@@ -539,7 +538,7 @@ async def test_project_burn_nulls_source_application_without_deleting_grant(
     )
     assert job_response.status_code == 201, job_response.text
     job_id = job_response.json()["id"]
-    await client.post(f"/api/v1/shadow-jobs/mine/{job_id}/publish", headers=headers)
+    await publish_and_approve_job(client, headers=headers, job_id=job_id)
 
     application, candidate_headers = await _apply_with_new_candidate(
         client, job_id=job_id, email="applicant@talentpool-burn.com"
@@ -591,10 +590,7 @@ async def test_list_eligible_for_project_scopes_by_company_wide_and_project_only
     )
     assert job_response.status_code == 201, job_response.text
     job = job_response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
+    await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
     company_wide_headers = await _build_and_approve_discoverable_passport(
         client, email="candidate-wide@talentpool-eligible-project.com", full_name="Wide Candidate"

@@ -6,6 +6,7 @@ from tests.integration.helpers import (
     candidate_signup,
     create_project,
     invite_and_accept,
+    publish_and_approve_job,
     signup,
 )
 
@@ -31,9 +32,7 @@ async def _create_job(client: AsyncClient, *, headers: dict, payload: dict = _JO
 
 
 async def _publish_job(client: AsyncClient, *, headers: dict, job_id: str) -> dict:
-    response = await client.post(f"/api/v1/shadow-jobs/mine/{job_id}/publish", headers=headers)
-    assert response.status_code == 200, response.text
-    return response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job_id)
 
 
 async def _save_passport(client: AsyncClient, *, headers: dict) -> None:
@@ -324,7 +323,6 @@ async def test_recruiter_can_create_and_publish_job(
     and shadow_jobs.update -- unlike old Member, which was view-only for Shadow jobs."""
     owner = await signup(client, email="owner@shadowjobs-memberperm.com")
     owner_headers = auth_headers(owner["access_token"])
-    job = await _create_job(client, headers=owner_headers)
 
     recruiter = await invite_and_accept(
         client,
@@ -339,9 +337,13 @@ async def test_recruiter_can_create_and_publish_job(
         "/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=recruiter_headers
     )
     assert create_allowed.status_code == 201, create_allowed.text
+    recruiter_job = create_allowed.json()
 
+    # Publish the job the Recruiter actually created, not the Owner's earlier one -- a Shadow-
+    # only job with no linked project is only accessible to its own creator or org-wide roles
+    # (require_shadow_job_access), so a Recruiter can never publish someone else's unlinked job.
     publish_allowed = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=recruiter_headers
+        f"/api/v1/shadow-jobs/mine/{recruiter_job['id']}/publish", headers=recruiter_headers
     )
     assert publish_allowed.status_code == 200, publish_allowed.text
 

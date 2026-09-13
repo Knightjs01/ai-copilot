@@ -4,6 +4,7 @@ from tests.integration.helpers import (
     auth_headers,
     candidate_signup,
     create_project,
+    publish_and_approve_job,
     signup,
     step_up_headers,
 )
@@ -128,10 +129,7 @@ async def test_shadow_reveal_candidate_can_approve_with_basic_disclosure_only(
     )
     assert job_response.status_code == 201, job_response.text
     job = job_response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
+    await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
     tokens = await candidate_signup(client, email="applicant@shadow-disclosure.com")
     candidate_headers = auth_headers(tokens["access_token"])

@@ -332,7 +332,12 @@ async def test_rls_blocks_cross_tenant_candidate_reads(client: AsyncClient) -> N
             assert explicit_cross_tenant_query.fetchall() == []
 
 
-async def test_app_auth_role_has_no_grants_on_candidates() -> None:
+async def test_app_auth_role_has_select_but_no_write_grants_on_candidates() -> None:
+    """Migration 0071 deliberately granted app_auth read-only access to candidates (Phantom
+    Command 2.0's admin stats endpoint needs cross-tenant candidate counts) -- SELECT is now
+    expected to succeed. The write-protection invariant this test originally existed for still
+    holds and is what actually matters: app_auth must never be able to modify tenant data."""
+
     from app.core.config import get_settings
     from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -340,12 +345,13 @@ async def test_app_auth_role_has_no_grants_on_candidates() -> None:
     auth_engine = create_async_engine(settings.auth_database_url)
     try:
         async with auth_engine.connect() as conn:
+            await conn.execute(text("SELECT 1 FROM candidates LIMIT 1"))
             try:
-                await conn.execute(text("SELECT 1 FROM candidates LIMIT 1"))
+                await conn.execute(text("DELETE FROM candidates WHERE false"))
                 raised = False
             except DBAPIError:
                 raised = True
-            assert raised, "app_auth should not have SELECT privilege on candidates"
+            assert raised, "app_auth should not have write privileges on candidates"
     finally:
         await auth_engine.dispose()
 

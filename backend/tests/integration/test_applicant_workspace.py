@@ -1,6 +1,12 @@
 from httpx import AsyncClient
 
-from tests.integration.helpers import auth_headers, candidate_signup, signup, step_up_headers
+from tests.integration.helpers import (
+    auth_headers,
+    candidate_signup,
+    publish_and_approve_job,
+    signup,
+    step_up_headers,
+)
 
 _JOB_PAYLOAD = {
     "title": "Staff Product Designer",
@@ -13,11 +19,7 @@ async def _create_and_publish_job(client: AsyncClient, *, headers: dict) -> dict
     response = await client.post("/api/v1/shadow-jobs", json=_JOB_PAYLOAD, headers=headers)
     assert response.status_code == 201, response.text
     job = response.json()
-    publish_response = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job['id']}/publish", headers=headers
-    )
-    assert publish_response.status_code == 200, publish_response.text
-    return publish_response.json()
+    return await publish_and_approve_job(client, headers=headers, job_id=job["id"])
 
 
 async def _apply_with_new_candidate(
@@ -73,10 +75,7 @@ async def test_get_applicant_404_wrong_job_application_pairing(client: AsyncClie
     job_b_response = await client.post("/api/v1/shadow-jobs", json=job_b_payload, headers=headers)
     assert job_b_response.status_code == 201
     job_b = job_b_response.json()
-    publish_b = await client.post(
-        f"/api/v1/shadow-jobs/mine/{job_b['id']}/publish", headers=headers
-    )
-    assert publish_b.status_code == 200
+    job_b = await publish_and_approve_job(client, headers=headers, job_id=job_b["id"])
 
     application, _ = await _apply_with_new_candidate(
         client, job_id=job_a["id"], email="candidate@applicant-get-404.com"
