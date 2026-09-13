@@ -61,6 +61,19 @@ class WebAuthnCredentialNotFoundError(AuthError):
     detail = "Passkey not found"
 
 
+class WebAuthnStepUpNotSupportedError(AuthError):
+    """A real second-factor re-verification for a passkey-only account (mfa_enabled=False, TOTP
+    never set up) isn't built yet -- step_up() must not silently downgrade to password-alone for
+    such an account, since that would falsely represent it as MFA-backed. Raised instead of
+    accepting the password, until a real WebAuthn step-up ceremony exists."""
+
+    status_code = 501
+    detail = (
+        "Step-up verification for passkey-only accounts isn't supported yet. "
+        "Set up an authenticator app under MFA settings to use step-up-gated actions."
+    )
+
+
 class EmailDeliveryError(AuthError):
     """Raised only where the caller explicitly asked for an email and deserves to know it
     failed (a resend-verification click) -- as opposed to signup/provisioning/invite flows,

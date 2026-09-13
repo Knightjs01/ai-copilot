@@ -1,7 +1,11 @@
+import json
+
 import pyotp
 from httpx import AsyncClient
+from webauthn.helpers import base64url_to_bytes
 
 from tests.integration.helpers import auth_headers, signup, step_up_headers
+from tests.integration.webauthn_helpers import VirtualAuthenticator
 
 
 async def test_step_up_rejects_wrong_password(client: AsyncClient) -> None:
@@ -12,6 +16,38 @@ async def test_step_up_rejects_wrong_password(client: AsyncClient) -> None:
         "/api/v1/auth/step-up", json={"password": "not the right password"}, headers=headers
     )
     assert response.status_code == 401
+
+
+async def test_step_up_refuses_rather_than_downgrade_for_passkey_only_account(
+    client: AsyncClient,
+) -> None:
+    # A user whose only enrolled factor is a passkey (mfa_enabled stays False -- only TOTP
+    # enrollment sets it) must not have step-up silently accept password alone, since that would
+    # falsely represent a single-factor check as MFA-backed. No real WebAuthn step-up ceremony
+    # exists yet, so this must refuse (501), not succeed.
+    owner = await signup(client, email="stepup-passkey-only@acme.com")
+    headers = auth_headers(owner["access_token"])
+
+    options_response = await client.post("/api/v1/auth/webauthn/register/options", headers=headers)
+    assert options_response.status_code == 200, options_response.text
+    options = options_response.json()["options"]
+    challenge = base64url_to_bytes(json.loads(options)["challenge"])
+
+    authenticator = VirtualAuthenticator()
+    credential = authenticator.register(challenge)
+    verify_response = await client.post(
+        "/api/v1/auth/webauthn/register/verify",
+        json={"credential": credential, "device_name": "Test Key"},
+        headers=headers,
+    )
+    assert verify_response.status_code == 200, verify_response.text
+
+    step_up_response = await client.post(
+        "/api/v1/auth/step-up",
+        json={"password": "correct horse battery staple"},
+        headers=headers,
+    )
+    assert step_up_response.status_code == 501
 
 
 async def test_step_up_token_grants_access_to_gated_action(client: AsyncClient) -> None:

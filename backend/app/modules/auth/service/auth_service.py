@@ -26,6 +26,7 @@ from app.modules.auth.exceptions import (
     InvalidWebAuthnCredentialError,
     SessionNotFoundError,
     WebAuthnCredentialNotFoundError,
+    WebAuthnStepUpNotSupportedError,
 )
 from app.modules.auth.login_throttle import LoginAttemptTracker
 from app.modules.auth.models import (
@@ -484,6 +485,16 @@ class AuthService:
             password, user.hashed_password
         ):
             raise InvalidCredentialsError()
+
+        if not user.mfa_enabled:
+            # A user whose only enrolled factor is a passkey must not have step-up silently
+            # downgrade to password-alone — that would falsely represent a single-factor check
+            # as MFA-backed, the exact guarantee step-up exists to provide. No real WebAuthn
+            # step-up ceremony exists yet (see WebAuthnStepUpNotSupportedError), so refuse
+            # rather than accept; this is unreachable for any account today since there's no
+            # frontend path to register a passkey without already enrolling TOTP.
+            if await self._webauthn_credentials.count_for_user(user.id) > 0:
+                raise WebAuthnStepUpNotSupportedError()
 
         if user.mfa_enabled:
             if not mfa_code or not user.mfa_secret_encrypted:
