@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" baseProfile="tiny-ps" version="1.2" viewBox="0 0 300 300">
+  <title>Phantom Hire</title>
+  <defs>
+    <linearGradient id="ghostFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FBFAFF"/>
+      <stop offset="100%" stop-color="#D8CFFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="280" height="280" rx="56" fill="#644FB0"/>
+  <rect x="10" y="10" width="280" height="280" rx="56" fill="#8049DF" fill-opacity="0.35"/>
+  <path d="M 90 145 A 60 60 0 0 1 210 145 L 210 205 Q 190 249 170 205 Q 150 249 130 205 Q 110 249 90 205 Z" fill="url(#ghostFill)"/>
+  <ellipse cx="128" cy="160" rx="11" ry="15" fill="#241C4D"/>
+  <ellipse cx="172" cy="160" rx="11" ry="15" fill="#241C4D"/>
+</svg>
