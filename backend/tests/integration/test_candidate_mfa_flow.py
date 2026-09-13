@@ -18,7 +18,9 @@ async def test_candidate_mfa_setup_enable_and_login_challenge(client: AsyncClien
 
     code = pyotp.TOTP(secret).now()
     enable_response = await client.post(
-        "/api/v1/candidate-auth/mfa/enable", json={"secret": secret, "code": code}, headers=headers
+        "/api/v1/candidate-auth/mfa/enable",
+        json={"password": "correct horse battery staple", "secret": secret, "code": code},
+        headers=headers,
     )
     assert enable_response.status_code == 200
     backup_codes = enable_response.json()["backup_codes"]
@@ -58,7 +60,11 @@ async def test_candidate_mfa_backup_code_logs_in_once_then_is_rejected(
     secret = setup_response.json()["secret"]
     enable_response = await client.post(
         "/api/v1/candidate-auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
     backup_code = enable_response.json()["backup_codes"][0]
@@ -102,7 +108,11 @@ async def test_candidate_mfa_disable_clears_backup_codes(client: AsyncClient) ->
     secret = setup_response.json()["secret"]
     enable_response = await client.post(
         "/api/v1/candidate-auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
     backup_code = enable_response.json()["backup_codes"][0]
@@ -117,7 +127,11 @@ async def test_candidate_mfa_disable_clears_backup_codes(client: AsyncClient) ->
     secret_again = setup_again.json()["secret"]
     await client.post(
         "/api/v1/candidate-auth/mfa/enable",
-        json={"secret": secret_again, "code": pyotp.TOTP(secret_again).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret_again,
+            "code": pyotp.TOTP(secret_again).now(),
+        },
         headers=headers,
     )
 
@@ -144,7 +158,11 @@ async def test_candidate_mfa_disable_requires_correct_password(client: AsyncClie
     secret = setup_response.json()["secret"]
     await client.post(
         "/api/v1/candidate-auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
 

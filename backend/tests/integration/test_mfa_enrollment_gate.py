@@ -50,7 +50,11 @@ async def test_company_user_blocked_from_business_routes_after_grace_period_expi
     secret = setup_response.json()["secret"]
     enable_response = await client.post(
         "/api/v1/auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
     assert enable_response.status_code == 200

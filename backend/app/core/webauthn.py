@@ -91,7 +91,11 @@ def begin_registration(
         user_display_name=user_display_name,
         authenticator_selection=AuthenticatorSelectionCriteria(
             resident_key=ResidentKeyRequirement.PREFERRED,
-            user_verification=UserVerificationRequirement.PREFERRED,
+            # REQUIRED, not PREFERRED: this module's own two-factor claim (see the file
+            # docstring) depends on the authenticator actually performing user verification
+            # (PIN/biometric), not just user presence — PREFERRED would let a bare
+            # possession-only authenticator register and silently satisfy mandatory MFA.
+            user_verification=UserVerificationRequirement.REQUIRED,
         ),
         exclude_credentials=[
             PublicKeyCredentialDescriptor(id=cred_id) for cred_id in exclude_credential_ids
@@ -110,6 +114,11 @@ def verify_registration(
             expected_challenge=expected_challenge,
             expected_rp_id=settings.webauthn_rp_id,
             expected_origin=settings.webauthn_origin,
+            # py_webauthn defaults this to False regardless of what user_verification was
+            # requested in begin_registration's options -- a client that ignores that hint
+            # (or a forged response) would otherwise still verify. Must be explicit here for
+            # the REQUIRED option above to mean anything.
+            require_user_verification=True,
         )
     except WebAuthnException as exc:
         raise WebAuthnVerificationError(str(exc)) from exc
@@ -127,7 +136,10 @@ def begin_authentication(*, allow_credential_ids: list[bytes]) -> Authentication
         allow_credentials=[
             PublicKeyCredentialDescriptor(id=cred_id) for cred_id in allow_credential_ids
         ],
-        user_verification=UserVerificationRequirement.PREFERRED,
+        # REQUIRED to match begin_registration — an authenticator enrolled under REQUIRED
+        # always performs user verification anyway, but pinning this side too keeps the
+        # two-factor guarantee explicit rather than implicit.
+        user_verification=UserVerificationRequirement.REQUIRED,
     )
     return AuthenticationCeremony(
         options_json=options_to_json(options), challenge=options.challenge
@@ -150,6 +162,8 @@ def verify_authentication(
             expected_origin=settings.webauthn_origin,
             credential_public_key=public_key,
             credential_current_sign_count=sign_count,
+            # Same reasoning as verify_registration's require_user_verification=True.
+            require_user_verification=True,
         )
     except WebAuthnException as exc:
         raise WebAuthnVerificationError(str(exc)) from exc

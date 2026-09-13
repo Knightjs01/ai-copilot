@@ -55,6 +55,7 @@ export function MfaSetupDialog({
   const setup = useMfaSetup();
   const enable = useMfaEnable();
   const [step, setStep] = React.useState<Step>("loading");
+  const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [backupCodes, setBackupCodes] = React.useState<string[]>([]);
@@ -62,6 +63,7 @@ export function MfaSetupDialog({
   React.useEffect(() => {
     if (open) {
       setStep("loading");
+      setPassword("");
       setCode("");
       setError(null);
       setup.mutate(undefined, { onSuccess: () => setStep("verify") });
@@ -74,12 +76,12 @@ export function MfaSetupDialog({
     if (!setup.data) return;
     setError(null);
     try {
-      const res = await enable.mutateAsync({ secret: setup.data.secret, code });
+      const res = await enable.mutateAsync({ password, secret: setup.data.secret, code });
       setBackupCodes(res.backup_codes);
       setStep("backup-codes");
       await refreshUser();
     } catch {
-      setError("That code didn't match. Check your authenticator app and try again.");
+      setError("That password or code didn't match. Check both and try again.");
     }
   };
 
@@ -115,6 +117,15 @@ export function MfaSetupDialog({
               <Field label="Can't scan it? Enter this key manually">
                 <CopyableSecret value={setup.data.secret} />
               </Field>
+              <Field label="Your password" htmlFor="mfa-verify-password">
+                <Input
+                  id="mfa-verify-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </Field>
               <Field label="6-digit code" htmlFor="mfa-verify-code">
                 <Input
                   id="mfa-verify-code"
@@ -131,7 +142,10 @@ export function MfaSetupDialog({
                 <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={code.length < 6 || enable.isPending}>
+                <Button
+                  type="submit"
+                  disabled={password.length === 0 || code.length < 6 || enable.isPending}
+                >
                   {enable.isPending ? "Confirming…" : "Confirm and enable"}
                 </Button>
               </DialogFooter>

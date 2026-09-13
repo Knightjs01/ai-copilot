@@ -12,6 +12,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
+from app.modules.candidates.dependencies import require_candidate_access
 from app.modules.prescreen_assessment.dependencies import get_prescreen_assessment_llm_client
 from app.modules.prescreen_assessment.llm_client import PrescreenAssessmentLLMClient
 from app.modules.prescreen_assessment.schemas import PrescreenAssessmentRead
@@ -29,6 +30,7 @@ async def generate_prescreen_assessment(
     candidate_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.CANDIDATES_UPDATE)),
+    __: None = Depends(require_candidate_access),
     session: AsyncSession = Depends(get_tenant_db),
     llm_client: PrescreenAssessmentLLMClient = Depends(get_prescreen_assessment_llm_client),
 ) -> PrescreenAssessmentRead:
@@ -43,6 +45,7 @@ async def get_prescreen_assessment(
     candidate_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.CANDIDATES_VIEW)),
+    __: None = Depends(require_candidate_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> PrescreenAssessmentRead:
     assessment = await PrescreenAssessmentService(session).get_assessment(
@@ -56,6 +59,7 @@ async def generate_handoff_recommendations(
     candidate_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.CANDIDATES_UPDATE)),
+    __: None = Depends(require_candidate_access),
     session: AsyncSession = Depends(get_tenant_db),
     llm_client: PrescreenAssessmentLLMClient = Depends(get_prescreen_assessment_llm_client),
 ) -> PrescreenAssessmentRead:

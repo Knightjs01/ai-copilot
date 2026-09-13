@@ -22,7 +22,7 @@ export function useCandidateMfaSetup() {
 
 export function useCandidateMfaEnable() {
   return useMutation({
-    mutationFn: (input: { secret: string; code: string }) =>
+    mutationFn: (input: { password: string; secret: string; code: string }) =>
       candidateApiClient.post<CandidateMfaEnableResponse>("/candidate-auth/mfa/enable", input),
   });
 }

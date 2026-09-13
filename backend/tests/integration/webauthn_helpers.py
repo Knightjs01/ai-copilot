@@ -34,7 +34,11 @@ class VirtualAuthenticator:
 
     def _auth_data(self, *, attested: bool) -> bytes:
         rp_id_hash = hashlib.sha256(RP_ID.encode()).digest()
-        flags = 0b00000001
+        # bit 0 (UP, user present) + bit 2 (UV, user verified) -- app/core/webauthn.py now
+        # requires UV (require_user_verification=True) since a passkey is only treated as
+        # satisfying mandatory MFA when the authenticator actually performed a PIN/biometric
+        # check, not mere possession.
+        flags = 0b00000101
         if attested:
             flags |= 0b01000000
         self.sign_count += 1

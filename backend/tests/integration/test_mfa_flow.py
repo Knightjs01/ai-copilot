@@ -14,7 +14,9 @@ async def test_mfa_setup_enable_and_login_challenge(client: AsyncClient) -> None
 
     code = pyotp.TOTP(secret).now()
     enable_response = await client.post(
-        "/api/v1/auth/mfa/enable", json={"secret": secret, "code": code}, headers=headers
+        "/api/v1/auth/mfa/enable",
+        json={"password": "correct horse battery staple", "secret": secret, "code": code},
+        headers=headers,
     )
     assert enable_response.status_code == 200
     backup_codes = enable_response.json()["backup_codes"]
@@ -43,6 +45,37 @@ async def test_mfa_setup_enable_and_login_challenge(client: AsyncClient) -> None
     assert verify_response.json()["access_token"]
 
 
+async def test_mfa_enable_requires_correct_password(client: AsyncClient) -> None:
+    # A stolen bearer token alone must not be enough to enroll an attacker-controlled MFA
+    # secret and lock the real account owner out — mirrors disable's own password re-check.
+    data = await signup(client, email="mfa-enable-wrong-password@acme.com")
+    headers = auth_headers(data["access_token"])
+
+    setup_response = await client.post("/api/v1/auth/mfa/setup", headers=headers)
+    secret = setup_response.json()["secret"]
+
+    wrong_password = await client.post(
+        "/api/v1/auth/mfa/enable",
+        json={"password": "not the right password", "secret": secret, "code": pyotp.TOTP(secret).now()},
+        headers=headers,
+    )
+    assert wrong_password.status_code == 401
+
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    assert me.json()["mfa_enabled"] is False
+
+    correct_password = await client.post(
+        "/api/v1/auth/mfa/enable",
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
+        headers=headers,
+    )
+    assert correct_password.status_code == 200
+
+
 async def test_mfa_backup_code_logs_in_once_then_is_rejected(client: AsyncClient) -> None:
     data = await signup(client, email="mfa-backup@acme.com")
     headers = auth_headers(data["access_token"])
@@ -51,7 +84,11 @@ async def test_mfa_backup_code_logs_in_once_then_is_rejected(client: AsyncClient
     secret = setup_response.json()["secret"]
     enable_response = await client.post(
         "/api/v1/auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
     backup_code = enable_response.json()["backup_codes"][0]
@@ -91,7 +128,11 @@ async def test_mfa_disable_clears_backup_codes(client: AsyncClient) -> None:
     secret = setup_response.json()["secret"]
     enable_response = await client.post(
         "/api/v1/auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
     backup_code = enable_response.json()["backup_codes"][0]
@@ -108,7 +149,11 @@ async def test_mfa_disable_clears_backup_codes(client: AsyncClient) -> None:
     secret_again = setup_again.json()["secret"]
     await client.post(
         "/api/v1/auth/mfa/enable",
-        json={"secret": secret_again, "code": pyotp.TOTP(secret_again).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret_again,
+            "code": pyotp.TOTP(secret_again).now(),
+        },
         headers=headers,
     )
 
@@ -132,7 +177,11 @@ async def test_mfa_disable_requires_correct_password(client: AsyncClient) -> Non
     secret = setup_response.json()["secret"]
     await client.post(
         "/api/v1/auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
 

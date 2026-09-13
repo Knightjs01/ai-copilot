@@ -16,6 +16,7 @@ from app.modules.hiring_blueprint.dependencies import get_hiring_blueprint_llm_c
 from app.modules.hiring_blueprint.llm_client import HiringBlueprintLLMClient
 from app.modules.hiring_blueprint.schemas import HiringBlueprintRead
 from app.modules.hiring_blueprint.service import HiringBlueprintService
+from app.modules.projects.dependencies import require_project_access
 
 router = APIRouter(
     prefix="/projects", tags=["hiring-blueprint"], dependencies=[Depends(require_mfa_enrolled)]
@@ -27,6 +28,7 @@ async def generate_hiring_blueprint(
     project_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_UPDATE)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
     llm_client: HiringBlueprintLLMClient = Depends(get_hiring_blueprint_llm_client),
 ) -> HiringBlueprintRead:
@@ -41,6 +43,7 @@ async def get_hiring_blueprint(
     project_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_VIEW)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> HiringBlueprintRead:
     blueprint = await HiringBlueprintService(session).get_blueprint(

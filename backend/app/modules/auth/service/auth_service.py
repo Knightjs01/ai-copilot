@@ -245,6 +245,15 @@ class AuthService:
         if user is None or not user.mfa_enabled or not user.mfa_secret_encrypted:
             raise InvalidOrExpiredTokenError()
 
+        # Per-account throttle, same mechanism as login's own — the slowapi per-IP limit on this
+        # route alone doesn't stop a 6-digit-code (or backup-code) brute force distributed across
+        # many source IPs against one already-identified account. Keyed on the user id (not an
+        # email — nothing here needs one) in its own realm so this never shares a counter with
+        # password-login throttling.
+        throttle = LoginAttemptTracker(realm="mfa")
+        if await throttle.is_locked(str(user.id)):
+            raise InvalidMfaCodeError()
+
         secret = security.decrypt_secret(user.mfa_secret_encrypted)
         used_backup_code = False
         if not security.verify_totp_code(secret=secret, code=code):
@@ -255,9 +264,12 @@ class AuthService:
                 user_id=user.id, code_hash=security.hash_opaque_token(code.strip().upper())
             )
             if backup_code is None:
+                await throttle.record_failure(str(user.id))
                 raise InvalidMfaCodeError()
             await self._tokens.consume_backup_code(backup_code)
             used_backup_code = True
+
+        await throttle.clear(str(user.id))
 
         await self._audit.record(
             company_id=user.company_id,
@@ -414,7 +426,14 @@ class AuthService:
         uri = security.get_totp_provisioning_uri(secret=secret, email=user.email)
         return secret, uri
 
-    async def enable_mfa(self, *, user: User, secret: str, code: str) -> list[str]:
+    async def enable_mfa(self, *, user: User, password: str, secret: str, code: str) -> list[str]:
+        # Mirrors disable_mfa's own password re-check: a stolen bearer token alone must not be
+        # enough to enroll an attacker-controlled MFA secret and permanently lock the real owner
+        # out of their own account.
+        if user.hashed_password is None or not security.verify_password(
+            password, user.hashed_password
+        ):
+            raise InvalidCredentialsError()
         if not security.verify_totp_code(secret=secret, code=code):
             raise InvalidMfaCodeError()
         user.mfa_secret_encrypted = security.encrypt_secret(secret)

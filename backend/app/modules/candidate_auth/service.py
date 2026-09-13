@@ -226,7 +226,14 @@ class CandidateAuthService:
         uri = security.get_totp_provisioning_uri(secret=secret, email=candidate.email)
         return secret, uri
 
-    async def enable_mfa(self, *, candidate: CandidateUser, secret: str, code: str) -> list[str]:
+    async def enable_mfa(
+        self, *, candidate: CandidateUser, password: str, secret: str, code: str
+    ) -> list[str]:
+        # Mirrors disable_mfa's own password re-check: a stolen bearer token alone must not be
+        # enough to enroll an attacker-controlled MFA secret and permanently lock the real owner
+        # out of their own account.
+        if not security.verify_password(password, candidate.hashed_password):
+            raise CandidateInvalidCredentialsError()
         if not security.verify_totp_code(secret=secret, code=code):
             raise CandidateInvalidMfaCodeError()
         candidate.mfa_secret_encrypted = security.encrypt_secret(secret)

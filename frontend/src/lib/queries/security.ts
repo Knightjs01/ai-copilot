@@ -16,7 +16,7 @@ export function useMfaSetup() {
 // mfa_enabled value.
 export function useMfaEnable() {
   return useMutation({
-    mutationFn: (input: { secret: string; code: string }) =>
+    mutationFn: (input: { password: string; secret: string; code: string }) =>
       apiClient.post<MfaEnableResponse>("/auth/mfa/enable", input),
   });
 }

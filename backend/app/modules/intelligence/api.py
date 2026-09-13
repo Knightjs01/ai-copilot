@@ -12,6 +12,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
+from app.modules.candidates.dependencies import require_candidate_access
 from app.modules.intelligence.dependencies import get_llm_client
 from app.modules.intelligence.llm_client import LLMClient
 from app.modules.intelligence.schemas import IntelligencePackRead
@@ -27,6 +28,7 @@ async def generate_intelligence_pack(
     candidate_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.CANDIDATES_UPDATE)),
+    __: None = Depends(require_candidate_access),
     session: AsyncSession = Depends(get_tenant_db),
     llm_client: LLMClient = Depends(get_llm_client),
 ) -> IntelligencePackRead:
@@ -41,6 +43,7 @@ async def get_intelligence_pack(
     candidate_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.CANDIDATES_VIEW)),
+    __: None = Depends(require_candidate_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> IntelligencePackRead:
     pack = await IntelligenceService(session).get_pack(

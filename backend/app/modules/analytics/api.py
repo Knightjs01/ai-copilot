@@ -14,6 +14,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.models import User
 from app.modules.auth.permissions import Permissions
+from app.modules.projects.dependencies import require_project_access
 
 router = APIRouter(
     prefix="/projects", tags=["analytics"], dependencies=[Depends(require_mfa_enrolled)]
@@ -25,6 +26,7 @@ async def get_project_analytics(
     project_id: uuid.UUID,
     actor: User = Depends(get_current_user_model),
     _: CurrentUser = Depends(require_permission(Permissions.PROJECTS_VIEW)),
+    __: None = Depends(require_project_access),
     session: AsyncSession = Depends(get_tenant_db),
 ) -> ProjectAnalytics:
     return await AnalyticsService(session).get_project_analytics(

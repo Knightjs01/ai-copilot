@@ -208,7 +208,7 @@ async def enable_mfa(
     session: AsyncSession = Depends(get_db),
 ) -> CandidateMfaEnableResponse:
     backup_codes = await CandidateAuthService(session).enable_mfa(
-        candidate=candidate, secret=body.secret, code=body.code
+        candidate=candidate, password=body.password, secret=body.secret, code=body.code
     )
     return CandidateMfaEnableResponse(backup_codes=backup_codes)
 

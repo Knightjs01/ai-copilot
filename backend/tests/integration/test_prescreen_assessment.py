@@ -318,6 +318,17 @@ async def test_hiring_manager_can_view_but_not_trigger_generation(
     )
     hiring_manager_headers = auth_headers(hiring_manager["access_token"])
 
+    # require_candidate_access (a resource-level check on top of the permission check) requires
+    # a non-org-wide role to also be a ProjectMember of the candidate's project -- add the Hiring
+    # Manager to it so this test exercises the permission floor, not the membership gate.
+    me = await client.get("/api/v1/auth/me", headers=hiring_manager_headers)
+    hiring_manager_id = me.json()["id"]
+    await client.post(
+        f"/api/v1/projects/{project_id}/members",
+        json={"user_id": hiring_manager_id},
+        headers=owner_headers,
+    )
+
     generate_denied = await client.post(
         f"/api/v1/candidates/{candidate_id}/prescreen-assessment", headers=hiring_manager_headers
     )

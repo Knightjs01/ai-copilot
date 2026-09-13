@@ -59,6 +59,7 @@ export function CandidateMfaSetupDialog({
   const enable = useCandidateMfaEnable();
   const container = useThemeScopeContainer();
   const [step, setStep] = React.useState<Step>("loading");
+  const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [backupCodes, setBackupCodes] = React.useState<string[]>([]);
@@ -66,6 +67,7 @@ export function CandidateMfaSetupDialog({
   React.useEffect(() => {
     if (open) {
       setStep("loading");
+      setPassword("");
       setCode("");
       setError(null);
       setup.mutate(undefined, { onSuccess: () => setStep("verify") });
@@ -78,12 +80,12 @@ export function CandidateMfaSetupDialog({
     if (!setup.data) return;
     setError(null);
     try {
-      const res = await enable.mutateAsync({ secret: setup.data.secret, code });
+      const res = await enable.mutateAsync({ password, secret: setup.data.secret, code });
       setBackupCodes(res.backup_codes);
       setStep("backup-codes");
       await refreshCandidate();
     } catch {
-      setError("That code didn't match. Check your authenticator app and try again.");
+      setError("That password or code didn't match. Check both and try again.");
     }
   };
 
@@ -119,6 +121,15 @@ export function CandidateMfaSetupDialog({
               <Field label="Can't scan it? Enter this key manually">
                 <CopyableSecret value={setup.data.secret} />
               </Field>
+              <Field label="Your password" htmlFor="candidate-mfa-verify-password">
+                <Input
+                  id="candidate-mfa-verify-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </Field>
               <Field label="6-digit code" htmlFor="candidate-mfa-verify-code">
                 <Input
                   id="candidate-mfa-verify-code"
@@ -135,7 +146,11 @@ export function CandidateMfaSetupDialog({
                 <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" variant="brand" disabled={code.length < 6 || enable.isPending}>
+                <Button
+                  type="submit"
+                  variant="brand"
+                  disabled={password.length === 0 || code.length < 6 || enable.isPending}
+                >
                   {enable.isPending ? "Confirming…" : "Confirm and enable"}
                 </Button>
               </DialogFooter>

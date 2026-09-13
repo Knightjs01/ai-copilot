@@ -81,6 +81,17 @@ async def test_member_can_view_but_not_trigger_generation(
     )
     member_headers = auth_headers(member["access_token"])
 
+    # require_project_access (a resource-level check on top of the permission check) requires a
+    # non-org-wide role to also be a ProjectMember -- add them so this test exercises the
+    # permission floor, not the membership gate.
+    me = await client.get("/api/v1/auth/me", headers=member_headers)
+    member_id = me.json()["id"]
+    await client.post(
+        f"/api/v1/projects/{project_id}/members",
+        json={"user_id": member_id},
+        headers=owner_headers,
+    )
+
     generate_denied = await client.post(
         f"/api/v1/projects/{project_id}/hiring-blueprint", headers=member_headers
     )

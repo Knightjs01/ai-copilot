@@ -75,7 +75,11 @@ async def test_step_up_requires_mfa_code_when_account_has_mfa_enabled(client: As
     secret = setup_response.json()["secret"]
     await client.post(
         "/api/v1/auth/mfa/enable",
-        json={"secret": secret, "code": pyotp.TOTP(secret).now()},
+        json={
+            "password": "correct horse battery staple",
+            "secret": secret,
+            "code": pyotp.TOTP(secret).now(),
+        },
         headers=headers,
     )
 
